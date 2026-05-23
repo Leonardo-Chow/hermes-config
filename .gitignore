@@ -81,3 +81,4 @@ Thumbs.db
 # Keep these files (empty dirs need .gitkeep)
 !skills/.gitkeep
 !optional-skills/.gitkeep
+skills/.curator_backups/
