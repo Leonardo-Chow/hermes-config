@@ -1,0 +1,66 @@
+#!/bin/bash
+# =============================================================================
+# Hermes Audit CLI — log non-terminal tool calls from the agent
+# =============================================================================
+# Usage:
+#   hermes-audit CMD <command>
+#   hermes-audit RESULT <exit_code> [<summary>]
+#   hermes-audit TOOL <tool_name> <args> [<result_summary>]
+#   hermes-audit SESSION <start|end> [<details>]
+#   hermes-audit TAIL [<lines>]
+# =============================================================================
+
+HERMES_AUDIT_DIR="$HOME/.hermes/audit"
+HERMES_AUDIT_LOG="$HERMES_AUDIT_DIR/commands.log"
+HERMES_AUDIT_COUNTER="$HERMES_AUDIT_DIR/.counter"
+
+mkdir -p "$HERMES_AUDIT_DIR"
+
+_ts() { date '+%Y-%m-%d %H:%M:%S'; }
+_next_id() {
+    local c=0
+    [ -f "$HERMES_AUDIT_COUNTER" ] && c=$(cat "$HERMES_AUDIT_COUNTER")
+    c=$((c + 1))
+    echo "$c" > "$HERMES_AUDIT_COUNTER"
+    printf "CMD-%05d" "$c"
+}
+
+case "${1:-help}" in
+    CMD)
+        id=$(_next_id)
+        echo "[$(_ts)] [$id] CMD: ${*:2}" >> "$HERMES_AUDIT_LOG"
+        echo "$id"
+        ;;
+    RESULT)
+        id="${2:-???}"
+        rc="${3:-?}"
+        summary="${*:4}"
+        echo "[$(_ts)] [$id] EXIT: $rc $summary" >> "$HERMES_AUDIT_LOG"
+        ;;
+    TOOL)
+        # Log a non-terminal tool call (delegate, cronjob, etc.)
+        id=$(_next_id)
+        tool_name="$2"
+        args="${*:3}"
+        echo "[$(_ts)] [$id] TOOL: $tool_name args=$args" >> "$HERMES_AUDIT_LOG"
+        echo "$id"
+        ;;
+    SESSION)
+        id="SESSION"
+        event="${2:-start}"
+        echo "[$(_ts)] [$id] SESSION_${event}: ${*:3}" >> "$HERMES_AUDIT_LOG"
+        ;;
+    TAIL)
+        lines="${2:-20}"
+        tail -n "$lines" "$HERMES_AUDIT_LOG"
+        ;;
+    HELP|help|--help|-h)
+        echo "Hermes Audit CLI"
+        echo "  hermes-audit CMD <command>      — Log a command, returns CMD-ID"
+        echo "  hermes-audit RESULT <id> <rc> [summary] — Log result"
+        echo "  hermes-audit TOOL <name> [args]  — Log tool call"
+        echo "  hermes-audit SESSION <start|end> [details]"
+        echo "  hermes-audit TAIL [lines]        — View recent log"
+        echo "  hermes-audit HELP"
+        ;;
+esac

@@ -1,0 +1,277 @@
+---
+name: gfw-bypass
+description: "在中国 GFW 环境下访问被墙网站的策略和工具链。覆盖代理工具诊断、节点切换、VPN 隧道检测、备用内容源。"
+version: 1.0.0
+author: Hermes Agent
+tags: [proxy, vpn, gfw, china, network, scraping]
+---
+
+# GFW Bypass — 访问被墙内容
+
+当需要访问被墙网站（Google、YouTube、Twitter、经济学人等）时的诊断和解决流程。
+
+## 本机代理环境
+
+### Shadowrocket VPN（主 VPN）⭐
+- **状态:** 已配置并连接成功（2026-05-09 确认）
+- **订阅链接:** `http://47.242.55.240/link/9Yinklz3hNqvzVeB?list=shadowrocket`
+- **特点:** 系统级 VPN，所有应用自动走代理
+- **连接命令:** `scutil --nc start "Shadowrocket"`
+- **断开命令:** `scutil --nc stop "Shadowrocket"`
+- **状态检查:** `scutil --nc status "Shadowrocket"`
+- **IP 检查:** `curl -s https://api.ipify.org`
+- **验证:** `curl -sL --max-time 10 "https://www.google.com" | wc -c` 应返回 >0
+- **⚠️ 用户要求：执行需要翻墙的任务时自动使用 Shadowrocket**
+- **已确认可访问:** Google、BBC、CNN、YouTube 等被墙网站
+
+### 0dcloud VPN（备用 VPN）
+- **路径:** `/Applications/0dcloud.app`
+- **Bundle ID:** `com.odcloud.app`
+- **架构:** 纯 VPN 模式，创建 `utun4` 隧道接口
+- **IPC:** Unix socket `/Users/zhoulong/Library/Caches/0dcloud/ipc_99105.sock`
+- **⚠️ 不暴露本地代理端口** — 无法通过 `--proxy` 参数使用
+- **配置目录:** `~/Library/Application Support/com.odcloud.app/`
+- **订阅:** Shadowrocket/Clash 格式，服务器 `47.242.55.240`
+- **节点:** AnyTLS 类型，覆盖新加坡/美国/日本/韩国/香港/英国等
+- **⚠️ 节点经常不稳定** — 需要用户手动切换
+
+### ClashX Pro（备用代理）
+- **端口:** HTTP/SOCKS5 `127.0.0.1:7890`，API `127.0.0.1:9090`
+- **节点:** ShadowsocksR/Vmess（nnbin.com），但连接经常 reset
+- **API:** `http://127.0.0.1:9090` 返回 `{"hello":"clash"}`
+
+### Clash Verge（已配置 VLESS 节点）⭐
+- **内核:** mihomo (Clash.Meta)，支持 VLESS + XTLS-Vision + Reality
+- **服务:** `/Library/PrivilegedHelperTools/io.github.clash-verge-rev.clash-verge-rev.service.bundle/`
+- **配置:** `~/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/clash-verge.yaml`
+- **端口配置:** `mixed-port: 7897`，API `127.0.0.1:9090`
+- **已有节点:** 良心云 VLESS+Reality 集群（香港/新加坡/日本/美国/韩国/台湾/英国）+ 美国主vpn (obsbot)
+- **代理组:** 良心云（手动选择）、自动选择（url-test）、故障转移（fallback）
+
+### v2rayN（实际运行的代理客户端）⭐
+- **路径:** `/Applications/v2rayN.app`
+- **内核:** mihomo，路径 `/Applications/v2rayN.app/Contents/MacOS/bin/mihomo/mihomo`
+- **代理端口:** HTTP `127.0.0.1:10808`，SOCKS `127.0.0.1:10809`
+- **2026-05-16 确认:** v2rayN 是实际运行的代理客户端，Clash Verge 可能未安装或未启动
+- **测试命令:** `curl -s --connect-timeout 10 -x http://127.0.0.1:10808 http://httpbin.org/ip`
+- **⚠️ 诊断时优先检查 v2rayN 端口 10808**，而非 Clash Verge 的 7897
+
+## 诊断流程
+
+### Step 1: 检查 VPN 隧道状态
+```bash
+ifconfig utun4 2>/dev/null | head -5
+netstat -rn | grep utun4 | head -5
+```
+正常应看到 `inet 198.18.0.1` 和路由表条目。
+
+### Step 2: 测试连通性
+```bash
+# 直接测试（通过 VPN 隧道）
+curl -sL --max-time 10 "https://www.google.com" | wc -c
+
+# 通过 ClashX 代理
+curl -sL --max-time 10 --proxy http://127.0.0.1:7890 "https://www.google.com" | wc -c
+
+# 通过 SOCKS5
+curl -sL --max-time 10 --socks5-hostname 127.0.0.1:7890 "https://www.google.com" | wc -c
+```
+
+### Step 3: 检查代理进程
+```bash
+ps aux | grep -iE "0dcloud|clash|mihomo|sing-box" | grep -v grep
+lsof -i -P -n | grep LISTEN | grep -E "7890|7891|7897|1080|9090"
+```
+
+### Step 4: ClashX 节点管理
+```bash
+# 查看当前节点
+curl -sL "http://127.0.0.1:9090/proxies" | python3 -c "import sys,json; d=json.load(sys.stdin); [print(k,':',v.get('now','N/A')) for k,v in d.get('proxies',{}).items() if v.get('now')]"
+
+# 切换节点
+curl -sL -X PUT "http://127.0.0.1:9090/proxies/Proxy" -H "Content-Type: application/json" -d '{"name":"节点名称"}'
+```
+
+## 常见问题
+
+### VPN 隧道已建立但无法访问
+- **症状:** `utun4` 存在，`curl` 连接超时或 SSL_ERROR_SYSCALL
+- **原因:** VPN 节点本身不可用或被封
+- **解决:** 在 0dcloud App 里切换节点，然后重新测试
+
+### ClashX 代理 Connection reset
+- **症状:** `curl --proxy` 返回 `Recv failure: Connection reset by peer`
+- **原因:** ShadowsocksR/Vmess 节点过期或被封
+- **解决:** 在 ClashX 菜单切换节点，或更新订阅
+
+### 订阅服务器 504
+- **症状:** 订阅链接返回 `504 Gateway Time-out`
+- **原因:** 订阅服务器 `47.242.55.240` 宕机
+- **解决:** 等待恢复，或使用其他订阅源
+
+## 备用内容获取策略
+
+当代理全部不可用时的降级方案：
+
+| 被墙站点 | 降级方案 |
+|----------|---------|
+| BBC | CNN（Camoufox 可直接访问，无需代理）|
+| 经济学人 | BBC Business / Reuters 中文 / 第一财经 |
+| YouTube | 无直接替代，搜索相关内容的中文报道 |
+| Twitter/X | 微博热搜 / 知乎讨论 |
+| Google News | 百度新闻 / 今日头条 |
+| GitHub | gh-proxy.com 镜像 |
+
+### 🛡️ Scrapling — 反检测爬虫（VPN 连接后）
+
+Scrapling 是反检测浏览器爬虫，支持 JS 渲染和 Cloudflare 绕过。**必须先连接 VPN**。
+
+```bash
+# 激活 Scrapling 虚拟环境
+source ~/.hermes/skills/scrapling/venv/bin/activate
+
+# 抓取 BBC（需 VPN）
+python3 ~/.hermes/skills/scrapling/scripts/bbc_scraper.py --limit 10 --output bbc.json
+```
+
+**适用场景：** 抓取被墙的 JS 渲染网站（BBC、CNN 等）
+**详见：** `scrapling` skill
+
+### ⚠️ BBC 完全被墙（2026-05 确认）
+
+BBC 网站在**无代理情况下**完全无法访问，包括：
+- `www.bbc.com/news` — 返回空内容
+- `www.bbc.com/zhongwen/simp` — 返回空内容
+- BBC RSS (`feeds.bbci.co.uk`) — 返回空内容
+- BBC API — 返回空内容
+
+**解决方案：** 使用 Shadowrocket VPN 后可正常访问 BBC。连接命令：`scutil --nc start "Shadowrocket"`
+
+### ⚠️ CNN 可直接访问（2026-05 确认）
+
+CNN (`www.cnn.com`) 在中国大陆可以**直接访问**，无需代理：
+- Camoufox 浏览器可正常加载
+- 文章全文可获取
+- 图片 CDN (`media.cnn.com`) 可访问
+- 适合生成 PDF 归档
+
+### ClashX 代理诊断（详细流程）
+
+```bash
+# 1. 检查 ClashX 是否运行
+ps aux | grep -i clash | grep -v grep
+
+# 2. 检查代理端口是否监听
+lsof -i :7890 2>/dev/null | head -3
+
+# 3. 检查 API 是否响应
+curl -s http://127.0.0.1:9090 2>/dev/null
+# 正常返回: {"hello":"clash"}
+
+# 4. 查看当前代理组和节点
+curl -s http://127.0.0.1:9090/proxies/Proxy 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d, indent=2)[:1000])"
+
+# 5. 测试代理连通性
+curl -x http://127.0.0.1:7890 -s --max-time 10 "https://www.google.com" | head -20
+# 空返回 = 代理不通
+
+# 6. 切换节点（如果当前节点不可用）
+curl -s -X PUT http://127.0.0.1:9090/proxies/Proxy \
+  -d '{"name":"c美国1 VIP1 网址:nnbin.com"}' \
+  -H "Content-Type: application/json"
+```
+
+**常见问题：**
+- ClashX 运行但代理不通 → 节点被封，需要切换
+- 所有节点都不通 → 订阅过期，需要更新
+- API 返回正常但 curl 代理超时 → 检查系统代理设置
+
+### ⚠️ 存档服务也被墙
+
+以下存档服务在中国大陆也无法访问：
+- archive.today (archive.ph) — 超时
+- Wayback Machine (web.archive.org) — 超时
+- Google Cache (webcache.googleusercontent.com) — 超时
+- 12ft.io — 超时
+
+### ⚠️ MiMo 联网搜索的限制
+
+MiMo 的 `web_search` 工具是**模拟的**，不是真实的联网搜索：
+- ❌ 无法获取被墙网站的真实内容
+- ❌ 无法绕过付费墙
+- ❌ 无法访问存档服务
+- ✅ 可以生成**仿写文章**（BBC/Reuters/Economist 风格）
+
+当需要英文财经新闻全文时，可以让 MiMo 生成仿写文章，然后生成 PDF。
+
+## ⛔ VPN 节点切换规则（重要）
+
+**绝对禁止**：Agent 不要乱切换 VPN 节点。乱切节点是网络错误的根本原因。
+
+**规则**：
+- 如需切换节点，**必须从已有节点列表里选择**，不要随机切换
+- 优先保持当前节点稳定，不做多余操作
+- 只在用户明确要求或当前节点确认不可用时才切换
+
+**原因**：频繁连接/断开 VPN 会导致 Shadowrocket 自动选择不稳定节点，反而造成网络中断。
+
+## MiMo 联网搜索（模拟搜索，非真实抓取）
+
+当 VPN 完全不可用且用户接受 AI 生成内容时，可用 MiMo API 的 `tools` 参数触发模拟联网搜索。
+
+**⚠️ 关键限制：**
+- ❌ 无法获取被墙网站的真实内容
+- ❌ 无法绕过付费墙
+- ❌ 无法访问 archive.today、Wayback Machine 等存档服务
+- ✅ 可以生成**高质量仿写文章**（BBC/Reuters/Economist 风格）
+
+**推荐工作流：** 不使用 `tools` 参数，直接让 MiMo 生成仿写文章（500-900字），然后用 Playwright 生成 PDF。
+
+```python
+# 正确：直接生成仿写文章（不触发 web_search）
+payload = {
+    'model': 'mimo-v2.5-pro',
+    'messages': [{'role': 'user', 'content': '请生成 BBC Business 风格的财经新闻（500字+），主题：...'}]
+    # 不包含 tools 参数
+}
+```
+
+API 端点: `https://token-plan-cn.xiaomimimo.com/v1/chat/completions`
+API Key: 从 `~/.hermes/auth.json` 的 `credential_pool.xiaomi[0].access_token` 读取
+
+**详见：** 本 skill 的 `references/mimo-web-search.md`（原 `mimo-web-search` skill 完整内容）
+
+## 订阅链接故障排除
+
+### "客户端版本太旧" 错误
+- **症状**：订阅链接返回 base64 编码的提示信息，解码后显示"客户端版本太旧了"
+- **原因**：订阅服务器检测到 Shadowrocket 版本过低，拒绝返回节点列表
+- **解决**：
+  1. 打开 App Store 检查 Shadowrocket 更新
+  2. 或联系 VPN 服务商获取新的订阅链接
+- **检测命令**：
+  ```bash
+  # 解码订阅内容查看是否为错误提示
+  curl -s "http://47.242.55.240/link/9Yinklz3hNqvzVeB?list=shadowrocket" | base64 -d
+  ```
+
+### 订阅服务器 504
+- **症状**：订阅链接返回 `504 Gateway Time-out`
+- **原因**：订阅服务器 `47.242.55.240` 宕机
+- **解决**：等待恢复，或使用其他订阅源
+
+## 添加 VLESS 节点到 Clash Verge
+
+详见 `references/clash-verge-vless-config.md`，包含 vless:// 链接解析、节点格式（Reality/普通TLS）、Python 配置脚本。
+
+**⚠️ 关键 Pitfall：** 永远不要用 sed 编辑 Clash Verge 的 YAML 配置（含 emoji/Unicode 会破坏文件）。必须用 Python。
+
+## 用户需操作事项
+
+当代理不可用时，需要用户手动操作：
+1. 打开 0dcloud App → 切换到可用节点
+2. 或在 ClashX Pro 菜单栏切换节点
+3. 或在 Shadowrocket App 里切换到可用节点
+4. 告诉 agent "已切换"，agent 重新测试
+
+**不要尝试用 `sudo` 设置系统代理** — 需要管理员密码，agent 无权操作。

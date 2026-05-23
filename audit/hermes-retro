@@ -1,0 +1,207 @@
+#!/bin/bash
+# =============================================================================
+# Hermes Audit Retro — 自动复盘
+# =============================================================================
+# Usage:
+#   hermes-retro                  — 复盘今天所有日志
+#   hermes-retro --today           — 同上
+#   hermes-retro --yesterday       — 复盘昨天
+#   hermes-retro --date 2026-05-08 — 复盘指定日期
+#   hermes-retro --range 2026-05-01 2026-05-08 — 复盘日期范围
+#   hermes-retro --last-100        — 复盘最近 100 条记录
+#   hermes-retro --report          — 生成完整报告文件
+# =============================================================================
+
+HERMES_AUDIT_DIR="$HOME/.hermes/audit"
+HERMES_AUDIT_LOG="$HERMES_AUDIT_DIR/commands.log"
+HERMES_RETRO_DIR="$HERMES_AUDIT_DIR/retro"
+
+mkdir -p "$HERMES_RETRO_DIR"
+
+_ts() { date '+%Y-%m-%d %H:%M:%S'; }
+
+# Collect log lines based on date filter
+_collect_logs() {
+    local filter="$1"
+    if [ "$filter" = "all" ]; then
+        cat "$HERMES_AUDIT_LOG" 2>/dev/null
+    elif [ "$filter" = "last-100" ]; then
+        tail -100 "$HERMES_AUDIT_LOG" 2>/dev/null
+    else
+        grep "^\[$filter" "$HERMES_AUDIT_LOG" 2>/dev/null
+    fi
+}
+
+_generate_retro() {
+    local filter="$1"
+    local label="$2"
+    local log_data
+    log_data=$(_collect_logs "$filter")
+
+    if [ -z "$log_data" ]; then
+        echo "📭 ${label}: 暂无日志数据"
+        return
+    fi
+
+    # Count metrics
+    local total_lines
+    total_lines=$(echo "$log_data" | wc -l | tr -d ' ')
+
+    local cmd_count
+    cmd_count=$(echo "$log_data" | grep -c '\[CMD-\|\[TOOL:' || echo 0)
+
+    local session_count
+    session_count=$(echo "$log_data" | grep -c 'SESSION_START' || echo 0)
+
+    local exit_0
+    exit_0=$(echo "$log_data" | grep 'EXIT: 0' | wc -l | tr -d ' ')
+
+    local exit_err
+    exit_err=$(echo "$log_data" | grep -E 'EXIT: [1-9][0-9]*' | wc -l | tr -d ' ')
+
+    local exit_total=$((exit_0 + exit_err))
+
+    # Extract unique CMD IDs
+    local unique_cmds
+    unique_cmds=$(echo "$log_data" | grep -oE '\[CMD-[0-9]+\]' | sort -u | wc -l | tr -d ' ')
+
+    # Find errors (non-zero exits)
+    local errors
+    errors=$(echo "$log_data" | grep -E 'EXIT: [1-9][0-9]*')
+
+    # Find key results — tool calls, note uploads, etc.
+    local uploads
+    uploads=$(echo "$log_data" | grep -iE 'import_doc|add_knowledge|note_id|media_id|DOC-' | head -10)
+
+    # Find anomalies
+    local anomalies
+    anomalies=$(echo "$log_data" | grep -iE 'error|fail|timeout|denied|reject|blocked|429|500|403' | head -10)
+
+    # Time range
+    local first_ts
+    first_ts=$(echo "$log_data" | head -1 | grep -oE '^\[[^]]+\]' | tr -d '[]')
+    local last_ts
+    last_ts=$(echo "$log_data" | tail -1 | grep -oE '^\[[^]]+\]' | tr -d '[]')
+
+    # Build report
+    local report=""
+    report+="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    report+="  📊 复盘报告: ${label}\n"
+    report+="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    report+="\n"
+    report+="📅 时间范围: ${first_ts:-N/A} → ${last_ts:-N/A}\n"
+    report+="\n"
+    report+="📈 统计概览\n"
+    report+="  · 日志条目:     ${total_lines} 行\n"
+    report+="  · 命令/工具调用: ${cmd_count} 次\n"
+    report+="  · 独立会话:     ${session_count} 个\n"
+    report+="  · 唯一 CMD-ID:  ${unique_cmds} 个\n"
+    report+="\n"
+    report+="✅ 执行结果\n"
+    if [ "$exit_total" -gt 0 ]; then
+        local success_pct=$((exit_0 * 100 / exit_total))
+        report+="  · 成功 (EXIT 0):  ${exit_0} 次 (${success_pct}%)\n"
+        report+="  · 失败 (EXIT ≠0): ${exit_err} 次\n"
+    else
+        report+="  · 结果记录暂缺 (非交互式 shell 无 exit hook)\n"
+    fi
+    report+="\n"
+
+    if [ -n "$errors" ]; then
+        report+="❌ 异常命令\n"
+        while IFS= read -r line; do
+            report+="  · ${line}\n"
+        done <<< "$errors"
+        report+="\n"
+    fi
+
+    if [ -n "$anomalies" ]; then
+        report+="⚠️  异常关键字（error/fail/timeout/429/403 等）\n"
+        while IFS= read -r line; do
+            report+="  · ${line}\n"
+        done <<< "$anomalies"
+        report+="\n"
+    fi
+
+    if [ -n "$uploads" ]; then
+        report+="📎 关键产出\n"
+        while IFS= read -r line; do
+            report+="  · ${line}\n"
+        done <<< "$uploads"
+        report+="\n"
+    fi
+
+    # Top commands by type
+    local web_cmds
+    web_cmds=$(echo "$log_data" | grep -cE 'curl|wget|web_|http' 2>/dev/null || true)
+    local git_cmds
+    git_cmds=$(echo "$log_data" | grep -cE 'git ' 2>/dev/null || true)
+    local npm_cmds
+    npm_cmds=$(echo "$log_data" | grep -cE 'npm |pnpm |yarn ' 2>/dev/null || true)
+    local python_cmds
+    python_cmds=$(echo "$log_data" | grep -cE 'python |pip ' 2>/dev/null || true)
+
+    report+="🔧 命令分类\n"
+    if [ "$web_cmds" -gt 0 ]; then report+="  · 🌐 Web 请求:  ${web_cmds} 次\n"; fi
+    if [ "$git_cmds" -gt 0 ]; then report+="  · 📦 Git 操作:  ${git_cmds} 次\n"; fi
+    if [ "$npm_cmds" -gt 0 ]; then report+="  · 📦 npm/包管理: ${npm_cmds} 次\n"; fi
+    if [ "$python_cmds" -gt 0 ]; then report+="  · 🐍 Python:    ${python_cmds} 次\n"; fi
+
+    report+="\n"
+    report+="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+    echo -e "$report"
+}
+
+# === Main ===
+case "${1:---today}" in
+    --today|-t|--day)
+        filter="$(date '+%Y-%m-%d')"
+        label="$(date '+%Y-%m-%d') 今日复盘"
+        _generate_retro "$filter" "$label"
+        ;;
+    --yesterday|-y)
+        filter="$(date -v-1d '+%Y-%m-%d' 2>/dev/null || date --date='yesterday' '+%Y-%m-%d')"
+        label="$filter 昨日复盘"
+        _generate_retro "$filter" "$label"
+        ;;
+    --date|-d)
+        filter="$2"
+        label="$filter 复盘"
+        _generate_retro "$filter" "$label"
+        ;;
+    --range|-r)
+        start="$2"
+        end="$3"
+        label="${start} → ${end} 复盘"
+        echo "⚠️  Range 模式暂用 all + grep 近似实现"
+        _generate_retro "all" "$label"
+        ;;
+    --last-100|-l)
+        _generate_retro "last-100" "最近 100 条"
+        ;;
+    --report|-R)
+        filter="$(date '+%Y-%m-%d')"
+        label="$(date '+%Y-%m-%d')"
+        report=$(_generate_retro "$filter" "$label" 2>/dev/null)
+        report_path="${HERMES_RETRO_DIR}/retro-${label}.md"
+        echo "$report" > "$report_path"
+        echo "✅ 报告已保存: $report_path"
+        ;;
+    --help|-h|help)
+        echo "Hermes 自动复盘工具"
+        echo ""
+        echo "用法:"
+        echo "  hermes-retro                 复盘今天"
+        echo "  hermes-retro --yesterday     复盘昨天"
+        echo "  hermes-retro --date YYYY-MM-DD  复盘指定日期"
+        echo "  hermes-retro --report        生成今日报告文件"
+        echo "  hermes-retro --last-100      复盘最近 100 条"
+        echo "  hermes-retro --help          帮助"
+        ;;
+    *)
+        filter="$(date '+%Y-%m-%d')"
+        label="$(date '+%Y-%m-%d') 今日复盘"
+        _generate_retro "$filter" "$label"
+        ;;
+esac

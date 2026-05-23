@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "installed": {
+    "youtube-full": {
+      "source": "skills.sh",
+      "identifier": "skills-sh/ZeroPointRepo/youtube-skills/skills/youtube-full",
+      "trust_level": "community",
+      "scan_verdict": "safe",
+      "content_hash": "sha256:f6d4f95888def04a",
+      "install_path": "youtube-full",
+      "files": [
+        "SKILL.md",
+        "references/auth-setup.md"
+      ],
+      "metadata": {
+        "detail_url": "https://skills.sh/ZeroPointRepo/youtube-skills/skills/youtube-full",
+        "repo_url": "https://github.com/ZeroPointRepo/youtube-skills"
+      },
+      "installed_at": "2026-05-20T09:34:21.497464+00:00",
+      "updated_at": "2026-05-20T09:34:21.497472+00:00"
+    }
+  }
+}

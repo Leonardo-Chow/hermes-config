@@ -1,0 +1,42 @@
+{
+  "updated_at": "2026-05-23T12:09:17.246213",
+  "platforms": {
+    "telegram": [],
+    "discord": [],
+    "whatsapp": [],
+    "slack": [],
+    "signal": [],
+    "mattermost": [],
+    "matrix": [],
+    "homeassistant": [],
+    "email": [],
+    "sms": [],
+    "dingtalk": [],
+    "msgraph_webhook": [],
+    "feishu": [
+      {
+        "id": "oc_a75cd45b69c8592cb9870318a214546b",
+        "name": "oc_a75cd45b69c8592cb9870318a214546b",
+        "type": "dm",
+        "thread_id": null
+      },
+      {
+        "id": "oc_a75cd45b69c8592cb9870318a214546b:om_x100b6f31de6890a4c4a2b668c439ca3",
+        "name": "oc_a75cd45b69c8592cb9870318a214546b / topic om_x100b6f31de6890a4c4a2b668c439ca3",
+        "type": "dm",
+        "thread_id": "om_x100b6f31de6890a4c4a2b668c439ca3"
+      }
+    ],
+    "wecom": [],
+    "wecom_callback": [],
+    "weixin": [],
+    "bluebubbles": [],
+    "qqbot": [],
+    "yuanbao": [],
+    "google_chat": [],
+    "irc": [],
+    "line": [],
+    "simplex": [],
+    "teams": []
+  }
+}
