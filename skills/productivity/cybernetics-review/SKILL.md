@@ -161,13 +161,48 @@ skill patch: autocli — 更新可用站点列表
 - 各种调试/优化 skill
 - 各种配置/设置 skill
 
+## 每日自动复盘工作流（Cron Job）
+
+### 触发
+- Cron Job ID: `22b9ed16db32`（每天 11:00）
+- 涉及 skill: `ima-skill`（IMA 记忆同步）、`hermes-agent`（更新检测）
+
+### 执行步骤
+1. **运行 hermes-retro** — 脚本路径: `~/.hermes/audit/hermes-retro`（bash 脚本，非 npm 包）
+   ```bash
+   bash ~/.hermes/audit/hermes-retro --today
+   ```
+2. **session_search** — 补充复盘上下文，获取今日会话详情
+3. **Memory 同步到 IMA** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库（`uhcEva4nd2xus1Q2yt7yn_N4_waEdOsQlVU3lhnkLXw=`）
+4. **Hermes 更新检测** — `git fetch origin main` + `git log HEAD..origin/main --oneline`
+5. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+
+### ⚠️ Cron Job 环境限制
+- **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
+- **`skill_manage` 可用** — 可以在 cron 中 patch/create skills
+- **VPN 必须手动连接** — git fetch 等 GitHub 操作需要先连接 Shadowrocket
+
+### ⚠️ macOS 注意事项
+- `timeout` 命令不存在，用 terminal 工具的 `timeout` 参数代替
+- `git fetch` 超时时需连接 VPN: `scutil --nc start "Shadowrocket"`
+- 完成后断开: `scutil --nc stop "Shadowrocket"`
+
+### 数据分流规则
+| 类型 | 目标 | 示例 |
+|------|------|------|
+| 底层逻辑 | memory.md / user.md | 用户偏好、环境事实、方法论 |
+| 操作细节 | skill (skill_manage) | 工具用法、错误处理、工作流 |
+| 历史数据 | IMA 知识库 | 日报、复盘报告、记忆快照 |
+
 ## 注意事项
 1. **闭环优先**：每次复盘必须形成闭环，不能只分析不修正
 2. **底层优先**：先提取底层逻辑存 memory，再存操作细节到 skill
 3. **层级清晰**：skill 分类按控制论层级，不要混杂
 4. **动态更新**：每次复盘后更新相关 skill，保持技能库鲜活
+5. **VPN 前置**：涉及 GitHub 操作时，先检查 VPN 状态再执行
 
 ## 参考资料
 
 - `references/qian-xuesen-cybernetics.md` — 钱学森工程控制论核心理论详解
 - `references/pdf-generation-template.md` — 新闻风格 PDF 生成模板（CNN/BBC/经济学人）
+- `references/ima-memory-sync.md` — Memory 文件同步到 IMA Herme记忆库的完整流程

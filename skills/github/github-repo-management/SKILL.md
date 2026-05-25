@@ -466,6 +466,10 @@ curl -s -X POST \
   -d '{"ref": "main", "inputs": {"environment": "staging"}}'
 ```
 
+## Pushing Config Repos with Secrets
+
+When pushing local config directories (like `~/.hermes/`) to GitHub, you'll likely hit secret scanning push protection. See **`references/secret-scanning-and-push-protection.md`** for the full workflow: .gitignore templates, `git filter-branch` history rewriting, large file handling, and Classic vs Fine-Grained token behavior.
+
 ## 10. Gists
 
 **With gh:**

@@ -749,8 +749,10 @@ so nothing is lost.
   per-skill `use_count`, `view_count`, `patch_count`,
   `last_activity_at`, `state`, `pinned`.
 
-Config: `curator.*` (`enabled`, `interval_hours`, `min_idle_hours`,
-`stale_after_days`, `archive_after_days`, `backup.*`).
+Config: `curator.*` (`enabled`, `interval_hours`, `min_idle_hours`, `stale_after_days`, `archive_after_days`, `backup.*`).
+User docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/curator
+
+**Curator backups** (`skills/.curator_backups/`): Before each curator run, the system creates a full tar.gz snapshot of all skills + cron job config. Each backup is ~130MB. These are for **local rollback only** — always exclude from git repos (they're large and rebuildable). To restore: `tar -xzf skills/.curator_backups/<timestamp>/skills.tar.gz`.
 User docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/curator
 
 ### Kanban (multi-agent work queue)

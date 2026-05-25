@@ -234,14 +234,57 @@ fi
 
 ---
 
+## Token Types: Classic vs Fine-Grained
+
+GitHub offers two PAT types. **Classic tokens are recommended for agent use** — simpler, broader, fewer edge cases.
+
+### Classic Token (`ghp_...`)
+
+- Created at: https://github.com/settings/tokens/new
+- Scopes are checkboxes: `repo`, `workflow`, `read:org`, etc.
+- `repo` scope grants access to ALL owned repos — no per-repo config needed
+- Works immediately with `gh auth login --with-token`
+- Recommended for: CI, automation, agent workflows
+
+### Fine-Grained Token (`github_pat_...`)
+
+- Created at: https://github.com/settings/personal-access-tokens/new
+- **Must explicitly select repositories** — token only accesses listed repos
+- Permissions are per-resource (contents, metadata, issues, etc.)
+- **Common failure:** `gh auth login --with-token` may fail with `missing required scope 'read:org'` even for basic operations — this is a known issue with Fine-Grained tokens
+- **Common failure:** `gh repo create` returns `Resource not accessible by personal access token` — Fine-Grained tokens need `administration:write` permission AND the target org/repo must be in scope
+- Recommended for: Scoped, least-privilege access to specific repos
+
+### When to Use Which
+
+| Scenario | Use Classic | Use Fine-Grained |
+|----------|------------|-----------------|
+| Agent pushing to multiple repos | ✅ | ❌ (must list each repo) |
+| CI/CD for a single repo | ✅ | ✅ |
+| `gh repo create` | ✅ | ⚠️ needs `administration:write` |
+| `gh auth login --with-token` | ✅ | ⚠️ may need `read:org` |
+| Minimal blast radius | ❌ | ✅ |
+
+### Migrating from Fine-Grained to Classic
+
+If a Fine-Grained token keeps failing:
+1. Go to https://github.com/settings/tokens/new
+2. Create a Classic token with `repo` scope
+3. Replace the old token: `echo "ghp_NEW_TOKEN" | gh auth login --with-token`
+4. Set up git credentials: `gh auth setup-git`
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | `git push` asks for password | GitHub disabled password auth. Use a personal access token as the password, or switch to SSH |
-| `remote: Permission to X denied` | Token may lack `repo` scope — regenerate with correct scopes |
+| `remote: Permission to X denied` | Token may lack `repo` scope — regenerate with correct scopes. Fine-Grained: add repo to token's repository list |
 | `fatal: Authentication failed` | Cached credentials may be stale — run `git credential reject` then re-authenticate |
 | `ssh: connect to host github.com port 22: Connection refused` | Try SSH over HTTPS port: add `Host github.com` with `Port 443` and `Hostname ssh.github.com` to `~/.ssh/config` |
 | Credentials not persisting | Check `git config --global credential.helper` — must be `store` or `cache` |
 | Multiple GitHub accounts | Use SSH with different keys per host alias in `~/.ssh/config`, or per-repo credential URLs |
 | `gh: command not found` + no sudo | Use git-only Method 1 above — no installation needed |
+| `missing required scope 'read:org'` | Fine-Grained token issue — switch to Classic token with `repo` scope |
+| `Resource not accessible by personal access token` | Fine-Grained token doesn't have repo in scope, or missing `administration:write` for `gh repo create` |
+| `gh auth login --with-token` times out | Non-interactive env can't do device flow — use `gh auth login --with-token <<< "ghp_TOKEN"` instead |
+| Secret scanning blocks push | See `github-repo-management` skill → `references/secret-scanning-and-push-protection.md` |
