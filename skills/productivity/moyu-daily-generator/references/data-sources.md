@@ -7,6 +7,7 @@
 curl -s 'https://qt.gtimg.cn/q=sh000001,sh000688,sz399001,sz399006,sz399005'
 # GBK解码: iconv -f GBK -t UTF-8 或 python3处理
 ```
+**⚠️ 采集时机注意：** 早盘开盘前（09:15-09:25集合竞价）或刚开盘时，涨跌幅字段显示 0.00%。如果摸鱼日报在 09:30 前生成，A股数据可能是开盘价而非实时涨跌。建议在 09:30 后采集或标注"早盘数据"。
 
 ### 板块涨幅排行
 东方财富 push2.eastmoney.com API（需从 delegate_task 获取或直接用python抓取）

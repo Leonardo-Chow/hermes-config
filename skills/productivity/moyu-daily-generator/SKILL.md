@@ -920,6 +920,19 @@ data = json.loads(raw)
 ### ⚠️ GitHub 内容下载需要 VPN
 从 GitHub 下载 SKILL.md / README.md 等 raw 文件时，中国大陆网络经常超时。**必须先连接 VPN**（`scutil --nc start "Shadowrocket"`），再用 curl 下载 raw.githubusercontent.com。git clone 同理。下载完成后可断开 VPN。
 
+### ⚠️ web_search 不支持 site: 搜索操作符（2026-05-27 验证）
+`web_search(query="site:techcrunch.com AI news")` 会导致 DuckDuckGo 后端报错：
+`"DuckDuckGo search failed: ('error sending request for url ...)"` — URL 编码的 `site:` 查询触发 Brave/Yahoo 后端异常。
+**解决方案：** 不要用 `site:` 操作符，改用普通关键词搜索或直接用 RSS feeds 获取特定来源的内容。
+```python
+# ❌ 会失败
+web_search(query="site:techcrunch.com OR site:theverge.com AI news May 2026")
+# ✅ 正常工作
+web_search(query="technology news today May 2026")
+# ✅ 最佳方案 — 直接用 RSS
+curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/feed/'
+```
+
 ### ⚠️ Tavily MCP 会话缓存断连问题（2026-05-20 验证）
 **症状：** `mcp_tavily_tavily_search` 返回 `"MCP server 'tavily' is not connected"` 或 `"unreachable after 3 consecutive failures"`。
 **诊断：** 运行 `hermes mcp test tavily`，如果显示 `✓ Connected` 但实际调用仍失败，则是**会话级缓存问题**。
