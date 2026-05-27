@@ -82,3 +82,5 @@ Thumbs.db
 !skills/.gitkeep
 !optional-skills/.gitkeep
 skills/.curator_backups/
+kanban.db-shm
+kanban.db-wal
