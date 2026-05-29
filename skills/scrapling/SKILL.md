@@ -467,6 +467,8 @@ class MySpider(Spider):
 - **Resource usage**: StealthyFetcher runs a real browser — limit concurrent usage
 - **disable_resources**: Set `disable_resources=True` to block fonts/images/media/stylesheets for ~25% faster loading
 - **GFW blocked sites**: For BBC, CNN, Google etc. from China — VPN **must** be connected first. Scrapling respects system proxy settings when VPN is active.
+- **Shadowrocket proxy for Scrapling/Playwright**: Shadowrocket macOS exposes HTTP/SOCKS5 proxy at `127.0.0.1:1082`. Pass `proxy='http://127.0.0.1:1082'` to Fetcher/DynamicFetcher/StealthyFetcher. Verified working for Instagram, Google, BBC. **Does NOT work for TikTok** (see below).
+- **TikTok X-Bogus anti-bot (2026-05-29 verified)**: TikTok's video list API requires an `X-Bogus` token generated client-side by TikTok's own JS. Even with proxy + cookies + Playwright, the video grid returns empty. The SSR `itemList` is always empty. Direct API calls return 0 bytes. **Do not attempt TikTok video scraping with Scrapling** — all approaches (DynamicFetcher, StealthyFetcher, Playwright with cookies) fail.
 - **Proxy connection failures**: ~5-10% of requests may fail with `ERR_PROXY_CONNECTION_FAILED`. Wrap in try/except, log failures, continue.
 - **YouTube likes/comments**: Dynamically loaded via JS, ~50% success rate. Use `aria-label` attributes as fallback.
 - **CLI `extract` command**: As of v0.2.99, the CLI only has `install` command. Use Python API instead for older versions. v0.4.8+ has full CLI.
@@ -526,6 +528,32 @@ titles = page.css('h2::text').getall()
 ### Reddit (Anti-bot, Camoufox required)
 
 See `references/reddit-scraping.md` — Reddit blocks curl/API/regular browsers. Camoufox (StealthyFetcher) is the only working approach.
+
+### Instagram Profile Posts (GFW, anti-bot)
+
+```python
+from scrapling.fetchers import StealthyFetcher
+
+page = StealthyFetcher.fetch(
+    'https://www.instagram.com/brand_handle/',
+    headless=True, network_idle=True, disable_resources=True,
+    block_webrtc=True, hide_canvas=True,
+)
+# Post URLs
+links = page.css('a[href*="/p/"]::attr(href)').getall() + page.css('a[href*="/reel/"]::attr(href)').getall()
+# Post content
+texts = page.css('[data-e2e*="desc"]::text').getall()
+# Note: exact dates NOT available without login — posts are ordered most-recent-first
+```
+
+### TikTok ⚠️ Very Difficult — Anti-Bot Blocks Video Grid
+
+TikTok uses X-Bogus client-side anti-bot tokens. The video grid is loaded via JS API calls that require this token — it cannot be extracted from CLI/automation.
+
+**What works:** Page loads (HTTP 200), profile info visible, relative time markers (e.g., "12h", "2d") in page text, oembed API for individual video metadata.
+**What does NOT work:** Video listing, video descriptions, exact timestamps, the `/api/post/item_list/` endpoint (returns empty without X-Bogus).
+
+**For TikTok monitoring:** Use NoxInfluencer Brand Monitor (requires brand_id from web UI), or manual browser checking.
 
 ## Support Files
 

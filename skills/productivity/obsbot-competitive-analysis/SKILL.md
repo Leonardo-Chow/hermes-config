@@ -19,9 +19,23 @@ version: 1.1.0
 - 红人视频文件夹（腾讯文档）：`DNmTBhbgCAky`
 - TranscriptAPI Key：存储在 `~/.zshenv`
 
+## 每日监测工作流
+
+当用户要求「每日监测」「今天更新的 OBSBOT 视频」「daily monitor」时，执行每日监测流程。
+
+核心流程：YouTube Data API + web_search 多平台搜索 → 腾讯文档智能表格（7列：更新时间/KOL ID/产品关键词/平台/视频类型/视频简介/视频链接）。
+
+**关键要求**：
+- 简介必须完整（含所有链接、折扣码、hashtags、免责声明），不能摘要
+- 搜索结果标注置信度（HIGH/MEDIUM/LOW）
+- 未检测到的平台必须说明是「确认无内容」还是「检测能力不足」
+
+详见 `references/daily-monitoring-workflow.md`。
+
 ## 适用场景
 
 - OBSBOT 产品竞品分析
+- OBSBOT 每日多平台内容监测（YouTube/Instagram/TikTok/X）
 - 任何产品的多平台用户反馈分析
 - 从 docx/xlsx 文件中提取数据生成可视化报告
 
@@ -141,6 +155,7 @@ for name in wb.sheetnames:
 | `verified-kol-patterns-from-v3-session.md` | 2026-05 美洲市场V3已验证的KOL偏好模式 + 搜索参数 + GFW恢复策略 |
 | `kol-video-analysis-workflow.md` | KOL 单视频分析流程 |
 | `youtube-full-search.md` | YouTube 全量视频搜索 |
+| `daily-monitoring-workflow.md` | 每日监测工作流（多平台搜索+智能表格） |
 | `html-template-guide.md` | HTML 报告模板指南 |
 
 ### Step 4: 报告生成
@@ -358,6 +373,14 @@ for table in doc.tables:
 
 ### ⚠️ YouTube Data API 需要 VPN
 在中国大陆环境下，YouTube Data API 调用需要 VPN 连接（Shadowrocket）。调用前先检查 VPN 状态：`scutil --nc status "Shadowrocket"`。如果断开，先连接：`scutil --nc start "Shadowrocket"`。
+
+### ⚠️ 多平台搜索的置信度差异
+YouTube Data API 返回 HIGH 置信度结果。但 Instagram/TikTok/X 的 web_search 结果置信度仅为 MEDIUM/LOW：
+- 搜索引擎对当天帖子索引延迟（几小时到几天）
+- web_extract 被所有社交平台的登录墙拦截
+- NoxInfluencer 可查 tagged 创作者但无法确认当天是否发了相关内容
+- 第一次搜索可能遗漏 Instagram 内容（已验证），必须用多种查询变体重试
+- 搜索结果为「未检测到」≠「确认无内容」，必须向用户说明检测能力限制
 
 ### ⚠️ 用户期望持续推进
 不要中途停下汇报「X/Y 完成」然后等待指令。遇到失败应尝试其他方法继续，直到所有数据获取完毕。生成文档前必须自检：文字覆盖率≥95%、关键板块全部存在。

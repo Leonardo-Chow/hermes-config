@@ -392,6 +392,27 @@ Use brand-monitor commands for owned/competitor brand analysis and brand asset e
 
 See `{baseDir}/references/brand-monitor.md` for command routing and platform boundaries.
 
+### ⚠️ Pitfall: No Brand Search API — `brand_id` Must Come from Web UI
+
+**There is NO `brand-monitor create` command.** The only way to add a brand is:
+```bash
+noxinfluencer brand-monitor add <brand_id> --force
+```
+The `brand_id` is an **opaque identifier** that exists in NoxInfluencer's brand database — it cannot be constructed, guessed, or searched via the CLI or API.
+
+**Steps to obtain brand_id:**
+1. Open https://www.noxinfluencer.com (or https://cn.noxinfluencer.com) in a browser
+2. Navigate to Brand Monitor → search for the brand name
+3. The brand_id appears in the URL or can be copied from the brand detail page
+4. Then run: `noxinfluencer brand-monitor add <brand_id> --force`
+5. Unlock data: `noxinfluencer brand-monitor unlock-base <brand_id> --force`
+
+**Existing brand_id format examples:**
+- Roblox: `2_Zo8xvGlDG5LEOMSWvFdi9yhcXHEsLnnOyPRBkS`
+- Nike: `6qc-ihHOWMRVe6cJNcXf_MNRDt7Ar3q6z5wROW2t2ckO`
+
+**Do NOT** try `noxinfluencer brand-monitor create` — it does not exist. Do NOT try API endpoints like `/v1/brand/search` — they return 404. The brand_id is the user's manual step; once obtained, the agent handles everything else.
+
 ---
 
 ## Workflow Routing

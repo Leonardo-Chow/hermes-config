@@ -396,7 +396,9 @@ mcporter auth tencent-docs
 6. smartsheet.add_records      → 批量添加记录（每批 ≤10 条）
 7. smartsheet.list_records     → 检查是否有默认空行
 8. smartsheet.delete_records   → 删除默认空行（创建时自动生成的空记录）
-9. manage.move_file            → 移动到目标文件夹（参数是 target_folder_id）
+9. smartsheet.rename_table  → 重命名工作表标签（默认是"智能表1"，改为有意义的名称）
+10. manage.rename_file_title → 改为中文标题（如需要）
+11. manage.move_file            → 移动到目标文件夹（参数是 target_folder_id）
 ```
 
 **⚠️ 关键顺序：必须先删除默认字段，再添加自定义字段，最后添加记录！**

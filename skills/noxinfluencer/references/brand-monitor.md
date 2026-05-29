@@ -38,3 +38,32 @@ Use brand-monitor commands for brand-level market intelligence and asset exports
 - Dry-run first unless the user already approved the exact brand and action.
 - Use `--force` only after approval.
 - For unlock operations, explain that quota/entitlement may be consumed before executing.
+
+## ⚠️ Brand Monitor Setup Limitations (2026-05-29 verified)
+
+### No `create` Command
+There is **no `brand-monitor create` command**. The only way to add a brand is:
+```bash
+noxinfluencer brand-monitor add <brand_id> --force
+```
+The `brand_id` is an opaque string that already exists in NoxInfluencer's brand database (e.g., Roblox = `2_Zo8xvGlDG5LEOMSWvFdi9yhcXHEsLnnOyPRBkS`, Nike = `6qc-ihHOWMRVe6cJNcXf_MNRDt7Ar3q6z5wROW2t2ckO`).
+
+### No Brand Search API
+There is **no CLI command or API endpoint** to search for brands by name. The brand_id must be obtained manually from the NoxInfluencer web UI:
+1. Go to https://www.noxinfluencer.com (or cn.noxinfluencer.com) → Brand Monitor → Search for the brand
+2. Copy the brand_id from the URL or page
+3. Then run `noxinfluencer brand-monitor add <brand_id> --force`
+
+### Setup Workflow
+```
+noxinfluencer doctor                              # Verify connectivity
+noxinfluencer brand-monitor list                  # Check existing monitors
+noxinfluencer schema 'brand-monitor add'          # Check required params
+noxinfluencer brand-monitor add <brand_id> --force # Add brand to monitor
+noxinfluencer brand-monitor unlock-base <brand_id> --force  # Unlock basic data
+noxinfluencer brand-monitor get <brand_id>        # Verify monitoring active
+```
+
+### Existing Monitors (as of 2026-05-29)
+- Roblox (`2_Zo8xvGlDG5LEOMSWvFdi9yhcXHEsLnnOyPRBkS`) — YouTube, Instagram, TikTok
+- Nike (`6qc-ihHOWMRVe6cJNcXf_MNRDt7Ar3q6z5wROW2t2ckO`) — YouTube, Instagram, TikTok

@@ -4,13 +4,13 @@
     "created_at": "2026-05-08T14:16:09.699061+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-19T02:07:56.443185+00:00",
-    "last_used_at": "2026-05-19T01:56:12.799664+00:00",
-    "last_viewed_at": "2026-05-19T01:56:12.798619+00:00",
+    "last_used_at": "2026-05-29T03:50:00.612439+00:00",
+    "last_viewed_at": "2026-05-29T03:50:00.610621+00:00",
     "patch_count": 11,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 10,
+    "view_count": 10
   },
   "amazon-review-scraper": {
     "archived_at": null,
@@ -69,13 +69,13 @@
     "created_at": "2026-05-13T02:07:28.543866+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-13T10:08:41.190646+00:00",
-    "last_used_at": "2026-05-13T10:09:05.021834+00:00",
-    "last_viewed_at": "2026-05-13T10:09:05.020743+00:00",
+    "last_used_at": "2026-05-29T04:38:56.171582+00:00",
+    "last_viewed_at": "2026-05-29T04:38:56.170034+00:00",
     "patch_count": 22,
     "pinned": false,
     "state": "active",
-    "use_count": 14,
-    "view_count": 14
+    "use_count": 15,
+    "view_count": 15
   },
   "camoufox": {
     "archived_at": null,
@@ -108,13 +108,13 @@
     "created_at": "2026-05-09T11:05:04.361493+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-27T03:55:37.328965+00:00",
-    "last_used_at": "2026-05-29T02:51:54.489475+00:00",
-    "last_viewed_at": "2026-05-29T02:51:54.488642+00:00",
+    "last_used_at": "2026-05-29T06:04:40.449733+00:00",
+    "last_viewed_at": "2026-05-29T06:04:40.449041+00:00",
     "patch_count": 11,
     "pinned": false,
     "state": "active",
-    "use_count": 8,
-    "view_count": 8
+    "use_count": 9,
+    "view_count": 9
   },
   "daily-digest": {
     "archived_at": null,
@@ -289,27 +289,27 @@
     "archived_at": null,
     "created_at": "2026-05-27T03:57:28.345191+00:00",
     "created_by": null,
-    "last_patched_at": "2026-05-28T07:51:18.216248+00:00",
-    "last_used_at": "2026-05-29T03:01:50.660126+00:00",
-    "last_viewed_at": "2026-05-29T03:01:50.658636+00:00",
-    "patch_count": 7,
+    "last_patched_at": "2026-05-29T06:02:58.874225+00:00",
+    "last_used_at": "2026-05-29T06:02:16.041129+00:00",
+    "last_viewed_at": "2026-05-29T06:02:16.040463+00:00",
+    "patch_count": 10,
     "pinned": false,
     "state": "active",
-    "use_count": 10,
-    "view_count": 10
+    "use_count": 12,
+    "view_count": 12
   },
   "obsbot-competitive-analysis": {
     "archived_at": null,
     "created_at": "2026-05-19T04:45:36.755112+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-05-28T07:20:49.665420+00:00",
-    "last_used_at": "2026-05-29T03:01:50.660714+00:00",
-    "last_viewed_at": "2026-05-29T03:01:50.659188+00:00",
-    "patch_count": 21,
+    "last_patched_at": "2026-05-29T06:03:33.117471+00:00",
+    "last_used_at": "2026-05-29T06:02:41.173897+00:00",
+    "last_viewed_at": "2026-05-29T06:02:41.173182+00:00",
+    "patch_count": 27,
     "pinned": false,
     "state": "active",
-    "use_count": 17,
-    "view_count": 17
+    "use_count": 20,
+    "view_count": 20
   },
   "repomix": {
     "archived_at": null,
@@ -328,14 +328,14 @@
     "archived_at": null,
     "created_at": "2026-05-10T04:48:23.410560+00:00",
     "created_by": null,
-    "last_patched_at": "2026-05-16T06:05:51.811337+00:00",
-    "last_used_at": "2026-05-16T04:48:22.415991+00:00",
-    "last_viewed_at": "2026-05-16T04:48:22.414449+00:00",
-    "patch_count": 16,
+    "last_patched_at": "2026-05-29T06:03:46.426171+00:00",
+    "last_used_at": "2026-05-29T05:40:01.634805+00:00",
+    "last_viewed_at": "2026-05-29T05:40:01.634082+00:00",
+    "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
-    "view_count": 5
+    "use_count": 7,
+    "view_count": 7
   },
   "tavily-python": {
     "archived_at": null,
@@ -354,14 +354,14 @@
     "archived_at": null,
     "created_at": "2026-05-10T06:45:25.550513+00:00",
     "created_by": null,
-    "last_patched_at": "2026-05-28T07:51:41.796948+00:00",
-    "last_used_at": "2026-05-29T03:01:50.661145+00:00",
-    "last_viewed_at": "2026-05-29T03:01:50.659657+00:00",
-    "patch_count": 45,
+    "last_patched_at": "2026-05-29T03:44:37.264539+00:00",
+    "last_used_at": "2026-05-29T03:43:10.803658+00:00",
+    "last_viewed_at": "2026-05-29T03:43:10.802805+00:00",
+    "patch_count": 46,
     "pinned": false,
     "state": "active",
-    "use_count": 37,
-    "view_count": 37
+    "use_count": 38,
+    "view_count": 38
   },
   "tencent-docs-mcp": {
     "archived_at": null,
