@@ -199,12 +199,12 @@
     "created_at": "2026-05-08T06:21:14.854643+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-20T09:59:30.712832+00:00",
-    "last_used_at": "2026-05-29T02:51:40.747349+00:00",
+    "last_used_at": "2026-05-29T03:00:14.120649+00:00",
     "last_viewed_at": "2026-05-20T09:40:49.854096+00:00",
     "patch_count": 5,
     "pinned": false,
     "state": "active",
-    "use_count": 38,
+    "use_count": 39,
     "view_count": 6
   },
   "jina-reader": {
@@ -290,26 +290,26 @@
     "created_at": "2026-05-27T03:57:28.345191+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-28T07:51:18.216248+00:00",
-    "last_used_at": "2026-05-28T08:16:40.557290+00:00",
-    "last_viewed_at": "2026-05-28T08:16:40.555324+00:00",
+    "last_used_at": "2026-05-29T03:01:50.660126+00:00",
+    "last_viewed_at": "2026-05-29T03:01:50.658636+00:00",
     "patch_count": 7,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 10,
+    "view_count": 10
   },
   "obsbot-competitive-analysis": {
     "archived_at": null,
     "created_at": "2026-05-19T04:45:36.755112+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-05-28T07:20:49.665420+00:00",
-    "last_used_at": "2026-05-28T08:09:03.063215+00:00",
-    "last_viewed_at": "2026-05-28T08:09:03.061930+00:00",
+    "last_used_at": "2026-05-29T03:01:50.660714+00:00",
+    "last_viewed_at": "2026-05-29T03:01:50.659188+00:00",
     "patch_count": 21,
     "pinned": false,
     "state": "active",
-    "use_count": 16,
-    "view_count": 16
+    "use_count": 17,
+    "view_count": 17
   },
   "repomix": {
     "archived_at": null,
@@ -355,13 +355,13 @@
     "created_at": "2026-05-10T06:45:25.550513+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-28T07:51:41.796948+00:00",
-    "last_used_at": "2026-05-28T07:51:21.857629+00:00",
-    "last_viewed_at": "2026-05-28T07:51:21.856320+00:00",
+    "last_used_at": "2026-05-29T03:01:50.661145+00:00",
+    "last_viewed_at": "2026-05-29T03:01:50.659657+00:00",
     "patch_count": 45,
     "pinned": false,
     "state": "active",
-    "use_count": 36,
-    "view_count": 36
+    "use_count": 37,
+    "view_count": 37
   },
   "tencent-docs-mcp": {
     "archived_at": null,
