@@ -1,7 +1,7 @@
 ---
 name: obsbot-competitive-analysis
 description: 多平台竞品分析工作流 — 从 YouTube/Reddit/Amazon 等平台数据（docx/xlsx）中提取用户反馈，生成杂志风格 HTML 市场分析报告（含 Chart.js 图表）。当用户要求分析竞品数据、生成市场分析报告、或处理 OBSBOT/竞品的 YouTube 评论/Reddit 讨论/Amazon 评论时使用。也适用于 YouTube 全量视频搜索+KOL 调研（产品竞品分析场景）。
-version: 1.0.0
+version: 1.1.0
 ---
 
 # 多平台竞品分析工作流
@@ -131,10 +131,207 @@ for name in wb.sheetnames:
 - 统计提及频率
 - 对比维度：价格、功能、用户口碑
 
+### 参考文件索引
+
+本 skill 的 `references/` 目录包含：
+| 文件 | 内容 |
+|:-----|:-----|
+| `kol-screening-criteria.md` | KOL筛选标准全文解析 |
+| `noxinfluencer-kol-discovery-cookbook.md` | NoxInfluencer CLI 搜索命令大全 |
+| `verified-kol-patterns-from-v3-session.md` | 2026-05 美洲市场V3已验证的KOL偏好模式 + 搜索参数 + GFW恢复策略 |
+| `kol-video-analysis-workflow.md` | KOL 单视频分析流程 |
+| `youtube-full-search.md` | YouTube 全量视频搜索 |
+| `html-template-guide.md` | HTML 报告模板指南 |
+
 ### Step 4: 报告生成
 - 使用 execute_code 一次性生成完整 HTML
 - 用 write_file 写入 ~/Documents/ 目录
 - 文件名格式：{产品名}-market-analysis-{日期}.html
+
+## KOL 资源开发工作流（美洲市场示例）
+
+当用户要求开发新市场 KOL 资源时，执行以下流程：
+
+### ⚠️ 第一步：判断「找新的」还是「补旧的」
+
+用户可能指定具体 KOL ID（如"找我指定的这几个"），也可能让搜索新的人。**规则**：
+- **用户给具体名字** → `Connor McCaskill` / `Davey Gravy` 等 → 只查这几个人的数据并补全，**不要去找同类型**
+- **用户给品类要求** → "找Tech/3C类的中腰部博主" → 用 NoxInfluencer 搜索
+- **用户给示例但说找相似** → 按品类+量级参数搜索匹配的
+- **用户从之前结果里留一部分** → 留下的不要动，其余按场景补充
+
+### 步骤0：产品→场景→品类映射（必须先做）
+
+用户明确纠正过「先思考产品适合的目标人群，然后再去寻找KOL」。在任何搜索前，先分析产品核心卖点 → 对应的使用场景 → YouTube 品类：
+
+```python
+# 例：OBSBOT Tiny 3 核心卖点 = AI追踪 + PTZ自动跟拍
+target_scenarios = [
+    ("🎥 直播/串流",    "走动时AI自动追踪",   ["Livestream", "Streamer"]),        # P0
+    ("🏋️ 健身/运动",   "运动中自动跟拍",     ["Sports", "Fitness"]),              # P0
+    ("🎵 音乐/录音棚", "多角度无人跟拍",     ["Music", "Studio"]),               # P1
+    ("📷 相机/视频教学","AI追踪作为卖点",     ["Camera", "Videography"]),          # P1
+    ("🪑 桌搭/工作室", "高颜值摄像头融入Setup",["Content Creator", "Setup"]),     # P1
+    ("🎮 游戏直播",    "互动更自由",          ["Gamer", "Game Gear"]),             # P2
+    ("💼 远程办公/教育","AI自动构图",         ["Apple", "Productive Tools"]),     # P2
+]
+# 用场景对应的品类去 NoxInfluencer 搜索
+
+用户历史偏好模式（已验证保留的KOL样本）和更多已验证的 NoxInfluencer 搜索参数见 `references/verified-kol-patterns-from-v3-session.md`。
+```
+
+### 数据源准备
+1. **已合作 KOL 表** — `Tiny 3 & Lite KOL(1).xlsx`（或更新的版本），用于排除已合作博主
+2. **已有模板** — `Leonardo的 KOL资源开发.xlsx`，包含了部分已筛选的 KOL
+3. **KOL筛选标准** — IMA 笔记「KOL筛选标准」，搜索关键词定位。详见 `references/kol-screening-criteria.md`
+
+### 排除规则
+- 用 `openpyxl` 读取已合作表的「网红ID」列（B列），生成排除列表：`python3 -c "import openpyxl; ..."`
+- 同时排除模板中已有的 KOL（以免重复）
+- 逐一验证候选 KOL 在排除列表中：`python3 -c 'print("✅" if name.lower() not in kols else "⛔")'`
+
+### ⚠️ 关键偏好：KOL 量级选择
+- **用户明确要求中腰部以下** — 不要全选头部/顶部博主
+- 按筛选标准量级定义（近期10个视频均播）：
+  - 🥈 **Mid-tier（腰部）**：10k ≤ views < 30k — **首选**
+  - 🥉 **Nano（尾部）**：views < 10k — **首选**
+  - 🥇 **Lower Macro（中下部）**：30k ≤ views < 50k — **少量**
+  - 🏆 **Elite / Upper Macro**（views ≥ 50k）— **不要选**
+- **粉丝数 >3k** — 太低的不考虑
+- **近3个月活跃** — `--published_within_days 90` 过滤
+
+### KOL 搜索策略（从中国网络环境）
+
+| 方法 | 效果 | 说明 |
+|:-----|:-----|:-----|
+| **Noxinfluencer CLI** | ⭐ **首选** | CLI搜索最精准，支持关键词/国家/粉丝量/均播/活跃度多维过滤。4000配额/月 |
+| **Noxinfluencer 网页版** | ⭐ 备用 | 筛选标准推荐，含多个OBSBOT账号（见 `references/kol-screening-criteria.md`） |
+| **YouTube Data API** | ⚠️ 需要VPN | 可搜索特定品类频道，配额有限 |
+| **web_search + FeedSpot** | ⚠️ 辅助 | 可找到频道目录站，但GFW下结果有限 |
+| **delegate_task** | ⚠️ 容易超时 | 大范围搜索容易600s超时，适合窄范围搜索 |
+| **web_extract** | ❌ GFW阻断 | 多数KOL目录站被墙 |
+| **知识 + 验证** | ⭐ 备用 | 利用对YouTube创作者生态的了解 + 定向搜索验证 |
+
+### NoxInfluencer 搜索参数详解
+
+详细搜索命令和已验证的频道名单见 `references/noxinfluencer-kol-discovery-cookbook.md`。
+
+```bash
+# 基础搜索命令
+noxinfluencer creator search --platform youtube \
+  --country '[US,CA]' \           # 国家：US=美国, CA=加拿大, MX=墨西哥
+  --keywords '[关键词]' \          # 搜索关键词（shell引号数组）
+  --avg_view_min 3000 \            # 最低均播
+  --avg_view_max 50000 \           # 最高均播
+  --follower_min 3000 \            # 最低粉丝
+  --follower_max 150000 \          # 最高粉丝
+  --published_within_days 90 \     # 最近90天内发布过视频
+  --page_size 20 \                 # 每页数量（最多20）
+  --lang zh                        # 中文输出
+```
+
+**关键筛选参数**：
+- `--avg_view_min` / `--avg_view_max` — 按均播过滤量级（核心参数）
+- `--follower_min` / `--follower_max` — 按粉丝数过滤
+- `--published_within_days` — 确保活跃度（建议90天）
+- `--keywords` — 按内容标签搜索，支持多关键词
+- `--country` — 目标市场国家代码
+- `--follower_countries` — 受众国家占比
+
+**分品类关键词策略**：
+| 品类 | 关键词 | 建议均播范围 |
+|:-----|:-------|:------------|
+| Tech/3C | `[webcam review,tech gadget,3C,camera review]` | 5k-50k |
+| Camera/Videography | `[camera review,photography tutorial,videography,film]` | 3k-50k |
+| Desk Setup/PC Build | `[desk setup,gaming setup,PC build,home office]` | 3k-50k |
+| Livestream/Gamer | `[streaming setup,gaming gear,live stream,PTZ camera]` | 3k-50k |
+| Music/Studio | `[music production,studio setup,guitar tutorial]` | 3k-50k |
+| Content Creator | `[productive tools,setup tour,workspace]` | 3k-50k |
+| Sports/Fitness | `[fitness,yoga,workout,gym,home gym]` | 3k-50k |
+| Apple/Accessories | `[apple accessories,mac setup,iphone accessories]` | 3k-50k |
+| Mexico (Spanish) | `[tecnologia,camara web,streaming,reseña]` | 3k-50k |
+
+### 价格估算
+
+| 量级 | 均播范围 | 建议价格 |
+|:-----|:---------|:---------|
+| 🥉 Nano | <10k | $60 - $200 |
+| 🥈 Mid-tier | 10k-30k | $200 - $500 |
+| 🥇 Lower Macro | 30k-50k | $500 - $900 |
+| 🥇 Upper Macro | 50k-100k | $900 - $2,000 （慎选）|
+| 🏆 Elite | ≥100k | $2,000+ （用户要求不选）|
+
+### 后续步骤：联系信息
+- **不要在当前流程中获取联系方式** — 用户明确表示「可以先不获取联系方式，后面我自己去弄」
+- 后续操作：NoxInfluencer 中可以用 `creator contacts` 获取邮箱
+
+### 品类覆盖要求
+
+不要全是一种类型，按 KOL筛选标准的网红类型分类覆盖：
+
+| 优先级 | 品类 | 与产品匹配度 |
+|:-------|:-----|:------------|
+| P0 | Camera / Tech / 3C / Gadget Review | 直接评测摄像头产品 |
+| P1 | PC Build / Desk Setup / Livestream | 可用作工作室/直播设备 |
+| P2 | Content Creator / Apple / Game Gear | 内容创作生态设备 |
+| P3 | Music / Art / DIY / Sports / Entertainment | 场景化使用案例 |
+
+### 模板填写规范（16列）
+
+| 列号 | 字段 | 填写规范 |
+|:----:|:-----|:---------|
+| 1 | 产品 | 固定为 `Tiny 3& Tiny 3 Lite` |
+| 2 | KOL ID | 频道名称（非Handle） |
+| 3 | 邮箱 | 公开邮箱或 @频道名推测 |
+| 4 | 频道链接 | YouTube 频道 URL |
+| 5 | 受众国家 | 按筛选标准：美国/加拿大/墨西哥 |
+| 6 | 粉丝量（k） | 如 `7.1M`, `136k` |
+| 7 | 量级（k）（视频均播） | 按近期10个视频均播估算 |
+| 8 | 互动率 | 百分比估算 |
+| 9 | 网红类型-一级类目 | Tech / Camera / Livestream / Gamer / Content Creator / Apple / Sports / Entertainment |
+| 10 | 网红类型-二级类目 | 按筛选标准中的二级类目填写 |
+| 11 | 视频形式&内容 | 简述频道内容方向 |
+| 12 | 合作平台 | `youtube` |
+| 13 | 建议合作价格 | 按量级估算（Nano $50-200 / Mid-tier $200-500 / Macro $500-1000 / Elite $1000+） |
+| 14 | 是否建议合作及理由 | 必须填写2-3句推荐理由 |
+| 15 | 筛选时间 | `YYYY-MM-DD` |
+| 16 | @审核人员 | 留空（用户负责审核） |
+
+### Excel 生成脚本
+```python
+# 用 openpyxl 生成格式化的 Excel 文件
+# 模板格式：标题行（合并A1:P1）+ 表头行（蓝色背景白字）+ 数据行
+# 冻结窗格 A3，启用自动筛选
+```
+
+### 腾讯文档 上传工作流
+
+KOL 资源表生成后，上传到腾讯文档云盘 OBSBOT 文件夹：
+
+```bash
+# Step 1: 上传到 COS
+cd ~/.hermes/skills/tencent-docs
+bash import_file.sh "/path/to/Leonardo的 KOL资源开发_XX.xlsx"
+# 输出：IMPORT_READY, FILE_KEY, FILE_NAME, FILE_MD5, TASK_ID, FILE_SIZE
+
+# Step 2: 触发异步导入
+mcporter call "tencent-docs" "manage.async_import" --args '{"task_id": "<TASK_ID>", "file_size": "<FILE_SIZE>", "file_key": "<FILE_KEY>", "file_name": "<FILE_NAME>", "file_md5": "<FILE_MD5>"}'
+
+# Step 3: 等待导入完成（15秒）
+sleep 15
+
+# Step 4: 搜索找到 file_id
+mcporter call "tencent-docs" "manage.search_file" --args '{"search_key": "文件名关键词"}'
+# 记录返回的 file_id
+
+# Step 5: 移动到 OBSBOT 文件夹 (DjbGtzenXmbX)
+mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "<file_id>", "target_folder_id": "DjbGtzenXmbX"}'
+
+# Step 6: 验证
+mcporter call "tencent-docs" "manage.folder_list" --args '{"folder_id": "DjbGtzenXmbX"}'
+```
+
+⚠️ **注意**：`manage.import_progress` 已知返回 405，替代方案是用 `manage.search_file` 确认。
 
 ## 常见陷阱
 
@@ -164,6 +361,66 @@ for table in doc.tables:
 
 ### ⚠️ 用户期望持续推进
 不要中途停下汇报「X/Y 完成」然后等待指令。遇到失败应尝试其他方法继续，直到所有数据获取完毕。生成文档前必须自检：文字覆盖率≥95%、关键板块全部存在。
+
+### 🔑 关键工作流修正（2026-05-28 美洲市场V3经验）
+
+#### 步骤0：产品→场景→品类映射（必须先做）
+
+在搜索任何 KOL 之前，**先分析产品目标使用场景**，再映射到 YouTube 内容品类。用户明确纠正过「先思考tiny3适合的目标人群，然后再去寻找KOL」：
+
+```python
+# 例：OBSBOT Tiny 3 核心卖点 = AI追踪 + PTZ自动跟拍
+target_scenarios = [
+    ("🎥 直播/串流", "走动时自动追踪", ["Livestream", "Streamer"]),
+    ("🏋️ 健身/运动", "运动中自动跟拍", ["Sports", "Fitness"]),
+    ("🎵 音乐/录音棚", "多机位无人跟拍", ["Music", "Studio"]),
+    ("📷 相机/视频教学", "AI追踪作为卖点", ["Camera", "Videography"]),
+    ("🪑 桌搭/工作室", "高颜值摄像头融入Setup", ["Content Creator", "Setup"]),
+    ("🎮 游戏直播", "互动更自由", ["Gamer", "Game Gear"]),
+    ("💼 远程办公/教育", "AI自动构图", ["Apple", "Productive Tools"]),
+]
+# 用这些场景对应的品类去 NoxInfluencer 搜索
+```
+
+#### 多版本迭代模式
+
+用户可能会经历多轮筛选。V1→V2→V3迭代常见：
+- **V1** 偏大（容易选头部博主）→ 用户会要求缩小
+- **V2** 用中腰部但品类不够匹配 → **V3** 按场景精细化
+- 每一版生成**新文件**（标注版本号 `_V3_`），不覆盖旧版
+- 用户留下哪些就保留，剩下重新按场景补充
+
+#### 中腰部/Nano 严格参数（用户已验证）
+
+用户从 V2 的 39 个里只保留了 12 个，其余要求全部重找。已验证的偏好特征：
+```
+粉丝范围: 34k ~ 137k，中位数 ~70k
+均播范围: 2k ~ 38k，中位数 ~15k
+❌ Elite（均播≥50k或粉丝≥150k）不要选
+✅ Mid-tier（均播10k-30k）/ Nano（均播<10k）首选
+✅ Lower Macro（均播30k-50k）可少量
+```
+
+#### NoxInfluencer GFW 故障恢复
+
+NoxInfluencer API (`skill.noxinfluencer.com`) 有时被 GFW 阻断：
+```
+Error: Request failed: fetch failed
+noxinfluencer doctor → server_reachable = fail
+```
+**恢复策略**：先 `noxinfluencer doctor` 确认 → 不通则用缓存数据（之前搜索结果 / `references/noxinfluencer-kol-discovery-cookbook.md` 已验证名单）→ 尝试 Shadowrocket VPN 后再试
+
+#### mcporter 授权过期修复
+
+Tencent Docs 上传报 `TLS connection` / `fetch failed` 时：
+```bash
+mcporter auth tencent-docs
+```
+重新授权即可，不需要手动刷新 token。
+
+#### 联系方式留空（用户偏好）
+
+搜索/筛选阶段**不要**获取联系方式（`creator contacts`）。用户明确说「可以先不获取联系方式，后面我自己去弄」。
 
 ### ⚠️ 网红类型必须按实际内容分类
 用户明确要求：网红类型分为 Livestream/Camera/Review/Tutorial/Podcast/Church 等实际类型，**不要用 KOL 量级**（头部KOL/腰部KOL/素人）。

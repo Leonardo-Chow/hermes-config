@@ -33,6 +33,7 @@ google-workspace:97c3ade5668d6eeaf95be1996f57921e
 heartmula:96a5927a5f221065260ddb2e0f1d77ec
 hermes-agent:81eb23370f90fbac07f6c86282d578b7
 hermes-agent-skill-authoring:4fefd83beeea0a8a32f5ae006f10f00d
+hermes-s6-container-supervision:d1dd00ca7688c85813f325a564490431
 himalaya:3f05533dcd15be9d89cc86ab13c94a83
 huggingface-hub:da338c5152d72db030bb81d923d1c64d
 humanizer:6645b341862575f452e86139c5c71ce9
@@ -84,6 +85,6 @@ touchdesigner-mcp:0664ded9138795d5518def4d16037650
 webhook-subscriptions:b1ffc6d6a3cf3f59ea8eb7dcd178c555
 weights-and-biases:8f0e1ee92fdf7b42a1dad448176d7c64
 writing-plans:ebe31eb58f7a09a7cd8fad4d422b9d3b
-xurl:e44ca3f6818dd7391a9b12ae79d76c16
+xurl:113313cc0bfb95c795074f350bb05ef7
 youtube-content:e43a762cd557db987d9ab466a7a60f76
 yuanbao:7844c287c57b42dccf51127f15e0751b

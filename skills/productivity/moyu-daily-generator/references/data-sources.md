@@ -11,6 +11,10 @@ curl -s 'https://qt.gtimg.cn/q=sh000001,sh000688,sz399001,sz399006,sz399005'
 
 ### 板块涨幅排行
 东方财富 push2.eastmoney.com API（需从 delegate_task 获取或直接用python抓取）
+```bash
+curl -s 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=8&po=1&np=1&fields=f2,f3,f4,f12,f14&fs=m:90+t:3' -H 'User-Agent: Mozilla/5.0'
+```
+**⚠️ 可能返回空结果（2026-05-29验证）：** 该API偶发返回空内容(0字节)，原因为服务器端限流或连接reset。无报错信息，需检查返回内容长度。失败时不阻塞日报生成，直接从A股指数数据推断市场方向，或用 `web_search(query="A股 板块涨幅")` 从财经新闻网站获取当日热门板块信息作为替代。
 
 ---
 
@@ -76,6 +80,12 @@ curl -sL "https://www.wired.com/feed/rss" -H 'User-Agent: Mozilla/5.0'
 curl -sL "https://www.ifanr.com/feed" -H 'User-Agent: Mozilla/5.0'
 ```
 
+### TechCrunch AI 专栏 ✅ 可靠
+```bash
+curl -sL "https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/category/artificial-intelligence/feed/"
+```
+适合 AI 板块独立采集，内容与主 RSS 有重叠但 AI 专题更集中。
+
 ### Hacker News ✅ 可靠
 ```bash
 # Firebase API
@@ -104,6 +114,10 @@ url = f"https://api.rss2json.com/v1/api.json?rss_url={rss_url}"
 
 ### CNBC ⚠️ 偶发500
 `https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114`
+
+### CNN World ⚠️ RSS返回过时内容（2026-05-29验证）
+`http://rss.cnn.com/rss/edition_world.rss` 通过 rss2json 转换后，返回的文章可能是 2022-2023 年的旧内容，而非当天新闻。CNN 的 RSS feed 可能已停止更新或被重定向到存档。
+**替代方案：** 用 `web_search(query="CNN world news today")` 获取当天 CNN 新闻，或使用 NPR/BBC/Al Jazeera 的 RSS 代替。
 
 ### France 24 ✅ 之前成功
 无稳定RSS，尝试直接请求首页或通过搜索获取

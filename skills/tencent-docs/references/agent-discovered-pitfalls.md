@@ -86,6 +86,25 @@ User preference: Reports should use Word documents, not Excel.
 `import_file.sh` → `manage.async_import` → poll until complete.
 Word docs generated with python-docx, organized by sections with tables.
 
+## mcporter Token Expiry
+
+`mcporter` tokens can expire after periods of inactivity, causing `manage.*` and `sheet.*` tools to fail with:
+```
+mcporter] tencent-docs appears offline (fetch failed).
+[TypeError: fetch failed]
+Client network socket disconnected before secure TLS connection was established
+```
+
+**Diagnosis**: `curl https://docs.qq.com` returns `200` (Tencent Docs itself is reachable), but mcporter calls fail with fetch/TLS errors.
+
+**Fix**: Re-authenticate:
+```bash
+mcporter auth tencent-docs
+```
+This re-establishes the session token. No config changes needed.
+
+**Prevention**: If mcporter has been idle for more than a few hours in the session, re-auth before file upload/import operations.
+
 ## Nested Folder Navigation
 
 For deeply nested folders (e.g., obsbot → youtube → 油管分析):

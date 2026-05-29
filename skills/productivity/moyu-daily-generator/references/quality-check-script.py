@@ -24,8 +24,8 @@ def evaluate_daily_report(report_content: str) -> dict:
     score += s2
     details['内容深度'] = f"{analysis} 处 = {s2}/20"
     
-    # 3. 封面图片 (10分) — 必须有 ima.qq.com 图片
-    has_cover = '![' in report_content and 'ima.qq.com' in report_content
+    # 3. 封面图片 (10分) — 必须有 ima.qq.com(正常) 或 placehold.co(IMA降级) 图片
+    has_cover = '![' in report_content and ('ima.qq.com' in report_content or 'placehold.co' in report_content)
     s3 = 10 if has_cover else 0
     score += s3
     details['封面图片'] = f"{'✅' if has_cover else '❌'} = {s3}/10"

@@ -109,6 +109,66 @@ curl -sL -X PUT "http://127.0.0.1:9090/proxies/Proxy" -H "Content-Type: applicat
 - **原因:** 订阅服务器 `47.242.55.240` 宕机
 - **解决:** 等待恢复，或使用其他订阅源
 
+### Homebrew 镜像加速（已验证可用）
+
+当 `brew install` 卡在下载环节（GFW 阻断），用中科大镜像：
+
+```bash
+# 安装 JDK/工具类
+HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles brew install openjdk@21
+
+# 先 fetch 再 install（避免超时）
+HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles brew fetch openjdk@21
+brew install openjdk@21
+```
+
+**已验证可用：** `openjdk@21` (191MB bottle) 通过中科大镜像成功下载。
+**注意：** 仅 `brew install` 可用此方式，`brew update` 需换国内 Git 镜像或连 Shadowrocket。
+
+**brew 下载队列卡死处理：**
+当 `brew` 下载被 SIGTERM 中断后，后续安装会卡在 `download_queue.rb` 报错：
+```
+Error: SIGTERM
+/opt/homebrew/Library/Homebrew/download_queue.rb:184:in 'Kernel#sleep'
+```
+**解决：** 删除锁定文件后重试
+```bash
+rm -f ~/Library/Caches/Homebrew/downloads/*.incomplete
+rm -f ~/Library/Caches/Homebrew/downloads/*.downloading  
+rm -f /opt/homebrew/Library/Locks/*
+```
+
+### pip3 安装替代方案
+
+当 `brew install` 反复超时时，用 `pip3 install` 代替（网络路径不同，有时更快）：
+
+```bash
+pip3 install mitmproxy       # ✅ 已验证成功（Mitmproxy 9.0.1）
+pip3 install frida-tools     # Frida 脚本工具
+```
+
+注意：pip 安装的 CLI 工具在 `~/Library/Python/3.9/bin/` 下，不在 PATH 中。
+
+### 直接下载 GitHub Release（先连 Shadowrocket）
+
+大型工具（如 JADX、APKTool、Frida gadget）可直接从 GitHub Releases 下载：
+
+```bash
+# 先连 VPN
+scutil --nc start "Shadowrocket"
+
+# 下载 JADX
+curl -sL "https://github.com/skylot/jadx/releases/download/v1.5.1/jadx-1.5.1.zip" -o /tmp/jadx.zip
+# 111MB 下载约 30-60 秒（VPN 连接状态下）
+
+# 下载 Frida Gadget
+curl -sL "https://github.com/frida/frida/releases/download/16.7.19/frida-gadget-16.7.19-android-arm64.so.xz" -o /tmp/frida-gadget.so.xz
+# 6.7MB，解压后 25MB
+
+# 断开 VPN（可选）
+scutil --nc stop "Shadowrocket"
+```
+
 ## 备用内容获取策略
 
 当代理全部不可用时的降级方案：

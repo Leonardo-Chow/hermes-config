@@ -1,0 +1,20 @@
+{
+  "id": "20260527-053545-pre-update",
+  "timestamp": "20260527-053545",
+  "label": "pre-update",
+  "file_count": 11,
+  "total_size": 115928428,
+  "files": {
+    "state.db": 115879936,
+    "config.yaml": 14221,
+    ".env": 22956,
+    "auth.json": 1250,
+    "cron/jobs.json": 8214,
+    "gateway_state.json": 672,
+    "channel_directory.json": 998,
+    "processes.json": 2,
+    "pairing/_rate_limits.json": 69,
+    "pairing/feishu-approved.json": 108,
+    "pairing/feishu-pending.json": 2
+  }
+}

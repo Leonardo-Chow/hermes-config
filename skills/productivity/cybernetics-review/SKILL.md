@@ -194,6 +194,15 @@ skill patch: autocli — 更新可用站点列表
 | 操作细节 | skill (skill_manage) | 工具用法、错误处理、工作流 |
 | 历史数据 | IMA 知识库 | 日报、复盘报告、记忆快照 |
 
+### Memory 清理方法论
+当 memory 使用率超过 70% 时，执行四步清理法：
+1. **删除重复** — 检查高度相似条目，保留最完整的一份
+2. **删除过时** — 已禁用 cron job、已修复问题、已卸载工具
+3. **迁移操作细节** — 检查是否已在 skill 中，是则删除 memory 条目
+4. **精简冗长** — 引用 skill 的条目压缩为 "详见 xxx skill"
+
+详见 `references/memory-cleanup-methodology.md`
+
 ## 注意事项
 1. **闭环优先**：每次复盘必须形成闭环，不能只分析不修正
 2. **底层优先**：先提取底层逻辑存 memory，再存操作细节到 skill
@@ -206,3 +215,4 @@ skill patch: autocli — 更新可用站点列表
 - `references/qian-xuesen-cybernetics.md` — 钱学森工程控制论核心理论详解
 - `references/pdf-generation-template.md` — 新闻风格 PDF 生成模板（CNN/BBC/经济学人）
 - `references/ima-memory-sync.md` — Memory 文件同步到 IMA Herme记忆库的完整流程
+- `references/memory-cleanup-methodology.md` — Memory 清理方法论（四步清理法、操作陷阱、检查清单）
