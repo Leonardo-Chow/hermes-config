@@ -1,11 +1,58 @@
 ---
 name: flutter-aot-apk-patching
-description: Flutter AOT APK 二进制修改方法论 — 通过 patching Dart AOT snapshot (libapp.so) 和网络层来修改 App 行为，绕过付费检查、弹窗、API 限制等。
+description: Flutter AOT APK 逆向工程方法论 — 网络 API 端点提取 + Dart AOT snapshot 二进制修改 + HTTP 代理拦截，用于绕过付费检查、弹窗、API 限制等。
 ---
 
 # Flutter AOT APK 修改方法论
 
 用于修改 Flutter AOT 编译的 Android APK，核心思路是通过 **多层叠加** 确保绕过逻辑生效。
+
+## Phase 1: 网络信息提取（修补前必做）
+
+在修改 APK 之前，先从 APK 中提取网络 API 端点、域名和认证方式。
+
+### 提取域名和 API 端点
+
+```bash
+# 找到所有 API 路径（Flutter 应用通常以 /app/ 开头）
+strings app.apk | grep -E '^/app/' | sort -u
+
+# 找到 HTTP URL（过滤 SDK/广告库噪音）
+strings app.apk | grep -E 'https?://' | grep -v 'com\.android\|google\|facebook\|tencent\|huawei\|amazon' | sort -u
+
+# 找到包级 Dart imports（提示架构分层）
+strings app.apk | grep -E 'package:.*services/' | sort -u
+```
+
+### 测试端点和识别认证
+
+```bash
+# 测试公开端点
+curl -sk "https://<domain>/app/live/info?roomId=ROOM_ID" -H "User-Agent: AppName/1.0"
+# 200 + 数据 → 公开 API；401 "未能读取到有效 token" → 需要认证
+
+# 搜索认证相关字符串
+strings app.apk | grep -iE 'token|authorization|bearer|auth.*key|secret|header'
+```
+
+常见认证模式：`lmi-live-token`（自定义 Header）、`Authorization: Bearer xxx`（JWT）、`x-auth-token`（自定义 Header）。
+
+### 用代理拦截获取 Token
+
+当 API 需要认证时，通过 mitmproxy 拦截已登录请求提取 token：
+```bash
+mitmdump --listen-host 0.0.0.0 --listen-port 8888
+```
+手机设置代理 → 打开 App → 发起请求 → 抓到完整 header。
+
+### TRTC 直播流特征
+
+- 使用腾讯云 TRTC SDK（libTXRTC.*.so）
+- 拉流地址不是静态 RTMP/HLS，而是动态协商生成
+- 通常需要 sdkAppId + userId + userSig + roomId 四元组
+- License URL: `https://*.trtcube-license.cn/license/`
+
+> **完整 API 端点参考**：`references/lmi-live-api-example.md`
 
 ## 三层方案（从简单到复杂）
 

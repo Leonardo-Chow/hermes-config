@@ -173,6 +173,9 @@ mcporter call "tencent-docs" "<工具名>" --args '<JSON参数>'
 
 ## 已知问题（Pitfalls）
 
+### 智能表格完整工作流
+详见 `references/smartsheet-workflow.md` — 从创建到配置字段到填充数据的完整流程，包含 response format 差异和用户偏好（链接用文本类型）。
+
 ### 用户偏好：链接用文本类型
 用户明确要求「视频链接不要用超链接」。链接字段使用 `text` 类型而非 `url` 类型，值格式为 `{"text_value": {"items": [{"text": "URL", "type": "text"}]}}`。
 

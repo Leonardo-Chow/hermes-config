@@ -545,18 +545,100 @@ java -jar uber-apk-signer.jar --apks mod.apk --overwrite --allowResign
 - **`recreate()` 的副作用**：Flutter 应用状态也会重置（导航回首页），适合「硬刷新」场景。如需「软刷新」（如仅刷新直播画面不丢状态），需通过 MethodChannel 向 Flutter 发消息
 - **Unicode 字符在 smali 中**：使用 `\uXXXX` 转义，如 `"\u21bb"` 表示 ↻
 
-### 变体：发送 MethodChannel 消息（软刷新）
+### 变体：MethodChannel 软刷新（只刷新直播间，不重启 App）
 
-如果不需要 `recreate()`，可以在 onClickListener 中通过 MethodChannel 向 Flutter 发送刷新消息：
+`Activity.recreate()` 会重启整个 App（Flutter 引擎重建，导航回首页）。对于「刷新直播间」这种场景，应通过 MethodChannel 向 Flutter 发消息，让 Flutter 层自行刷新。
 
-```java
-// 在 onClick 中：
-FlutterEngine engine = ((FlutterActivity)activity).getFlutterEngine();
-new MethodChannel(engine.getDartExecutor(), "app/refresh")
-    .invokeMethod("refresh", null);
+**完整实现（4 步）：**
+
+**Step 1: MainActivity.smali 添加 channel 字段**
+
+```smali
+# 在 .field 声明区域添加：
+.field private refreshChannel:Lio/flutter/plugin/common/MethodChannel;
 ```
 
-对应的 Flutter 端需注册 MethodChannel 监听。
+**Step 2: configureFlutterEngine() 中创建 channel**
+
+在 `configureFlutterEngine` 方法末尾、`return-void` 之前添加：
+
+```smali
+# 创建 refreshChannel
+new-instance v0, Lio/flutter/plugin/common/MethodChannel;
+
+invoke-virtual {p0}, Lcom/lmi/live/MainActivity;->getFlutterEngine()Lio/flutter/embedding/engine/FlutterEngine;
+move-result-object v1
+
+invoke-virtual {v1}, Lio/flutter/embedding/engine/FlutterEngine;->getDartExecutor()Lio/flutter/embedding/engine/dart/DartExecutor;
+move-result-object v1
+
+invoke-virtual {v1}, Lio/flutter/embedding/engine/dart/DartExecutor;->getBinaryMessenger()Lio/flutter/plugin/common/BinaryMessenger;
+move-result-object v1
+
+const-string v2, "com.lmi.live/refresh"
+
+invoke-direct {v0, v1, v2}, Lio/flutter/plugin/common/MethodChannel;-><init>(Lio/flutter/plugin/common/BinaryMessenger;Ljava/lang/String;)V
+
+iput-object v0, p0, Lcom/lmi/live/MainActivity;->refreshChannel:Lio/flutter/plugin/common/MethodChannel;
+```
+
+**Step 3: RefreshHelper.smali 改为接收 MethodChannel**
+
+```smali
+# 构造函数改为接收 Activity + MethodChannel
+.method public constructor <init>(Landroid/app/Activity;Lio/flutter/plugin/common/MethodChannel;)V
+    .locals 1
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+    new-instance v0, Ljava/lang/ref/WeakReference;
+    invoke-direct {v0, p1}, Ljava/lang/ref/WeakReference;-><init>(Ljava/lang/Object;)V
+    iput-object v0, p0, Lcom/lmi/live/RefreshHelper;->activityRef:Ljava/lang/ref/WeakReference;
+    iput-object p2, p0, Lcom/lmi/live/RefreshHelper;->channel:Lio/flutter/plugin/common/MethodChannel;
+    return-void
+.end method
+
+# addRefreshButton 也改为接收 MethodChannel
+.method public static addRefreshButton(Landroid/app/Activity;Lio/flutter/plugin/common/MethodChannel;)V
+    # ... 创建 Button 代码不变 ...
+    new-instance v1, Lcom/lmi/live/RefreshHelper;
+    invoke-direct {v1, p0, p1}, Lcom/lmi/live/RefreshHelper;-><init>(Landroid/app/Activity;Lio/flutter/plugin/common/MethodChannel;)V
+    # ... addView 代码不变 ...
+.end method
+
+# onClick 改为通过 channel 发消息
+.method public onClick(Landroid/view/View;)V
+    .locals 3
+    iget-object v0, p0, Lcom/lmi/live/RefreshHelper;->activityRef:Ljava/lang/ref/WeakReference;
+    invoke-virtual {v0}, Ljava/lang/ref/WeakReference;->get()Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, Landroid/app/Activity;
+    if-eqz v0, :cond_0
+    invoke-virtual {v0}, Landroid/app/Activity;->isFinishing()Z
+    move-result v0
+    if-nez v0, :cond_0
+    iget-object v0, p0, Lcom/lmi/live/RefreshHelper;->channel:Lio/flutter/plugin/common/MethodChannel;
+    if-eqz v0, :cond_0
+    const-string v1, "refreshLiveRoom"
+    const/4 v2, 0x0
+    invoke-virtual {v0, v1, v2}, Lio/flutter/plugin/common/MethodChannel;->invokeMethod(Ljava/lang/String;Ljava/lang/Object;)V
+    :cond_0
+    return-void
+.end method
+```
+
+**Step 4: onCreate 调用时传入 channel**
+
+```smali
+# 原来：invoke-static {p0}, Lcom/lmi/live/RefreshHelper;->addRefreshButton(Landroid/app/Activity;)V
+# 改为：
+iget-object v0, p0, Lcom/lmi/live/MainActivity;->refreshChannel:Lio/flutter/plugin/common/MethodChannel;
+invoke-static {p0, v0}, Lcom/lmi/live/RefreshHelper;->addRefreshButton(Landroid/app/Activity;Lio/flutter/plugin/common/MethodChannel;)V
+```
+
+**⚠️ 注意事项：**
+- Flutter 端需要注册对应的 MethodChannel 监听器（`MethodChannel('com.lmi.live/refresh').setMethodCallHandler(...)`）
+- 如果 Flutter 端没有注册，`invokeMethod` 会静默失败（不会崩溃）
+- channel name 必须两端一致（如 `com.lmi.live/refresh`）
+- 用 `strings libapp.so | grep -i "refresh\|method.*channel"` 找 Flutter 端已有的 channel name，避免冲突
 
 ---
 
@@ -606,12 +688,39 @@ Dart 应用使用自己的 HTTP 客户端（`dart:io` HttpClient 或 `dio` 包�
 - 唯一可靠的观看途径是 App 本身（或 Web 版 TRTC SDK）
 - 可通过 Frida 拦截 `/app/live/info` 等 API 的响应体来确认返回的是 TRTC 参数还是 CDN 流地址
 
-### ⚠️ 架构选择：Frida Gadget 必须匹配目标 CPU
+### ⚠️ 架构选择：保留原始 APK 的所有 CPU 架构
+
 华为/小米等主流手机是 arm64（`arm64-v8a`），但旧款或低端机可能是 32 位（`armeabi-v7a`）。
+
 ```bash
 # 检查目标设备架构
 adb shell getprop ro.product.cpu.abi
+
+# 检查 APK 包含哪些架构
+unzip -l app.apk | grep "lib/" | awk '{print $NF}' | cut -d'/' -f2 | sort -u
 ```
+
+**关键规则：修改后的 APK 必须保留原始 APK 的所有架构目录。**
+
+**Lmi 实战教训（2026-05-29）：**
+- 原始 APK 包含 `arm64-v8a` + `armeabi-v7a`（221MB）
+- apktool 解码后只保留了 `arm64-v8a`（107MB）
+- 结果：部分设备报「与操作系统不兼容」安装失败
+- 修复：从包含所有架构的原始 APK 重新制作
+
+**检查清单：**
+```bash
+# 解码前记录原始架构列表
+ORIG_ARCHS=$(unzip -l original.apk | grep "lib/" | awk '{print $NF}' | cut -d'/' -f2 | sort -u)
+echo "原始架构: $ORIG_ARCHS"
+
+# 回编后验证架构列表是否一致
+NEW_ARCHS=$(unzip -l modified.apk | grep "lib/" | awk '{print $NF}' | cut -d'/' -f2 | sort -u)
+echo "修改后架构: $NEW_ARCHS"
+
+diff <(echo "$ORIG_ARCHS") <(echo "$NEW_ARCHS") && echo "✅ 架构一致" || echo "❌ 架构丢失！"
+```
+
 - 只注入 `arm64-v8a` 的 Gadget → arm64 手机正常，32 位手机闪退
 - 建议所有架构都注入，避免兼容性问题
 
@@ -620,6 +729,26 @@ adb shell getprop ro.product.cpu.abi
 
 ### ⚠️ 签名校验
 启动闪退 → 在 smali 中搜 `signature`、`getPackageManager`、`signingInfo` 跳过校验逻辑。
+
+### ⚠️ 改 API 地址会破坏登录/认证（方案E 的致命副作用）
+
+使用方案E（二进制改 libapp.so API 地址）时，**Base URL 被替换后，所有 API 请求（包括登录）都会发到新地址**。如果新地址（如本机 HTTP 代理）没有实现登录接口，用户将无法登录。
+
+**Lmi 实战教训（2026-05-29）：**
+- v10 把 `https://lmilive.lmizhibo.com` 改成了 `http://81.71.248.163:80//`
+- 该 IP 没有登录服务 → 用户登录失败
+- v11 从原始 APK 重新制作，保留原始 API 地址，只添加 RefreshHelper 按钮 → 登录恢复正常
+
+**正确做法：区分「功能性修改」和「网络层修改」**
+
+| 修改类型 | 改什么 | 能改 API 地址？ |
+|:---------|:-------|:---------------|
+| 添加 UI 叠加层（按钮等） | smali 层 | ❌ 不改 |
+| 去弹窗/改收费逻辑 | smali 层 | ❌ 不改 |
+| MitM 代理拦截（方案E） | libapp.so | ✅ 改，但代理必须实现所有必要端点 |
+| 本地 HTTP 代理转发 | libapp.so | ✅ 改，代理转发到真实服务器 |
+
+**规则：除非你同时运行一个完整的代理转发服务，否则不要改 API 地址。**
 
 ### ⚠️ 重构时必须从原始 APK 解码，不要从已修改的 APK 再解码
 
@@ -653,6 +782,54 @@ apktool d -o v2 original.apk       # 第二轮（盖掉 v1，或分别保存）
 - 保留原始 APK 的副本，每次重新解码
 - 用脚本化记录修改内容（smali patch、二进制替换），而不是靠修改后的 APK 作为中间产物
 
+### ⚠️ apktool 回编资源错误：`$avd_hide_password__2` 缺失
+
+apktool 解码后回编时，可能报错：
+```
+error: resource drawable/$avd_hide_password__2 (aka com.lmi.live:drawable/$avd_hide_password__2) not found.
+```
+
+**原因：** 原始 APK 中的 `res/drawable/avd_hide_password.xml` 引用了 `$avd_hide_password__2` 动画资源，但 apktool 解码时丢失了该文件（只有 `__0` 和 `__1`）。
+
+**修复：** 创建空的 stub XML 文件：
+```bash
+cat > res/drawable/\$avd_hide_password__2.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+</set>
+EOF
+```
+
+然后重新 `apktool b` 即可。这个空动画不影响 App 运行（只是密码隐藏图标的过渡动画）。
+
+### ⚠️ 安装失败诊断：「无效安装包」或「与操作系统不兼容」
+
+Android 安装 APK 失败的常见原因及修复：
+
+| 错误提示 | 原因 | 修复 |
+|:---------|:-----|:-----|
+| **无效安装包** | APK 结构损坏（从已修改的 APK 再次解码累积错误） | 从原始 APK 重新解码制作 |
+| **与操作系统不兼容** | APK 缺少设备所需的 CPU 架构（如只有 arm64 但设备需要 armeabi-v7a） | 保留原始 APK 的所有架构目录 |
+| **签名冲突** | 已安装同包名但不同签名的 APK | 先卸载旧版再安装 |
+| **解析包时出现问题** | APK 文件下载不完整或被截断 | 重新下载，检查文件完整性 |
+
+**快速诊断流程：**
+```bash
+# 1. 检查 APK 完整性
+unzip -t app.apk | tail -3  # "No errors detected" = OK
+
+# 2. 检查签名
+apksigner verify --verbose app.apk
+
+# 3. 检查架构覆盖
+unzip -l app.apk | grep "lib/" | awk '{print $NF}' | cut -d'/' -f2 | sort -u
+
+# 4. 检查 AndroidManifest 是否有效
+unzip -p app.apk AndroidManifest.xml | xxd | head -3
+# 有效: 第一字节 03 (binary XML)
+# 无效: 乱码或 00 填充
+```
+
 ### ⚠️ 签名使用内置 debug keystore（华为兼容性）
 
 华为 Mate30 / HarmonyOS / EMUI 设备对 APK 签名证书更敏感。**推荐用 uber-apk-signer 的内置 debug keystore**（无需指定 `--ks` 参数）而不是自定义创建的 keystore。
@@ -666,6 +843,20 @@ java -jar uber-apk-signer.jar --apks app.apk --ks ~/.android/debug.keystore --ks
 ```
 
 uber-apk-signer 内置的标准 Android debug 证书（CN=Android Debug, OU=Android, O=US, L=US, ST=US, C=US）在所有 Android 设备上兼容性最好。新创建的 debug keystore 签名指纹不同，可能触发华为的额外校验。
+
+### ⚠️ APK 文件可能有非标准扩展名
+
+用户提供 APK 文件时，扩展名可能不是 `.apk`，如：
+- `app-release (2).apk.1` — 下载工具添加的序号
+- `app-release.apk.zip` — 重命名过的
+- 无扩展名
+
+用 `file` 命令仍可识别：`file app-release (2).apk.1` → `Zip archive data`
+
+**处理方式：** 复制为 `.apk` 后缀再操作：
+```bash
+cp "app-release (2).apk.1" /tmp/work/app-release.apk
+```
 
 ### ⚠️ 验证 APK 编译结果：smali 文件在 dex 中不可见
 `apktool b` 编译后，所有 smali 文件被编译合并到 `classes.dex` / `classes2.dex` / `classes3.dex` 中。如果用 `zipfile.namelist()` 搜索新增的 smali 类的文件名，**找不到是正常的**。
@@ -682,4 +873,6 @@ with zipfile.ZipFile('output.apk') as z:
 ## 参考案例
 
 - `references/lmi-live-app-analysis.md` — Lmi 直播 App 完整逆向分析报告（Flutter + 自建门票系统 + Google Play Billing v7.1.1）
+- `references/lmi-api-enumeration.md` — Lmi API 端点枚举结果（2026-05-30）：全部需要认证、无公开端点、无网页版
+- `references/trtc-live-streaming.md` — TRTC（腾讯云实时音视频）直播协议说明：为何无法提取 RTMP/FLV/HLS 流 URL，API 端点一览，CDN 转推判断方式
 - `references/trtc-live-streaming.md` — TRTC（腾讯云实时音视频）直播协议说明：为何无法提取 RTMP/FLV/HLS 流 URL，API 端点一览，CDN 转推判断方式

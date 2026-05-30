@@ -467,10 +467,13 @@ class MySpider(Spider):
 - **Resource usage**: StealthyFetcher runs a real browser — limit concurrent usage
 - **disable_resources**: Set `disable_resources=True` to block fonts/images/media/stylesheets for ~25% faster loading
 - **GFW blocked sites**: For BBC, CNN, Google etc. from China — VPN **must** be connected first. Scrapling respects system proxy settings when VPN is active.
+- **Shadowrocket proxy**: Use `http://127.0.0.1:1082` (HTTP/SOCKS5) for Scrapling/Playwright. Pass `proxy='http://127.0.0.1:1082'` to DynamicFetcher/StealthyFetcher. Playwright needs `proxy={"server": "http://127.0.0.1:1082"}` at browser launch.
+- **TikTok anti-bot (X-Bogus)**: TikTok's video list API requires an `X-Bogus` token generated client-side. ALL approaches fail: curl+proxy, Scrapling, Playwright+Cookie, bb-browser real Chrome. The video grid shows "出错了" because the API call silently fails. **Do not attempt TikTok video list scraping — it is a hard constraint.** Use NoxInfluencer Brand Monitor or manual verification instead.
 - **Shadowrocket proxy for Scrapling/Playwright**: Shadowrocket macOS exposes HTTP/SOCKS5 proxy at `127.0.0.1:1082`. Pass `proxy='http://127.0.0.1:1082'` to Fetcher/DynamicFetcher/StealthyFetcher. Verified working for Instagram, Google, BBC. **Does NOT work for TikTok** (see below).
 - **TikTok X-Bogus anti-bot (2026-05-29 verified)**: TikTok's video list API requires an `X-Bogus` token generated client-side by TikTok's own JS. Even with proxy + cookies + Playwright, the video grid returns empty. The SSR `itemList` is always empty. Direct API calls return 0 bytes. **Do not attempt TikTok video scraping with Scrapling** — all approaches (DynamicFetcher, StealthyFetcher, Playwright with cookies) fail.
 - **Proxy connection failures**: ~5-10% of requests may fail with `ERR_PROXY_CONNECTION_FAILED`. Wrap in try/except, log failures, continue.
 - **YouTube likes/comments**: Dynamically loaded via JS, ~50% success rate. Use `aria-label` attributes as fallback.
+- **TikTok video grid DOES NOT LOAD** (verified 2026-05-29): TikTok uses X-Bogus anti-bot token generated client-side. The profile page loads (HTTP 200) and user info is visible, but the video grid returns "出错了" (error) and `itemList` is empty in SSR data. All approaches fail: DynamicFetcher, StealthyFetcher, Playwright with cookies, bb-browser real Chrome, curl with cookies, direct API calls. The video list is ONLY accessible when TikTok's own JS generates the X-Bogus token. **Do not attempt TikTok scraping — use NoxInfluencer Brand Monitor or manual check instead.**
 - **CLI `extract` command**: As of v0.2.99, the CLI only has `install` command. Use Python API instead for older versions. v0.4.8+ has full CLI.
 - **Legal**: Always check robots.txt and website ToS. Use `robots_txt_obey = True` on spiders.
 
@@ -509,6 +512,35 @@ views = (m := re.search(r'([\d,]+)\s*次观看', all_text)) and m.group(1) or 'N
 desc = page.css('meta[name="description"]::attr(content)').get() or 'N/A'
 tags = ', '.join(page.css('a[href*="hashtag/"]::text').getall()[:5])
 ```
+
+### Instagram Profile (GFW blocked, Cloudflare)
+
+```python
+from scrapling.fetchers import StealthyFetcher
+
+# Shadowrocket proxy: 127.0.0.1:1082 (HTTP/SOCKS5)
+page = StealthyFetcher.fetch(
+    'https://www.instagram.com/obsbot/',
+    headless=True,
+    network_idle=True,
+    disable_resources=True,
+    proxy='http://127.0.0.1:1082',
+    block_webrtc=True,
+    hide_canvas=True,
+)
+
+# Post links
+links = page.css('a[href*="/p/"]::attr(href)').getall()
+links += page.css('a[href*="/reel/"]::attr(href)').getall()
+
+# Post content
+descs = page.css('[data-e2e*="desc"]::text').getall()
+
+# Note: Instagram public profile does NOT show exact post dates.
+# Post order is most-recent-first. Use oembed for individual post details.
+```
+
+**Pitfall:** Instagram public profile page does not expose post dates. Posts are ordered newest-first but no timestamp is visible without login. For exact dates, scrape individual post URLs or use web_extract on each `/p/` URL.
 
 ### BBC News (GFW blocked, JS rendered)
 

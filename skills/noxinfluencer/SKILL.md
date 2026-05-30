@@ -143,6 +143,28 @@ Use `noxinfluencer schema creator.search` to discover available filter parameter
 
 See `{baseDir}/references/search-filters.md` for filter selection semantics by user intent.
 
+### ⚠️ Shell Quoting Pitfall
+
+The `creator profile <creator_id>` command takes `creator_id` as a **positional argument**. If the ID contains special characters (it often does — long base64-like strings), you MUST use `shell_quote()` or `shlex.quote()`:
+
+```python
+from hermes_tools import terminal, shell_quote
+r = terminal(f'noxinfluencer creator profile {shell_quote(creator_id)} --json 2>&1', timeout=30)
+```
+
+Without shell_quote, the shell may split/interpret the ID, causing "Use either positional <creator_id> or a direct select" errors.
+
+### ⚠️ Search Results Don't Include channel_url
+
+`creator search` returns: id, nickname, tags, followers, country, total_videos, view_per_followers, engagement_rate, avg_views, language.
+
+It does **NOT** return channel_url or channel_id. To get the YouTube channel URL, you must make a separate `creator profile <id>` call for each result. This is a two-step workflow:
+
+```
+Step 1: noxinfluencer creator search --platform youtube --keywords '[...]' → get creator IDs
+Step 2: noxinfluencer creator profile <id> --json → get channel_url, channel_id
+```
+
 ### Tier-Specific Search (Mid-Tier / Nano Focus)
 
 When the user asks for mid-tier or nano creators (common for budget-conscious campaigns), use `--avg_view_min/max` and `--follower_min/max` to filter by KOL size tiers:
