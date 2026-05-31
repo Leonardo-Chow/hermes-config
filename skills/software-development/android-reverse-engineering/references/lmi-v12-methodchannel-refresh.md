@@ -4,6 +4,21 @@
 
 用户要求刷新按钮只刷新直播间（不重启整个 App）。v10/v11 使用 `activity.recreate()` 导致整个 App 重启。
 
+## 用户完整需求（2026-05-29）
+
+1. ✅ 软件可以正常使用（登录、直播）
+2. ✅ 设置一个可以刷新直播间的按钮（MethodChannel 软刷新）
+3. ⏳ 阻止软件弹窗收费，或可以直接关闭付费的弹窗
+4. ⏳ 全面分析软件，彻底搞懂软件逻辑
+
+## 当前状态
+
+v12 已制作完成（MethodChannel 软刷新），但用户反馈「打不开应用」。可能原因：
+- apktool 回编后的 APK 结构与原始 APK 有差异
+- 需要进一步调试安装失败原因
+
+**下一步：** 考虑不使用 apktool 重新打包，而是直接修改原始 APK 中的 libapp.so 二进制文件（方案E 的思路），然后用 zip 工具重新打包，避免 apktool 引入的结构差异。
+
 ## 技术方案
 
 通过 Flutter MethodChannel 向 Dart 层发送 `refreshLiveRoom` 消息，由 Flutter 层调用 `_refreshPlayUrlFromServer` 方法。

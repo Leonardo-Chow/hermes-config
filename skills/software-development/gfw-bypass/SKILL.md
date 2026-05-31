@@ -246,6 +246,15 @@ curl -s -X PUT http://127.0.0.1:9090/proxies/Proxy \
 - 所有节点都不通 → 订阅过期，需要更新
 - API 返回正常但 curl 代理超时 → 检查系统代理设置
 
+### ⚠️ 国内网站反爬升级案例
+
+**千度热播 / LMI Live（qiandurebo.com）— 2026-05 确认：**
+- 旧版：PHP 页面，curl 可直接获取 FLV 直播源
+- 新版：Vue.js SPA + CloudFront CDN + AES 加密 API
+- 反爬：JS 挑战页 + 浏览器指纹检测 + 假内容蜜罐（注入「草履虫科普」文本）
+- 结论：所有自动化方案均失效，DouyinLiveRecorder 的千度热播集成已失效
+- 详见：`android-reverse-engineering` skill 的 `references/lmi-live-app-analysis.md`
+
 ### ⚠️ 存档服务也被墙
 
 以下存档服务在中国大陆也无法访问：

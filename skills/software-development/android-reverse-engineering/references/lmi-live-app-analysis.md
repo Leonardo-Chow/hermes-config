@@ -33,7 +33,11 @@ Native (Java) 层:
   - MainActivity (Flutter 宿主)
   - BillingClient (Google Play 支付)
   - ProxyBillingActivity (支付 Activity)
-  - MethodChannel: com.lmi.live/payment_browser
+  - MethodChannel: com.lmi.live/payment_browser — 支付浏览器（拦截此 channel 可阻止付费弹窗）
+  - MethodChannel: com.lmi.live/screen_awake — 屏幕常亮
+  - MethodChannel: com.lmi.live/screen_protection — 屏幕保护
+  - MethodChannel: com.lmi.live/screen_protection/events — 屏幕保护事件（EventChannel）
+  - 自定义 MethodChannel: com.lmi.live/refresh — 刷新直播间（v12 新增）
 
 网络层:
   - 域名: lmilive.lmizhibo.com (81.71.248.163)
@@ -73,7 +77,7 @@ Native (Java) 层:
 5. `_showTicketPayDialog()` → Google Pay / 自建支付
 6. 支付成功后可能调 `/app/live/ticket/buy` → 再调 `/app/live/ticket/verify`
 
-## 破解策略演变（v1 → v11）
+## 破解策略演变（v1 → v12）
 
 | 版本 | 方案 | 效果 | 问题 |
 |:-----|:-----|:-----|:-----|
@@ -85,6 +89,11 @@ Native (Java) 层:
 | **v10** | 从原始 APK 完整重建 + 3个二进制补丁 + RefreshHelper 按钮 | ❌ **登录失败** | API 地址被改成 `http://81.71.248.163:80//`，该服务器无登录服务 |
 | **v11** | 从原始 APK 重建，**只加 RefreshHelper，保留原始 API 地址** | ✅ 登录正常 + 刷新按钮 | 正确做法：功能性修改不碰 API 地址 |
 | **v11 Fixed** | 从 `app-release (2).apk.1`（221MB 多架构）重建 | ✅ 安装正常 + 登录正常 | v11 之前用了精简 APK（107MB arm64-only），部分设备报「与操作系统不兼容」 |
+| **v12** | 从原始 APK 重建 + MethodChannel 软刷新（`com.lmi.live/refresh`） | ⚠️ 制作中 | 刷新按钮改为通过 MethodChannel 发送 `refreshLiveRoom` 消息，不再 `recreate()`。用户需求还包括：阻止付费弹窗、全面分析软件。待验证安装和功能 |
+| **v14** | RefreshHelper + RefreshHelper$1 + RefreshHelper$2（看直播/关直播双按钮） | ❌ 打不开 | 多内部类 smali 导致 App 崩溃 |
+| **v3-final** | 单 RefreshHelper + RefreshHelper$1（recreate） | ⚠️ 可用 | 服务器端口冲突导致用户无法下载，功能上 recreate() 仍是重启整个 App |
+
+**当前状态（2026-05-30）：** 用户需求为「看直播/关直播」两个按钮 + 阻止付费弹窗。多内部类方案导致崩溃，需探索其他实现方式（如单类多按钮、View ID 区分）。
 
 ### v10 登录失败根因
 
@@ -139,15 +148,84 @@ strings /tmp/check/classes2.dex | grep "RefreshHelper"
 - proxy 拦截所有 `/app/live/ticket/*` 请求 → 返回假「有票」响应
 - 同时可捕获 `/app/live/info` 的完整响应（含 TRTC 参数）
 
+## 千度热播（qiandurebo.com）关联分析（2026-05-30 深度分析）
+
+### App 历史
+LMI Live 前身为「千度热播」，由**许昌千润网络科技有限公司**开发。App 包名 `com.lmi.live` 未变，API 域名 `lmilive.lmizhibo.com` 未变。新版 PWA 改名为「**17歲**」。
+
+### 旧版网页（已失效）
+千度热播曾有网页版直播观看页面：
+- URL: `https://qiandurebo.com/web/video.php?roomnumber=55555`
+- 页面内嵌 JavaScript 变量 `var user = {...}`，含 `play_url`（FLV 流地址）和 `zb_nickname`（主播名）
+- DouyinLiveRecorder 的 `get_qiandurebo_stream_data()` 函数曾基于此接口工作
+- StreamGet 也曾支持（`QiandureboLiveStream` 类），但 **v4.0.9 起已废弃**
+- **提取方法（已失效）：**
+  ```python
+  data = re.search(r'var user = (.*?)\r\n\s+user\.play_url', html, re.S).group(1)
+  play_url = re.findall(r'"play_url": "(.*?)",\r\n', data)
+  ```
+
+### 新版网页架构（2026年全面改版，Flutter Web PWA）
+
+**重定向链路：**
+```
+qiandurebo.com (302) → dqcevbcm.94qr5.com (302) → d7i10uvnpwrqh.cloudfront.net (Vue.js SPA)
+                     ↓
+                   PWA 链接（从 /landing-page API 解密获取）:
+                   d31ft00iqx11xs.cloudfront.net, d3sdwbmksqkkhw.cloudfront.net,
+                   dv8ynndi5ln13.cloudfront.net, b7w3r9k2.wyccp.com, b4v6n1p8.o9l8z.com 等
+```
+
+**技术栈：**
+- 入口页：Vue.js SPA（`d7i10uvnpwrqh.cloudfront.net`）— 引导页，加载 PWA 配置
+- PWA 应用：**Flutter Web**（dart2js 编译，html renderer）— 实际直播间在此
+- PWA manifest：`name: "17歲"`，`display: standalone`
+- 直播协议：**HLS**（PWA 加载 `hls.js`）— 移动端用 TRTC，Web 端用 HLS
+- 入口 JS：`flutter_bootstrap.js` → `main.dart.js`（4.8MB，dart2js 编译）
+
+**Flutter Web 路由：**
+- `/live/55555` — 加载 hls.js + 直播间页面
+- `/live/?roomnumber=55555` — 参数形式
+- Flutter 内部路由通过 `main.dart.js` 中的混淆代码处理，无法直接提取
+
+**反爬措施（极其强硬，2026-05-30 全部验证）：**
+
+| 层级 | 措施 | 绕过尝试 | 结果 |
+|:-----|:-----|:---------|:-----|
+| 1. JS 挑战 | 首次返回 503 + `location.href=""` | curl 带 cookie 重试 | ❌ 挑战持续 |
+| 2. 浏览器指纹 | 无头浏览器返回蜜罐假页面 | Playwright + stealth 插件 | ❌ 仍返回蜜罐 |
+| 3. AES-CBC 加密 | API payload 全部加密 | 找到 key/IV 并成功解密 | ✅ 解密成功 |
+| 4. Flutter Web 初始化 | Flutter 引擎不完全初始化 | 延长等待 + 多种 URL 格式 | ❌ Flutter 未完全加载 |
+| 5. 动态加载 | 直播间数据通过 Flutter 内部路由加载 | 分析 main.dart.js（4.8MB） | ❌ 代码高度混淆 |
+
+**反爬蜜罐特征（bot 检测标志）：**
+- 页面标题「主页」，内容全是「草履虫是怎样感知外界刺激的」等科普文本
+- `<body style="display:none">` + CSS 隐藏类 `[class*=-p1-zse-]{display:none}`
+- 伪装 meta 标签：`content="一次草履虫短期培养实验记录"`
+- **判断方法：** 内容含「草履虫」「纤毛纲」「原生动物门」且无 video 元素 → 被识别为 bot
+
+**API 结构（从 SPA JS 提取并成功解密）：**
+- 域名：`kpi.landapiqq.com`、`kpich.landapiqq.com`、`kpiv4.landapiqq.com`
+- 端点：`/landing-page`（POST，加密 payload）— 返回 PWA 链接和联系信息
+- 端点：`/channel/statistics`（POST）— 渠道统计
+- 加密：AES CBC，key=`BioItun4JIOFL78hlQECIb==`，IV=`dfg2s8g9klc3jab1`
+- Auth：`Bearer 6sHdXgiC8FFKkfAyR4EMrlyAMuV0DBG4itzeMglyFHponGYXFwl7tf31BPB4TwMX`
+
+**解密示例（成功解密 landing-page 响应）：**
+```python
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import base64
+cipher = AES.new(b'BioItun4JIOFL78hlQECIb==', AES.MODE_CBC, b'dfg2s8g9klc3jab1')
+result = unpad(cipher.decrypt(base64.b64decode(encrypted)), 16).decode()
+# 返回: {"pwaLinks":["https://d31ft00iqx11xs.cloudfront.net",...],"contactList":[...]}
+```
+
+**结论：** 千度热播网页版已从 PHP 升级为 Flutter Web PWA。即使解密了 API 通信，Flutter Web 在无头浏览器中不完全初始化，无法导航到直播间。直播间 HLS 流地址只能通过**真实浏览器手动操作 + 抓包**获取。DouyinLiveRecorder 和 StreamGet 的千度热播集成均已失效。
+
 ## 已知限制（不可行事项）
 
-### ❌ 无网页版（2026-05-30 确认）
-
-LMI Live 是纯 Flutter 移动应用（`package:lmi_app`），无 H5/web 版本：
-- `lmizhibo.com` 域名无 web 服务（连接超时或 ERR_CONNECTION_CLOSED）
-- libapp.so 中无 H5/web 页面代码
-- 所有 `/app/*` API 端点均需 `lmi-live-token` 认证，无公开接口
-- 详细的 API 枚举结果见 `lmi-api-enumeration.md`
+### ❌ 网页版存在但无法自动提取（2026-05-30 确认）\n\nLMI Live 移动端（`package:lmi_app`）使用 TRTC 协议，无法提取标准流。\n千度热播（qiandurebo.com）有 Flutter Web PWA 网页版（改名「17歲」），使用 HLS 协议，但：\n- 无头浏览器被反爬检测，返回蜜罐假页面\n- Flutter Web 引擎在 headless 环境不完全初始化\n- API 通信使用 AES-CBC 加密（已破解但无用，无法导航到直播间）\n- **唯一可行方案：真实浏览器手动操作 + 抓包获取 HLS m3u8 地址**
 
 ### ❌ 无法提取 TRTC 直播流 URL
 - App 使用腾讯 TRTC（专有 UDP 协议），非标准 RTMP/FLV/HLS

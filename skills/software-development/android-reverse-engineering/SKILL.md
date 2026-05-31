@@ -545,6 +545,66 @@ java -jar uber-apk-signer.jar --apks mod.apk --overwrite --allowResign
 - **`recreate()` 的副作用**：Flutter 应用状态也会重置（导航回首页），适合「硬刷新」场景。如需「软刷新」（如仅刷新直播画面不丢状态），需通过 MethodChannel 向 Flutter 发消息
 - **Unicode 字符在 smali 中**：使用 `\uXXXX` 转义，如 `"\u21bb"` 表示 ↻
 
+### 变体：MethodChannel 拦截付费弹窗（阻止收费弹窗）
+
+Flutter 应用的付费弹窗通过 MethodChannel 与原生层通信。拦截这些 channel 可以阻止弹窗显示。
+
+**Lmi 实战发现的付费相关 MethodChannel：**
+```
+com.lmi.live/payment_browser  — 支付浏览器（在 configureFlutterEngine 中注册）
+```
+
+**拦截方式 1：替换 MethodCallHandler（推荐）**
+
+在 `configureFlutterEngine()` 中，找到注册 payment_browser channel 的代码，将 handler 替换为空实现：
+
+```smali
+# 原始代码（configureFlutterEngine 中）：
+# new-instance v0, Lio/flutter/plugin/common/MethodChannel;
+# const-string v2, "com.lmi.live/payment_browser"
+# invoke-direct {v0, v1, v2}, ...
+# new-instance v1, Lcom/lmi/live/MainActivity$$ExternalSyntheticLambda2;
+# invoke-virtual {v0, v1}, ...->setMethodCallHandler(...)
+
+# 修改：把 setMethodCallHandler 的参数改为一个返回 null 的空 handler
+# 或者直接删除 setMethodCallHandler 调用
+```
+
+**拦截方式 2：在 libapp.so 中 patch Dart 函数**
+
+通过 `strings libapp.so` 找到付费弹窗相关函数名：
+```
+_showPaySuccessDialog@960268369
+_showTicketPayDialog@953456253
+_handlePayTap@957523569
+_buildTicketDialog@994430884
+_buildTicketRequiredOverlay@994430884
+```
+
+在 libapp.so 中搜索这些函数的 Dart AOT 编译代码，patch 使其直接 return（NOP 或修改条件跳转）。这是最彻底的方式但难度较高。
+
+**拦截方式 3：添加「关闭弹窗」按钮**
+
+在 RefreshHelper 中额外添加一个「✕ 关闭弹窗」按钮，点击时：
+1. 遍历 DecorView 的所有子 View
+2. 找到弹窗相关的 View（通过 visibility、z-order 等判断）
+3. 调用 `setVisibility(GONE)` 隐藏
+
+```smali
+# 在 onClick 中添加：
+invoke-virtual {v0}, Landroid/app/Activity;->getWindow()Landroid/view/Window;
+move-result-object v1
+invoke-virtual {v1}, Landroid/view/Window;->getDecorView()Landroid/view/View;
+move-result-object v1
+check-cast v1, Landroid/view/ViewGroup;
+# 遍历子 View，隐藏最顶层的弹窗
+invoke-virtual {v1}, Landroid/view/ViewGroup;->getChildCount()I
+move-result v2
+# ... 循环隐藏最后添加的 View
+```
+
+**⚠️ 注意：** Flutter 弹窗是 Flutter 引擎自己渲染的 Widget，不是 Android 原生的 AlertDialog/Dialog。原生层无法直接操作 Flutter Widget。上述方式 3 对 Flutter 弹窗**无效**，只对原生弹窗有效。Flutter 弹窗必须通过方式 1（拦截 MethodChannel）或方式 2（patch Dart 函数）处理。
+
 ### 变体：MethodChannel 软刷新（只刷新直播间，不重启 App）
 
 `Activity.recreate()` 会重启整个 App（Flutter 引擎重建，导航回首页）。对于「刷新直播间」这种场景，应通过 MethodChannel 向 Flutter 发消息，让 Flutter 层自行刷新。
@@ -858,6 +918,154 @@ uber-apk-signer 内置的标准 Android debug 证书（CN=Android Debug, OU=Andr
 cp "app-release (2).apk.1" /tmp/work/app-release.apk
 ```
 
+### ⚠️ apktool 回编的 APK 可能「打不开」—— 考虑直接二进制修改
+
+apktool 回编后的 APK 即使签名成功，在某些设备上仍可能无法安装或打开。原因包括：
+- apktool 重新打包改变了 dex 文件的内部结构
+- 资源文件重新编译可能引入细微差异
+- 某些设备（如华为 HarmonyOS）对 APK 结构更敏感
+
+**替代方案：直接二进制修改 libapp.so，避免 apktool 回编**
+
+```bash
+# 1. 解压原始 APK
+unzip original.apk -d /tmp/work/
+
+# 2. 直接用 Python 修改 libapp.so 中的字节
+python3 -c "
+import sys
+data = open('/tmp/work/lib/arm64-v8a/libapp.so', 'rb').read()
+old = b'https://lmilive.lmizhibo.com'
+new = b'http://192.168.0.6:8888/////'  # 等长替换
+data = data.replace(old, new)
+open('/tmp/work/lib/arm64-v8a/libapp.so', 'wb').write(data)
+"
+
+# 3. 用 zip 重新打包（保留原始 ZIP 结构）
+cd /tmp/work && zip -r /tmp/modified.apk . -x 'META-INF/*'
+
+# 4. 重签名
+uber-apk-signer -a /tmp/modified.apk --allowResign
+```
+
+**优点：** 不经过 apktool 的 smali↔dex 转换，保留原始 APK 的 dex 结构和资源对齐。
+
+**缺点：** 只能做二进制级别的字符串替换，无法添加新的 smali 类或修改 Java 逻辑。
+
+**何时用哪种方案：**
+
+| 修改类型 | 推荐方案 |
+|:---------|:---------|
+| 只改 API 地址 / 字符串 | 直接二进制修改（避免 apktool） |
+| 添加新 smali 类（如 RefreshHelper） | apktool 回编（需要 smali 编译） |
+| 修改已有 smali 方法 | apktool 回编 |
+| 两者都需要 | 先用 apktool 制作 smali 补丁，再用二进制方式应用到原始 APK |
+
+### ⚠️ 开始逆向前先完整理解用户需求
+
+**Lmi v12 教训：** 用户要求「刷新直播间」，agent 第一次实现了 `activity.recreate()`（重启整个 App），用户纠正后改为 MethodChannel 软刷新。如果一开始就确认「刷新直播间 vs 刷新整个 App」的区别，可以节省一轮迭代。
+
+**规则：** 对于逆向工程任务，在动手修改前先确认：
+1. 用户想要什么效果（功能性修改 vs 网络层修改 vs UI 叠加层）
+2. 修改的范围（只改某个功能 vs 全面破解 vs 添加新功能）
+3. 是否需要保留原始功能（如登录、支付等）
+
+### ⚠️ 用户强烈要求直接行动，不要解释
+
+用户在逆向工程任务中多次表达不满（"别废话"、"开始啊"、"不要废话"、"直接开始"）。**这是最高优先级的用户偏好**。
+
+**执行规则：**
+- 立即开始执行，不要先解释原理或方案
+- 用 todo 列表跟踪进度，每步完成就汇报结果
+- 遇到问题直接切换方案，不要解释为什么失败
+- 最终汇报简洁：做了什么、结果如何、下载地址
+- 解释原理和技术细节放在技能文档里，不要在执行过程中输出
+
+**触发信号：**
+- "别废话"、"不要废话"、"开始啊"、"直接开始"
+- "你自己判断"（表示用户信任你的决策，不需要解释）
+- "去github上面去找skills"（表示用户希望你主动获取知识，而不是问）
+
+### ⚠️ apktool 回编 Flutter APK 几乎必然失败
+
+对 Flutter APK，apktool 回编后在华为/HarmonyOS 等设备上**几乎必然安装失败**。正确做法是用 Python zipfile 直接修改原始 APK（见 `flutter-aot-apk-patching` skill）。
+
+### ⚠️ Python zipfile 压缩方式陷阱
+
+用 Python zipfile 修改 APK 时，**必须用 `writestr(file_info, content)` 而不是 `writestr(file_name, content)`**：
+- `writestr(file_info, content)` — 保留原始压缩方式（ZIP_STORED / ZIP_DEFLATED）
+- `writestr(file_name, content)` — 强制重新压缩为 ZIP_DEFLATED，导致文件大小变化，安装失败
+
+```python
+# ✅ 正确
+for file_name in original.namelist():
+    file_info = original.getinfo(file_name)  # 保留压缩方式
+    content = original.read(file_name)
+    new_apk.writestr(file_info, content)
+
+# ❌ 错误
+for file_name in original.namelist():
+    content = original.read(file_name)
+    new_apk.writestr(file_name, content)  # 丢失原始压缩方式
+```
+
+### ⚠️ 逆向工程任务：直接行动，不要解释
+
+用户在逆向工程任务中明确表达「别废话」「开始啊」等不满。这类任务用户期望：
+- 直接开始执行，不要先解释原理
+- 用 todo 列表跟踪进度，每步完成就汇报结果
+- 遇到问题直接切换方案，不要解释为什么失败
+- 最终汇报简洁：做了什么、结果如何、下载地址
+
+解释原理和技术细节放在技能文档里（用户需要时会看），不要在执行过程中输出。
+
+### ⚠️ smali 内部类创建容易导致崩溃
+
+在 smali 中创建内部类（如 `RefreshHelper$1.smali`、`RefreshHelper$2.smali`）作为 OnClickListener 时，容易导致 App 崩溃。原因：
+- 内部类需要正确的 `InnerClasses` 注解
+- 外部类需要引用内部类的 class descriptor
+- apktool 回编时可能不正确处理这些引用
+
+**更可靠的替代方案：**
+1. 让主类直接实现 `OnClickListener`，在 `onClick` 中用 `switch` 判断 View ID
+2. 使用匿名内部类（在主 smali 文件中直接创建 OnClickListener 实例）
+3. 最简单：只创建一个 RefreshHelper 类 + 一个 RefreshHelper$1 内部类（单按钮场景）
+
+**如果需要多个按钮：**
+- 不要创建多个 `RefreshHelper$1`、`RefreshHelper$2` 文件
+- 而是在一个 `RefreshHelper.smali` 中用 `static addButtons()` 方法创建多个 Button
+- 每个 Button 用不同的 `OnClickListener` 实例（通过 ID 区分）
+
+### ⚠️ 用户说「刷新直播间」≠「重启 App」
+
+`activity.recreate()` 会销毁并重建整个 Activity，Flutter 引擎也重启，导航回首页。用户说「刷新直播间」通常指的是：
+- 只刷新当前直播画面（重新拉流）
+- 不丢失当前页面状态和导航历史
+
+**正确实现：** 通过 MethodChannel 向 Flutter 发消息，让 Flutter 层调用 `_refreshPlayUrlFromServer`。如果 Flutter 端没有注册对应的 channel，`invokeMethod` 会静默失败（不会崩溃），此时回退到 `recreate()`。
+
+**在动手前确认：** 用户要的是「硬刷新」（重启 App）还是「软刷新」（只刷新直播画面）。这个区别很大，确认一次可以省掉一轮迭代。
+
+### ⚠️ Python HTTP 服务器在 macOS 上端口冲突
+
+macOS 上 `python3 -m http.server 9999` 反复报 `OSError: [Errno 48] Address already in use`。
+
+**正确启动流程：**
+```bash
+# 1. 先杀掉所有占用端口的进程
+lsof -ti :9999 | xargs kill -9 2>/dev/null
+sleep 2
+
+# 2. 确认端口已释放
+lsof -i :9999  # 应无输出
+
+# 3. 用 terminal(background=true) 启动，不要用 &（& 在 bash 中会被吞掉）
+
+# 4. 启动后验证
+sleep 2
+curl -I http://192.168.0.8:9999/file.apk  # 应返回 200 OK
+```
+
 ### ⚠️ 验证 APK 编译结果：smali 文件在 dex 中不可见
 `apktool b` 编译后，所有 smali 文件被编译合并到 `classes.dex` / `classes2.dex` / `classes3.dex` 中。如果用 `zipfile.namelist()` 搜索新增的 smali 类的文件名，**找不到是正常的**。
 
@@ -875,4 +1083,5 @@ with zipfile.ZipFile('output.apk') as z:
 - `references/lmi-live-app-analysis.md` — Lmi 直播 App 完整逆向分析报告（Flutter + 自建门票系统 + Google Play Billing v7.1.1）
 - `references/lmi-api-enumeration.md` — Lmi API 端点枚举结果（2026-05-30）：全部需要认证、无公开端点、无网页版
 - `references/trtc-live-streaming.md` — TRTC（腾讯云实时音视频）直播协议说明：为何无法提取 RTMP/FLV/HLS 流 URL，API 端点一览，CDN 转推判断方式
-- `references/trtc-live-streaming.md` — TRTC（腾讯云实时音视频）直播协议说明：为何无法提取 RTMP/FLV/HLS 流 URL，API 端点一览，CDN 转推判断方式
+- `references/lmi-v12-methodchannel-refresh.md` — Lmi v12 MethodChannel 软刷新实现（2026-05-29）
+- `references/lmi-iterative-failures.md` — Lmi APK 迭代失败记录（v10→v13），含关键字符串偏移量、MethodChannel 列表、核心教训
