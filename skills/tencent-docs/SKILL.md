@@ -429,6 +429,8 @@ current service: open.tdocs.agentapi.trpc
 
 **解决方案 — .docx 导入绕过**（适用于含图片的文档）：
 
+> ⚠️ **已知坑**：import_file.sh 上传 .docx 后，manage.search_file 可能搜不到导入的文件。推荐用 `create_smartcanvas_by_mdx` 直接创建智能文档（Markdown 格式），更可靠。
+
 ```bash
 # 1. 用 python-docx 创建 .docx 文件，图片直接嵌入
 pip3 install python-docx  # 如未安装

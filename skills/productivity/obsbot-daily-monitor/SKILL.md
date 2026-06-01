@@ -19,7 +19,7 @@ OBSBOT Tail Air / Tail 2 / Meet SE / Meet 2 / Tiny SE / Tiny 2 / Tiny 2 Lite / T
 |:-----|:-----|:------|:-----|
 | **YouTube** | YouTube Data API | ✅ HIGH | `curl` + API Key 直接搜索，日期过滤精确 |
 | **Instagram** | Scrapling StealthyFetcher | ⚠️ MEDIUM | 可爬帖子列表和内容，但拿不到精确日期 |
-| **TikTok** | ❌ 不可用 | ❌ | X-Bogus 反爬机制，所有方案均失败（2026-05-29 验证） |
+| **TikTok** | Scrapling search + oembed API | ✅ HIGH | 搜索页获取链接 + oembed API 获取详情 + 视频 ID 解码时间（2026-05-31 验证） |
 | **X/Twitter** | web_search / xurl | ⚠️ LOW | web_search 索引延迟大；xurl 需注册 App |
 
 ## YouTube 搜索流程
@@ -49,7 +49,165 @@ links = page.css('a[href*="/p/"]::attr(href)').getall()
 links += page.css('a[href*="/reel/"]::attr(href)').getall()
 ```
 
-## 腾讯文档表格
+## TikTok 爬取流程
+
+Profile 页面会被 CAPTCHA 阻断，使用搜索页 + oembed API + 视频 ID 时间解码：
+
+```python
+from scrapling.fetchers import StealthyFetcher
+import subprocess, json
+from datetime import datetime
+
+proxy = 'http://127.0.0.1:1082'  # Shadowrocket
+
+# Step 1: 搜索页获取视频链接
+page = StealthyFetcher.fetch('https://www.tiktok.com/search?q=OBSBOT',
+    headless=True, network_idle=True, disable_resources=True,
+    proxy=proxy, block_webrtc=True, hide_canvas=True)
+video_links = page.css('a[href*="/video/"]::attr(href)').getall()
+
+# Step 2: oembed API 获取视频详情（必须用代理，直连会 connection reset）
+for url in video_links[:10]:
+    result = subprocess.run(
+        ['curl', '-s', '--max-time', '8', '-x', proxy,
+         f'https://www.tiktok.com/oembed?url={url}'],
+        capture_output=True, text=True, timeout=15)
+    data = json.loads(result.stdout)
+    print(f"{data['author_name']}: {data['title'][:80]}")
+
+# Step 3: 视频 ID 解码发布时间
+for url in video_links:
+    vid_id = url.split('/video/')[-1]
+    ts = int(vid_id) >> 32  # Unix timestamp (秒)
+    dt = datetime.fromtimestamp(ts)
+    print(f"{url} → {dt.strftime('%Y-%m-%d')}")
+```
+
+**注意**：VPN 必须连接（Shadowrocket at 127.0.0.1:1082），否则 Scrapling 和 oembed API 都会超时。已知 OBSBOT TikTok 账号：`@obsbot`（17.5K粉丝）、`@obsbot_us`、`@obsbot.my`。标签：`#obsbot`、`#obsbot_tiny3lite`。
+
+## YouTube 批量搜索脚本
+
+用 Python 脚本批量搜索比逐个 curl 更可靠（避免 VPN 断连导致部分关键词超时）：
+
+```python
+#!/usr/bin/env python3
+import json, urllib.request, urllib.parse
+
+API_KEY=*** = "YYYY-MM-DD"
+keywords = ["OBSBOT", "OBSBOT Tiny 3", "OBSBOT Tiny 3 Lite", "OBSBOT Tiny 2",
+    "OBSBOT Tiny 2 Lite", "OBSBOT Tiny SE", "OBSBOT Tail 2", "OBSBOT Tail Air",
+    "OBSBOT Meet 2", "OBSBOT Meet SE", "OBSBOT Talent 2", "OBSBOT webcam",
+    "OBSBOT camera", "OBSBOT unboxing", "OBSBOT review", "OBSBOT streaming"]
+
+all_videos = {}
+for kw in keywords:
+    params = urllib.parse.urlencode({
+        'part': 'snippet', 'q': kw, 'type': 'video',
+        'publishedAfter': f'{DATE}T00:00:00Z',
+        'publishedBefore': f'{DATE}T23:59:59Z',
+        'maxResults': 20, 'key': API_KEY
+    })
+    url = f"https://www.googleapis.com/youtube/v3/search?{params}"
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+            for item in data.get('items', []):
+                vid = item['id']['videoId']
+                if vid not in all_videos:
+                    s = item['snippet']
+                    all_videos[vid] = {
+                        'id': vid, 'title': s['title'], 'channel': s['channelTitle'],
+                        'published': s['publishedAt'], 'desc': s.get('description','')[:300],
+                        'url': f'https://youtube.com/watch?v={vid}', 'keyword': kw
+                    }
+    except Exception as e:
+        print(f"[{kw}] ERROR: {e}")
+
+# 过滤 OBSBOT 相关
+obsbot_related = [v for v in all_videos.values() if any(
+    k in v['title'].lower() or k in v['desc'].lower()
+    for k in ['obsbot', 'tiny 3', 'tiny 2', 'tail 2', 'tail air', 'meet 2', 'meet se', 'talent 2']
+)]
+```
+
+**关键坑**：VPN 长任务会断，部分关键词会 IncompleteRead 或 SSL EOF。脚本会跳过失败的关键词继续执行，最后汇总所有成功的结果。
+
+## SOP 工作流（IMA 笔记：OBSBOT每日上线SOP）
+
+IMA 笔记链接：https://ima.qq.com/note/share/_AweMLuM8wuZLJgQaVVlNg
+
+每日执行 3 步：
+
+### Step 1 社交媒体检索
+- 覆盖 4 平台：YouTube / Instagram / TikTok / X
+- 10 个产品关键词
+- 视频类型：YTB Dedicated / Integration / Shorts / TT video / INS reel / INS post / X post
+- ❌ 无效视频：只挂购买链接未展示产品 / 纯官方宣传素材切片
+
+### Step 2 内容质检
+- 视频内容分类（常规测评→不用标记；自发测评→看体量判断；展会/采访→需标记）
+- 描述区检查：链接是否正确、标签是否完整
+- 信息有遗漏→标记提醒
+
+### Step 3 输出上线资源报告（两部分结构）
+
+报告必须包含两部分，不能只输出筛选结果：
+
+**Part 1：全平台搜索结果（所有第三方 OBSBOT 相关内容）**
+- 列出当日搜索到的**所有** OBSBOT 相关内容
+- **必须过滤 OBSBOT 官方账号**（@obsbot、@OBSBOT_Official、@obsbotmy、@obsbot_us 等）
+- 按平台分组：YTB / TT / INS / X
+- 每条包含：博主、标题、链接、发布时间、简介
+
+**Part 2：符合 SOP 要求的视频**\n- 从 Part 1 中筛选出符合要求的视频\n- 筛选标准：视频必须包含完整的产品测评内容\n- ❌ 排除：只挂购买链接未展示产品 / 纯官方宣传素材切片 / 品牌大使直播中使用（非专门测评）/ 仅描述中提到但无产品展示\n- 按平台分组，每条标注产品、视频类型、简析\n- **⚠️ Part 2 必须附带链接**（用户明确要求 2026-05-31）
+
+**排除说明**：在报告末尾列出被排除的视频及原因
+
+格式示例：
+```
+## Part 1：全平台搜索结果
+### YouTube（N条）
+| # | 博主 | 视频标题 | 链接 | 发布时间 | 简介 |
+### TikTok（N条）
+...
+### Instagram（N条）
+...
+### X/Twitter（N条）
+...
+
+## Part 2：符合 SOP 要求的视频
+### YouTube（N条）
+| 博主 | 视频 | 产品 | 视频类型 | 简析 |
+### TikTok（N条）
+...
+### Instagram（N条）
+...
+### X/Twitter（N条）
+...
+
+## ⚠️ 排除说明
+| 排除项 | 平台 | 原因 |
+```
+
+已合作红人需标记对应小伙伴名字（参考 KOL资源交接表）。
+
+详细输出格式模板见 `references/sop-output-format.md`。
+
+## 腾讯文档上传
+
+**推荐方式：create_smartcanvas_by_mdx**（智能文档，Markdown 格式，排版美观）
+
+```bash
+mcporter call tencent-docs create_smartcanvas_by_mdx --args '{"title": "OBSBOT上线资源报告_YYYY-MM-DD", "mdx": "报告内容..."}'
+# 返回 file_id 和 url
+mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "target_folder_id": "DjbGtzenXmbX"}'
+```
+
+**⚠️ 不推荐 import_file.sh + Word 文档**：import_file.sh 上传 .docx 后，manage.search_file 可能搜不到导入的文件（已知坑）。用 create_smartcanvas_by_mdx 更可靠，Markdown 表格直接渲染。
+
+**文件夹**：OBSBOT（ID: DjbGtzenXmbX）
+
+## 腾讯文档表格（KOL 筛选用）
 
 - **文件夹**：OBSBOT → 每日监测（ID: DumZsGZJrwsf）
 - **表格类型**：smartsheet
@@ -158,10 +316,10 @@ curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CHA
 
 ## 已知限制
 
-- **TikTok**：X-Bogus 反爬机制，无法通过任何 CLI/无头浏览器方案获取视频列表
 - **Instagram**：Scrapling 可爬内容但无法获取精确发布日期
 - **X/Twitter**：xurl 未配置时只能依赖 web_search（索引延迟 1-3 天）
 - **简介完整性**：YouTube API 返回完整 description；Instagram 只能获取页面可见文本
+- **TikTok VPN 依赖**：Scrapling 必须通过 Shadowrocket 代理（127.0.0.1:1082），VPN 断开会导致超时
 
 ## 并行策略
 
@@ -172,8 +330,41 @@ curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CHA
 
 总耗时约 3-5 分钟。
 
+## 多轮搜索确保无遗漏
+
+用户明确要求（2026-05-31）：**必须多次检测确保没有遗漏。**
+
+执行策略：
+1. **第一轮**：13 个产品关键词直接搜索（OBSBOT Tiny 3, OBSBOT Tail 2, ...）
+2. **第二轮**：变体关键词补充搜索（Tiny 3 webcam, Tail 2 camera, OBSBOT unboxing, OBSBOT review, ...）
+3. **第三轮**：品牌大使/联盟关键词（OBSBOT brand ambassador, OBSBOT affiliate）
+4. **去重**：按 video ID 去重，汇总所有轮次的结果
+
+YouTube API 部分关键词会因 VPN 断连返回 IncompleteRead，脚本会跳过失败关键词继续执行。需要跑两轮脚本确保覆盖。
+
+## 腾讯文档编辑（更新已有文档）
+
+当需要更新已创建的智能文档（如添加链接列）时，使用 smartcanvas 编辑工具：
+
+```bash
+# 1. 搜索锚点
+mcporter call tencent-docs smartcanvas.find --args '{"file_id": "FILE_ID", "query": "要查找的文本"}'
+# 返回 blocks[].id
+
+# 2. 删除旧内容
+mcporter call tencent-docs smartcanvas.edit --args '{"file_id": "FILE_ID", "action": "DELETE", "id": "BLOCK_ID"}'
+
+# 3. 在锚点后插入新内容
+mcporter call tencent-docs smartcanvas.edit --args '{"file_id": "FILE_ID", "action": "INSERT_AFTER", "id": "ANCHOR_ID", "content": "新内容..."}'
+```
+
+**⚠️ 已知坑**：
+- 搜索返回多个同名块时，需要根据上下文判断删除哪个（如 Part 1 和 Part 2 都有"TikTok（1条）"标题）
+- 表格内容在 get_content 中被提取为纯文本，Markdown 链接 `[文本](URL)` 显示为"文本"
+- 推荐直接用 `create_smartcanvas_by_mdx` 一次性创建完整内容，避免后续编辑
+
 ## ⚠️ 关键约束
 
-**不要浪费时间在已知不可行的平台上。** TikTok 反爬（X-Bogus）是硬约束，2026-05-29 已用 5 种方案验证全部失败。遇到类似情况应快速确认不可行后转向替代方案，不要反复尝试。
+**VPN 稳定性是首要约束。** Shadowrocket 长时间任务会断开，需要定期检查连接状态。YouTube API 和 TikTok Scrapling 都依赖 VPN。遇到 VPN 断开时先重连再继续。
 
 详见 `references/platform-constraints.md` 获取每个平台的详细状态和工具矩阵。

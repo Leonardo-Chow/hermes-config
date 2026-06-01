@@ -113,6 +113,15 @@ Agent 会按优先级依次尝试：环境变量 → 配置文件。缺少凭证
 
 ## 已知陷阱
 
+### 🔴 读取他人分享的笔记 — "not author" 错误
+当用户分享一个 IMA 笔记链接（如 `https://ima.qq.com/note/share/XXX`），用 `get_doc_content` 读取会返回 `GetNoteContent not author`，因为笔记不是当前 API Key 用户创建的。
+**解决方案**：用 `browser_navigate` 访问分享链接，从页面快照中读取内容。web_extract 对 IMA 页面也会失败，必须用 browser 工具。
+```python
+# 用浏览器访问分享链接读取内容
+browser_navigate('https://ima.qq.com/note/share/_AweMLuM8wuZLJgQaVVlNg?channel=4')
+# 然后用 browser_snapshot(full=True) 获取完整内容
+```
+
 ### 🔴 get_doc_content "not author" 错误
 调用 `get_doc_content` 时返回 `GetNoteContent not author`，说明该笔记由其他 IMA 账号创建，当前 API Key 无权读取内容。
 **解决方案**：用 `get_media_info` 获取 `notebook_ext_info.notebook_id`，再用 `notebook_id` 作为 `note_id` 重试 `get_doc_content`。有时 `notebook_id` 可以绕过权限限制。

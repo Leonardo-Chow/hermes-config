@@ -468,12 +468,17 @@ class MySpider(Spider):
 - **disable_resources**: Set `disable_resources=True` to block fonts/images/media/stylesheets for ~25% faster loading
 - **GFW blocked sites**: For BBC, CNN, Google etc. from China — VPN **must** be connected first. Scrapling respects system proxy settings when VPN is active.
 - **Shadowrocket proxy**: Use `http://127.0.0.1:1082` (HTTP/SOCKS5) for Scrapling/Playwright. Pass `proxy='http://127.0.0.1:1082'` to DynamicFetcher/StealthyFetcher. Playwright needs `proxy={"server": "http://127.0.0.1:1082"}` at browser launch.
-- **TikTok anti-bot (X-Bogus)**: TikTok's video list API requires an `X-Bogus` token generated client-side. ALL approaches fail: curl+proxy, Scrapling, Playwright+Cookie, bb-browser real Chrome. The video grid shows "出错了" because the API call silently fails. **Do not attempt TikTok video list scraping — it is a hard constraint.** Use NoxInfluencer Brand Monitor or manual verification instead.
-- **Shadowrocket proxy for Scrapling/Playwright**: Shadowrocket macOS exposes HTTP/SOCKS5 proxy at `127.0.0.1:1082`. Pass `proxy='http://127.0.0.1:1082'` to Fetcher/DynamicFetcher/StealthyFetcher. Verified working for Instagram, Google, BBC. **Does NOT work for TikTok** (see below).
-- **TikTok X-Bogus anti-bot (2026-05-29 verified)**: TikTok's video list API requires an `X-Bogus` token generated client-side by TikTok's own JS. Even with proxy + cookies + Playwright, the video grid returns empty. The SSR `itemList` is always empty. Direct API calls return 0 bytes. **Do not attempt TikTok video scraping with Scrapling** — all approaches (DynamicFetcher, StealthyFetcher, Playwright with cookies) fail.
+- **TikTok anti-bot (updated 2026-05-31)**: TikTok has aggressive anti-bot. Profile pages load (HTTP 200) but video grid shows CAPTCHA slider puzzle, and SSR `itemList` is always empty. Direct Scrapling profile scraping fails for most accounts. **Working workaround — 3-step approach:**
+  1. **Search page**: `StealthyFetcher.fetch('https://www.tiktok.com/search?q=KEYWORD', proxy='http://127.0.0.1:1082')` → `a[href*="/video/"]::attr(href)` returns video links
+  2. **oembed API via proxy**: `curl -s -x http://127.0.0.1:1082 "https://www.tiktok.com/oembed?url=https://www.tiktok.com/@user/video/VIDEO_ID"` → returns title, author, thumbnail. Direct access (no proxy) gets connection reset.
+  3. **Video ID → timestamp**: `int(video_id) >> 32` gives Unix timestamp (seconds). Use to filter by publish date.
+  - Profile page: does NOT work for most accounts (CAPTCHA blocks video grid). @tiktok control account works (31 videos), but brand/creator accounts trigger CAPTCHA.
+  - Search page + oembed: **works** — verified 2026-05-31
+  - NoxInfluencer Brand Monitor still works for brand-level TikTok tracking (requires brand_id from web UI)
+- **Shadowrocket proxy for Scrapling/Playwright**: Shadowrocket macOS exposes HTTP/SOCKS5 proxy at `127.0.0.1:1082`. Pass `proxy='http://127.0.0.1:1082'` to Fetcher/DynamicFetcher/StealthyFetcher. Verified working for Instagram, Google, BBC, TikTok search pages.
 - **Proxy connection failures**: ~5-10% of requests may fail with `ERR_PROXY_CONNECTION_FAILED`. Wrap in try/except, log failures, continue.
 - **YouTube likes/comments**: Dynamically loaded via JS, ~50% success rate. Use `aria-label` attributes as fallback.
-- **TikTok video grid DOES NOT LOAD** (verified 2026-05-29): TikTok uses X-Bogus anti-bot token generated client-side. The profile page loads (HTTP 200) and user info is visible, but the video grid returns "出错了" (error) and `itemList` is empty in SSR data. All approaches fail: DynamicFetcher, StealthyFetcher, Playwright with cookies, bb-browser real Chrome, curl with cookies, direct API calls. The video list is ONLY accessible when TikTok's own JS generates the X-Bogus token. **Do not attempt TikTok scraping — use NoxInfluencer Brand Monitor or manual check instead.**
+- **TikTok — Use search+oembed, not profile scraping**: Profile scraping triggers CAPTCHA for most accounts. Use the search page → oembed API → video ID timestamp approach documented in Verified Patterns below.
 - **CLI `extract` command**: As of v0.2.99, the CLI only has `install` command. Use Python API instead for older versions. v0.4.8+ has full CLI.
 - **Legal**: Always check robots.txt and website ToS. Use `robots_txt_obey = True` on spiders.
 
@@ -578,18 +583,54 @@ texts = page.css('[data-e2e*="desc"]::text').getall()
 # Note: exact dates NOT available without login — posts are ordered most-recent-first
 ```
 
-### TikTok ⚠️ Very Difficult — Anti-Bot Blocks Video Grid
+### TikTok — Search + oembed approach (2026-05-31 verified)
 
-TikTok uses X-Bogus client-side anti-bot tokens. The video grid is loaded via JS API calls that require this token — it cannot be extracted from CLI/automation.
+Profile page scraping triggers CAPTCHA for most accounts. Use search page + oembed API instead.
 
-**What works:** Page loads (HTTP 200), profile info visible, relative time markers (e.g., "12h", "2d") in page text, oembed API for individual video metadata.
-**What does NOT work:** Video listing, video descriptions, exact timestamps, the `/api/post/item_list/` endpoint (returns empty without X-Bogus).
+```python
+from scrapling.fetchers import StealthyFetcher
+import subprocess, json
+from datetime import datetime
 
-**For TikTok monitoring:** Use NoxInfluencer Brand Monitor (requires brand_id from web UI), or manual browser checking.
+proxy = 'http://127.0.0.1:1082'
+
+# Step 1: Search page → video links
+page = StealthyFetcher.fetch(
+    'https://www.tiktok.com/search?q=OBSBOT',
+    headless=True, network_idle=True, disable_resources=True,
+    proxy=proxy, block_webrtc=True, hide_canvas=True,
+)
+video_links = page.css('a[href*="/video/"]::attr(href)').getall()
+
+# Step 2: oembed API via proxy → video metadata
+for url in video_links[:10]:
+    result = subprocess.run(
+        ['curl', '-s', '--max-time', '8', '-x', proxy,
+         f'https://www.tiktok.com/oembed?url={url}'],
+        capture_output=True, text=True, timeout=15
+    )
+    data = json.loads(result.stdout)
+    print(f"{data['author_name']}: {data['title'][:80]}")
+
+# Step 3: Video ID → publish timestamp
+for url in video_links:
+    vid_id = url.split('/video/')[-1]
+    ts = int(vid_id) >> 32  # Unix timestamp in seconds
+    dt = datetime.fromtimestamp(ts)
+    print(f"{url} published: {dt.strftime('%Y-%m-%d')}")
+```
+
+**OBSBOT TikTok accounts:** `@obsbot` (17.5K followers), `@obsbot_us` (shop), `@obsbot.my` (Malaysia), `@obsbot_official` (PH)
+**Key hashtags:** `#obsbot`, `#obsbot_tiny3lite`, `#obsbot_tiny3`
 
 ## Support Files
 
 - `references/youtube-scraping.md` — YouTube video scraping patterns
+- `references/youtube-comment-scraping.md` — YouTube comment scraping via API (commentThreads endpoint)
+- `references/reddit-scraping.md` — Reddit anti-detection scraping
+- `scripts/bbc_scraper.py` — BBC News scraper
+- `scripts/youtube_scraper.py` — YouTube video scraper
+- `scripts/tiktok_oembed_search.py` — TikTok content discovery via search + oembed + ID timestamp decode (requires VPN proxy)
 - `references/youtube-comment-scraping.md` — YouTube comment scraping via API (commentThreads endpoint)
 - `references/reddit-scraping.md` — Reddit anti-detection scraping
 - `scripts/bbc_scraper.py` — BBC News scraper

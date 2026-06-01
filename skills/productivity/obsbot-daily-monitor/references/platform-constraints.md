@@ -1,6 +1,6 @@
 # OBSBOT Daily Monitoring — Platform Constraints & Tool Matrix
 
-## Platform-by-Platform Status (verified 2026-05-29)
+## Platform-by-Platform Status (verified 2026-05-31)
 
 ### YouTube ✅ FULLY WORKING
 - **Tool:** YouTube Data API (`curl` + API Key)
@@ -20,20 +20,18 @@
 - **Workaround for dates:** Scrape individual post URLs via `web_extract` or oembed API
 - **Reliability:** MEDIUM — works for content, fails for dates
 
-### TikTok ❌ NOT WORKING
-- **Root cause:** X-Bogus anti-bot token mechanism
-- **What happens:** Profile page loads (HTTP 200), user info visible (followers, bio), playlists visible, but video grid shows "出错了" (error). SSR `itemList` is empty. All API calls return 0 bytes.
-- **Approaches tried (all failed):**
-  1. curl + proxy + cookies → HTTP 200, 0 bytes
-  2. Scrapling DynamicFetcher + proxy → Page loads, 0 video links
-  3. Scrapling StealthyFetcher + proxy → Same
-  4. Playwright + cookies + proxy → Detected as headless
-  5. bb-browser (real Chrome) + cookie injection → Video grid error
-  6. Direct TikTok API calls from browser fetch → Empty response (missing X-Bogus)
-- **Alternatives:**
-  - NoxInfluencer Brand Monitor (requires brand_id from web UI)
-  - Manual check of @obsbot profile
-  - NoxInfluencer creator search (finds tagged creators, not today's posts)
+### TikTok ✅ WORKING (search + oembed approach)
+- **Verified:** 2026-05-31
+- **What works:**
+  1. **Search page via Scrapling**: `StealthyFetcher.fetch('https://www.tiktok.com/search?q=KEYWORD', proxy='http://127.0.0.1:1082')` → `a[href*="/video/"]::attr(href)` returns video links
+  2. **oembed API via proxy**: `curl -s -x http://127.0.0.1:1082 "https://www.tiktok.com/oembed?url=VIDEO_URL"` → returns title, author, thumbnail. Direct access (no proxy) gets connection reset.
+  3. **Video ID → timestamp**: `int(video_id) >> 32` gives Unix timestamp (seconds) for precise publish date filtering
+  4. **web_search indirect**: `site:tiktok.com OBSBOT` discovers video links via search engine indexing
+- **What does NOT work:** Profile page scraping triggers CAPTCHA slider puzzle for most accounts. SSR `itemList` is always empty.
+- **Workflow:** web_search for links → oembed API for metadata → video ID decode for date → filter today's content
+- **Reliability:** HIGH for content discovery; profile scraping still blocked
+- **Known accounts:** `@obsbot` (17.5K), `@obsbot_us`, `@obsbot.my`, `@obsbot_official` (PH)
+- **Key hashtags:** `#obsbot`, `#obsbot_tiny3lite`, `#obsbot_tiny3`
 
 ### X/Twitter ⚠️ NOT CONFIGURED
 - **Tools available:**
@@ -63,8 +61,8 @@
 ```
 delegate_task (3 parallel):
   ├── Task 1: YouTube API search + full descriptions
-  ├── Task 2: Instagram Scrapling + X/Twitter web_search
-  └── Task 3: Tencent Docs folder lookup + smartsheet creation
+  ├── Task 2: TikTok search+oembed + Instagram Scrapling
+  └── Task 3: X/Twitter web_search + Tencent Docs setup
 ```
 
-Total execution time: ~3-5 minutes (YouTube API is fastest, Instagram Scrapling takes 30-60s)
+Total execution time: ~3-5 minutes (YouTube API is fastest, TikTok oembed is fast, Instagram Scrapling takes 30-60s)
