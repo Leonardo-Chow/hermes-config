@@ -928,11 +928,14 @@ curl -s 'https://api.example.com/data' | python3 -c "import json,sys; ..."
    curl -s 'https://api.example.com/data' | python3 -c "..."
    ```
 
-### ⚠️ GitHub Search API 质量问题
+### ⚠️ GitHub Search API 质量问题（含已验证的高效查询）
 `created:>date` 查询返回的多为游戏mod、Roblox工具等低质量仓库。**更好的查询策略：**
 - `stars:>500 language:python created:>2026-05-01` — 限定语言和最低星数
 - `topic:ai stars:>100` — 按主题筛选
 - 或从 HackerNews/科技新闻中手动发现热门项目
+- **AI Agent Skill 板块专用查询（2026-06-02 验证，返回高质量结果）：**
+  `agent+skill+MCP+stars:>50&sort=stars&order=desc` — 返回 ECC (202K⭐)、CowAgent (45K⭐)、antigravity-awesome-skills (39K⭐) 等知名项目
+  `agent+skill+stars:>100&sort=stars&order=desc` — 更宽泛，含更多框架类项目
 
 ### ⚠️ 配图数量不足会扣分
 质量评分中配图≥3张得满分15分，2张只得8分，1张只得8分。**建议：** 在采集新闻时同步提取至少3篇文章的 OG 图片（NPR/CNN/Guardian 最可靠），不要等到最后才找配图。
@@ -1030,7 +1033,10 @@ curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/fe
 **降级方案：** 如果急需生成日报，直接用 `web_search` 替代 Tavily 搜索新闻（质量略低但可用）。
 **验证 API Key：** `curl -s -X POST "https://mcp.tavily.com/mcp/" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'` — 401 表示 Key 过期，需更新；正常响应表示 Key 有效但会话连接断了。
 
-### ⚠️ Tavily MCP 每日配额耗尽（daily_cap_reached）（2026-06-02 验证）
+### ⚠️ CNN RSS 返回过时内容（2026-06-02 验证）
+CNN RSS (`rss.cnn.com/rss/edition_world.rss`) 通过 rss2json 解析后返回的文章日期为 2021-2023 年，不是当天新闻。**不要依赖 CNN RSS 作为国际新闻来源。** 优先使用 BBC + NPR + Al Jazeera + France 24 组合。
+
+### ⚠️ Tavily MCP 每日配额耗尽（daily_cap_reached）（2026-06-02 再次验证）
 **症状：** 所有 Tavily MCP 调用返回 `{"code":"daily_keyless_daily_cap_reached","message":"You reached the daily keyless Tavily limit."}`。这与会话缓存断连不同——是 API Key 层面的配额限制。
 **诊断：** 错误码为 `daily_keyless_daily_cap_reached`（非 "not connected" 或 "unreachable"），说明 Tavily 免费额度已用完，所有会话都会失败。
 **解决方案：**
@@ -1038,12 +1044,16 @@ curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/fe
 2. 如果有付费 Tavily API Key，在请求中添加 `Authorization: Bearer tvly-YOUR_KEY` 头
 3. 等待配额重置（`retry_after_seconds` 字段显示等待时间）
 **影响：** Tavily Search/Extract/Research 全部不可用，必须用 RSS + curl 替代
-**RSS 降级清单（按优先级）：**
-- 科技：TechCrunch RSS、Ars Technica RSS、The Verge RSS
-- 国际：BBC RSS、NPR RSS、Al Jazeera RSS、France 24 RSS
-- 娱乐：Variety RSS、Hollywood Reporter RSS
-- AI：Arstechnica Technology Lab RSS
+**RSS 降级清单（按优先级，2026-06-02 验证全部可用）：**
+- 科技：`https://techcrunch.com/feed/` · `https://feeds.arstechnica.com/arstechnica/technology-lab` · `https://www.theverge.com/rss/index.xml`
+- 国际：`https://feeds.bbci.co.uk/news/world/rss.xml` · `https://feeds.npr.org/1004/rss.xml` · `https://www.aljazeera.com/xml/rss/all.xml` · `https://www.france24.com/en/rss`
+- 娱乐：`https://variety.com/feed/` · `https://www.hollywoodreporter.com/feed/`
+- AI：`https://techcrunch.com/category/artificial-intelligence/feed/`
+- CNN（不稳定）：`http://rss.cnn.com/rss/edition_world.rss`（2026-06-02 返回过时内容，优先用 BBC/NPR/France 24）
+
 所有 RSS 通过 `api.rss2json.com` 转 JSON：`curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=<RSS_URL>'`
+
+**RSS 降级实测效果（2026-06-02）：** 使用上述 10 个 RSS 源，30 秒内完成全部新闻采集，质量评分 97.1/100。国际新闻覆盖 6 个不同媒体域名（BBC、NPR、Al Jazeera、France 24、TechCrunch、Ars Technica），满足≥5个来源的要求。
 
 ### ⚠️ Tavily MCP 断连时的完整降级方案（2026-05-27 验证）
 **场景：** Tavily MCP 连续失败 3 次后标记 unreachable，需要继续生成日报。

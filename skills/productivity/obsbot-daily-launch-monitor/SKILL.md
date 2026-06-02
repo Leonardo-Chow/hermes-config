@@ -94,26 +94,56 @@ curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/videos?part=snippet
 
 ### Step 3: TikTok 搜索
 
-#### 方式1: web_search 搜索
+⚠️ **关键限制（2026-06-01 验证）**：
+- web_search 无法索引最新发布的 TikTok 视频（索引延迟 1-2 周）
+- TikTok 搜索页面需要登录才能查看结果
+- 浏览器 Cookie 注入被安全策略阻止
+- oembed API 可用，但只能获取已知视频ID的信息
 
-```python
-web_search('site:tiktok.com OBSBOT 2026-05', limit=20)
-web_search('tiktok OBSBOT Tiny 3 review May 2026', limit=10)
-```
-
-#### 方式2: oembed API 验证
+#### 方式1: oembed API 验证（推荐，最可靠）
 
 ```bash
+# 用代理访问 oembed API
 curl -s --max-time 8 -x http://127.0.0.1:1082 "https://www.tiktok.com/oembed?url=https://www.tiktok.com/@USER/video/VIDEO_ID"
 ```
 
-#### 方式3: 视频 ID 解码时间
+#### 方式2: 视频 ID 解码时间
 
 ```python
 import datetime
 timestamp = int(video_id) >> 32
 date = datetime.datetime.fromtimestamp(timestamp).date()
 ```
+
+#### 方式3: 已知账号逐个检查
+
+已知 OBSBOT 相关 TikTok 账号：
+- @obsbot（OBSBOT Official，17.5K 粉丝）
+- @obsbotmy1（obsbotmy）
+- @psscreativemedia（PSS Creative Media）
+- @mrsmobster（MrsMobster）
+- @maccagames（MaccaGames）
+- @brainiacvp（Brainiacvp）
+- @cestlabby
+- @stephskiii
+
+对每个账号，用 oembed API 验证最新视频。
+
+#### 方式4: web_search 间接搜索（补充）
+
+```python
+web_search('site:tiktok.com OBSBOT 2026-05', limit=20)
+web_search('tiktok OBSBOT Tiny 3 review May 2026', limit=10)
+```
+
+注意：web_search 结果可能遗漏最新视频，仅作为补充。
+
+#### 方式5: 用户提供 Cookie 登录浏览器
+
+如果用户提供了 TikTok Cookie，可以：
+1. 保存到 ~/.hermes/cookies/platform_cookies.json
+2. 用浏览器访问 TikTok 搜索页面
+3. 但 Cookie 注入可能被浏览器安全策略阻止
 
 ### Step 4: Instagram 搜索
 
