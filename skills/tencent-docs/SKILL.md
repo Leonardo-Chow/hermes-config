@@ -176,8 +176,11 @@ mcporter call "tencent-docs" "<工具名>" --args '<JSON参数>'
 ### 智能表格完整工作流
 详见 `references/smartsheet-workflow.md` — 从创建到配置字段到填充数据的完整流程，包含 response format 差异和用户偏好（链接用文本类型）。
 
-### 用户偏好：链接用文本类型
+### 用户偏好：链接用文本类型（智能表格）
 用户明确要求「视频链接不要用超链接」。链接字段使用 `text` 类型而非 `url` 类型，值格式为 `{"text_value": {"items": [{"text": "URL", "type": "text"}]}}`。
+
+### 用户偏好：smartcanvas 中链接用纯文本 URL
+用户明确要求（2026-06-01）：**smartcanvas 中链接直接用纯文本 URL，不要用 Markdown 超链接格式 `[链接](URL)`**。直接写 `https://...` 即可。
 
 ### MCP 工具 RPC 错误（2026-05）
 `upload_image` 和 `scrape_url` 工具虽然在 `mcporter list` 中列出，但调用时返回 `-32603: rpc name ... invalid, current service: open.tdocs.agentapi.trpc`。这是服务端 RPC 未注册的问题，与客户端版本无关（v1.0.33 已是最新）。

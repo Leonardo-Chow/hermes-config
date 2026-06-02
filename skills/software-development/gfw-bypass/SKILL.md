@@ -1,6 +1,6 @@
 ---
 name: gfw-bypass
-description: "在中国 GFW 环境下访问被墙网站的策略和工具链。覆盖代理工具诊断、节点切换、VPN 隧道检测、备用内容源。"
+description: "在中国 GFW 环境下访问被墙网站的策略和工具链。覆盖代理工具信息、备用内容源。VPN 由用户手动开关。"
 version: 1.0.0
 author: Hermes Agent
 tags: [proxy, vpn, gfw, china, network, scraping]
@@ -13,16 +13,8 @@ tags: [proxy, vpn, gfw, china, network, scraping]
 ## 本机代理环境
 
 ### Shadowrocket VPN（主 VPN）⭐
-- **状态:** 已配置并连接成功（2026-05-09 确认）
-- **订阅链接:** `http://47.242.55.240/link/9Yinklz3hNqvzVeB?list=shadowrocket`
-- **特点:** 系统级 VPN，所有应用自动走代理
-- **连接命令:** `scutil --nc start "Shadowrocket"`
-- **断开命令:** `scutil --nc stop "Shadowrocket"`
-- **状态检查:** `scutil --nc status "Shadowrocket"`
-- **IP 检查:** `curl -s https://api.ipify.org`
-- **验证:** `curl -sL --max-time 10 "https://www.google.com" | wc -c` 应返回 >0
-- **⚠️ 用户要求：执行需要翻墙的任务时自动使用 Shadowrocket**
 - **已确认可访问:** Google、BBC、CNN、YouTube 等被墙网站
+- **由用户手动开关** — 需要时告诉我，我会提示你开启
 
 ### 0dcloud VPN（备用 VPN）
 - **路径:** `/Applications/0dcloud.app`
@@ -104,6 +96,18 @@ curl -sL -X PUT "http://127.0.0.1:9090/proxies/Proxy" -H "Content-Type: applicat
 - **原因:** ShadowsocksR/Vmess 节点过期或被封
 - **解决:** 在 ClashX 菜单切换节点，或更新订阅
 
+### git push/pull 失败 — 使用 SOCKS5 代理
+- **症状:** `git push` 返回 `LibreSSL SSL_connect: SSL_ERROR_SYSCALL` 或 `CONNECT tunnel failed, response 503`
+- **解决:** 为 git 配置 SOCKS5 代理（Shadowrocket 本地端口 1082 支持 SOCKS5）：
+  ```bash
+  cd <repo>
+  git config http.proxy socks5://127.0.0.1:1082
+  git config https.proxy socks5://127.0.0.1:1082
+  git push origin main
+  ```
+- **⚠️ 优先级:** git 操作默认使用 `socks5://127.0.0.1:1082`，不要用 `http://127.0.0.1:1082`
+- **用户需确保 Shadowrocket 已手动开启**
+
 ### 订阅服务器 504
 - **症状:** 订阅链接返回 `504 Gateway Time-out`
 - **原因:** 订阅服务器 `47.242.55.240` 宕机
@@ -149,24 +153,16 @@ pip3 install frida-tools     # Frida 脚本工具
 
 注意：pip 安装的 CLI 工具在 `~/Library/Python/3.9/bin/` 下，不在 PATH 中。
 
-### 直接下载 GitHub Release（先连 Shadowrocket）
+### 直接下载 GitHub Release
 
-大型工具（如 JADX、APKTool、Frida gadget）可直接从 GitHub Releases 下载：
+大型工具（如 JADX、APKTool、Frida gadget）可直接从 GitHub Releases 下载（需要用户先手动开启 VPN）。
 
 ```bash
-# 先连 VPN
-scutil --nc start "Shadowrocket"
-
 # 下载 JADX
 curl -sL "https://github.com/skylot/jadx/releases/download/v1.5.1/jadx-1.5.1.zip" -o /tmp/jadx.zip
-# 111MB 下载约 30-60 秒（VPN 连接状态下）
 
 # 下载 Frida Gadget
 curl -sL "https://github.com/frida/frida/releases/download/16.7.19/frida-gadget-16.7.19-android-arm64.so.xz" -o /tmp/frida-gadget.so.xz
-# 6.7MB，解压后 25MB
-
-# 断开 VPN（可选）
-scutil --nc stop "Shadowrocket"
 ```
 
 ## 备用内容获取策略
@@ -182,9 +178,9 @@ scutil --nc stop "Shadowrocket"
 | Google News | 百度新闻 / 今日头条 |
 | GitHub | gh-proxy.com 镜像 |
 
-### 🛡️ Scrapling — 反检测爬虫（VPN 连接后）
+### 🛡️ Scrapling — 反检测爬虫
 
-Scrapling 是反检测浏览器爬虫，支持 JS 渲染和 Cloudflare 绕过。**必须先连接 VPN**。
+Scrapling 是反检测浏览器爬虫，支持 JS 渲染和 Cloudflare 绕过。**被墙网站需要先让用户开启 VPN**。
 
 ```bash
 # 激活 Scrapling 虚拟环境
@@ -205,7 +201,7 @@ BBC 网站在**无代理情况下**完全无法访问，包括：
 - BBC RSS (`feeds.bbci.co.uk`) — 返回空内容
 - BBC API — 返回空内容
 
-**解决方案：** 使用 Shadowrocket VPN 后可正常访问 BBC。连接命令：`scutil --nc start "Shadowrocket"`
+**解决方案：** 让用户手动开启 VPN 后即可正常访问 BBC。
 
 ### ⚠️ CNN 可直接访问（2026-05 确认）
 
@@ -273,16 +269,14 @@ MiMo 的 `web_search` 工具是**模拟的**，不是真实的联网搜索：
 
 当需要英文财经新闻全文时，可以让 MiMo 生成仿写文章，然后生成 PDF。
 
-## ⛔ VPN 节点切换规则（重要）
+## ⛔ VPN 节点切换规则
 
-**绝对禁止**：Agent 不要乱切换 VPN 节点。乱切节点是网络错误的根本原因。
+**绝对禁止**：Agent 不要操作 VPN、不要切换节点、不要连接/断开 VPN。
 
 **规则**：
-- 如需切换节点，**必须从已有节点列表里选择**，不要随机切换
-- 优先保持当前节点稳定，不做多余操作
-- 只在用户明确要求或当前节点确认不可用时才切换
-
-**原因**：频繁连接/断开 VPN 会导致 Shadowrocket 自动选择不稳定节点，反而造成网络中断。
+- 被墙网站无法访问时，**提示用户手动开启 VPN**
+- 不由我执行任何 VPN 操作命令
+- 用户手动操作后告诉我，我再继续
 
 ## MiMo 联网搜索（模拟搜索，非真实抓取）
 
@@ -337,10 +331,4 @@ API Key: 从 `~/.hermes/auth.json` 的 `credential_pool.xiaomi[0].access_token` 
 
 ## 用户需操作事项
 
-当代理不可用时，需要用户手动操作：
-1. 打开 0dcloud App → 切换到可用节点
-2. 或在 ClashX Pro 菜单栏切换节点
-3. 或在 Shadowrocket App 里切换到可用节点
-4. 告诉 agent "已切换"，agent 重新测试
-
-**不要尝试用 `sudo` 设置系统代理** — 需要管理员密码，agent 无权操作。
+当需要访问被墙网站时，我会提示你手动开启 VPN。开启后告诉我即可。

@@ -9,6 +9,8 @@ tags: [obsbot, monitoring, daily, youtube, instagram, tiktok, tencent-docs]
 
 每天搜索多平台 OBSBOT 产品相关内容，汇总到腾讯文档智能表格。
 
+**⚠️ 必须搜索全部 10 个产品关键词**（用户 2026-06-01 确认）。不能只搜索 Tiny 3 和 Tiny 2，必须覆盖所有产品线。
+
 ## 产品关键词
 
 OBSBOT Tail Air / Tail 2 / Meet SE / Meet 2 / Tiny SE / Tiny 2 / Tiny 2 Lite / Tiny 3 / Tiny 3 Lite / Talent 2
@@ -145,9 +147,12 @@ IMA 笔记链接：https://ima.qq.com/note/share/_AweMLuM8wuZLJgQaVVlNg
 - ❌ 无效视频：只挂购买链接未展示产品 / 纯官方宣传素材切片
 
 ### Step 2 内容质检
-- 视频内容分类（常规测评→不用标记；自发测评→看体量判断；展会/采访→需标记）
-- 描述区检查：链接是否正确、标签是否完整
-- 信息有遗漏→标记提醒
+
+详细质检要求见 `references/quality-check-requirements.md`。
+
+每条视频检查：
+1. **视频内容**：是否原画直出、是否特殊主题（榜单/对比/教程/特殊场景/展会采访）
+2. **描述区**：官网链接、亚马逊链接、渠道链接、标签、折扣信息（每项打勾或打叉）
 
 ### Step 3 输出上线资源报告（两部分结构）
 
@@ -161,37 +166,75 @@ IMA 笔记链接：https://ima.qq.com/note/share/_AweMLuM8wuZLJgQaVVlNg
 
 **Part 2：符合 SOP 要求的视频**\n- 从 Part 1 中筛选出符合要求的视频\n- 筛选标准：视频必须包含完整的产品测评内容\n- ❌ 排除：只挂购买链接未展示产品 / 纯官方宣传素材切片 / 品牌大使直播中使用（非专门测评）/ 仅描述中提到但无产品展示\n- 按平台分组，每条标注产品、视频类型、简析\n- **⚠️ Part 2 必须附带链接**（用户明确要求 2026-05-31）
 
+**⚠️ 腾讯文档 smartcanvas 中链接必须用纯文本 URL**（用户 2026-06-01 确认）。不要用 `[链接](URL)` 格式，直接写 `https://...`。
+
+**⚠️ 每条视频必须单独列出**（用户 2026-06-01 确认）。不要把多条视频放在表格的一行里，每条视频用加粗编号 + 标题作为独立条目。
+
+**⚠️ 多工具交叉验证**（用户 2026-06-01 确认）。不能只用一种工具搜索，需要用 YouTube API + web_search + 浏览器搜索等多种方式交叉验证，确保不遗漏任何视频。
+
+**⚠️ 必须全面**（用户 2026-06-01 确认）。所有视频链接都要写出来，不能只输出筛选后的结果，Part 1 必列所有找到的内容。
+
 **排除说明**：在报告末尾列出被排除的视频及原因
 
-格式示例：
+格式示例（每条视频独立列出，链接用纯文本 URL）：
 ```
-## Part 1：全平台搜索结果
-### YouTube（N条）
-| # | 博主 | 视频标题 | 链接 | 发布时间 | 简介 |
-### TikTok（N条）
-...
-### Instagram（N条）
-...
-### X/Twitter（N条）
-...
+## 5月30日（周六）
 
-## Part 2：符合 SOP 要求的视频
-### YouTube（N条）
-| 博主 | 视频 | 产品 | 视频类型 | 简析 |
-### TikTok（N条）
-...
-### Instagram（N条）
-...
-### X/Twitter（N条）
-...
+### 全平台搜索结果
 
-## ⚠️ 排除说明
-| 排除项 | 平台 | 原因 |
+#### YouTube（6条）
+
+**1. OBSBOT Tiny 3 + Vox SE Review - Best webcam yet?**
+- 博主：LevelUP Gaming & Tech
+- 链接：https://www.youtube.com/watch?v=1wA3SztU7Zs
+- 产品：Tiny 3
+- 类型：Dedicated Video
+
+**2. OBSBOT Tiny 3 Lite et micro VOX SE**
+- 博主：GUILLAUME++
+- 链接：https://www.youtube.com/watch?v=OBZjBTIfrEI
+- 产品：Tiny 3 Lite
+- 类型：Dedicated Video
+
+#### TikTok（1条）
+
+**1. Is this the smartest webcam ever? OBSBOT Tiny 3 Unboxing!**
+- 博主：@mrsmobster
+- 链接：https://www.tiktok.com/@mrsmobster/video/7645867491847130381
+
+#### Instagram（0条）
+
+今日无新帖。
+
+#### X/Twitter（1条）
+
+**1. 使用 OBSBOT AI 追尾摄像头录制播客**
+- 账号：@SCHOOLLIVEBAR
+
+---
+
+### 符合 SOP 要求的视频
+
+**1. OBSBOT Tiny 3 + Vox SE Review - Best webcam yet?**
+- 博主：LevelUP Gaming & Tech
+- 链接：https://www.youtube.com/watch?v=1wA3SztU7Zs
+- 产品：Tiny 3
+- 类型：Dedicated Video
+- 视频内容质检：
+  - ☑️ 常规产品测评
+  - ☑️ 原画直出演示
+  - ☑️ 特殊主题：无
+- 描述区质检：
+  - ☑️ 官网链接：有
+  - ☑️ 亚马逊链接：有
+  - ☑️ 折扣信息：有（DERMO505，5% off）
+  - ☑️ 标签：有（#obsbot #obsbot_Tiny3 等）
 ```
 
 已合作红人需标记对应小伙伴名字（参考 KOL资源交接表）。
 
 详细输出格式模板见 `references/sop-output-format.md`。
+产品覆盖情况表格式见 `references/product-coverage-table.md`。
 
 ## 腾讯文档上传
 
@@ -313,13 +356,45 @@ curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CHA
 # 搜索频道内竞品内容
 curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CHANNEL_ID&q=insta360+OR+elgato+webcam&type=video&maxResults=5&order=date&key=API_KEY"
 ```
-
 ## 已知限制
 
-- **Instagram**：Scrapling 可爬内容但无法获取精确发布日期
-- **X/Twitter**：xurl 未配置时只能依赖 web_search（索引延迟 1-3 天）
-- **简介完整性**：YouTube API 返回完整 description；Instagram 只能获取页面可见文本
+- **TikTok**：X-Bogus 反爬机制，无法通过任何 CLI/无头浏览器方案获取视频列表。已验证方案：curl+proxy（空响应）、Scrapling DynamicFetcher（视频不渲染）、Playwright+Cookie（被检测）、bb-browser 真实 Chrome（API 返回空）。替代方案：NoxInfluencer Brand Monitor（需 brand_id）或手动确认。
+- **TikTok Cookie 提供也不行** — 用户提供了完整 TikTok Cookie，Playwright 设置后仍被反爬检测。X-Bogus 令牌由页面 JS 生成，无法通过外部注入绕过。
+- **Instagram**：Scrapling StealthyFetcher + proxy `http://127.0.0.1:1082` 可爬帖子列表和内容，但无法获取精确发布日期。
+- **X/Twitter**：xurl 未配置时只能依赖 web_search（索引延迟 1-3 天）。xurl 需要注册 App（`xurl auth apps add`）。twitter CLI 需要浏览器登录态。
+- **简介完整性**：YouTube API 返回完整 description；Instagram 只能获取页面可见文本。
 - **TikTok VPN 依赖**：Scrapling 必须通过 Shadowrocket 代理（127.0.0.1:1082），VPN 断开会导致超时
+
+## KOL 筛选工作流
+
+当用户要求筛选 KOL 时，使用 NoxInfluencer + YouTube API 的两阶段流程：
+
+### 阶段一：NoxInfluencer 搜索
+- 按品类并行搜索（Tech 3C / Camera / Livestream / Apple / Gamer / Desk Setup / Podcast / Productivity）
+- 筛选条件：`avg_view_min 3000, avg_view_max 50000, follower_min 5000, follower_max 200000, published_within_days 90`
+- 每个品类搜 10-15 个，去重后合并
+
+### 阶段二：YouTube API 三重验证
+对每个候选人执行：
+1. **获取频道 ID** — `creator profile <id>` 获取 channel_url
+2. **活跃度验证** — YouTube API 搜索最新视频，>90 天未更新直接筛掉
+3. **OBSBOT 合作检查** — YouTube API 搜索频道内 OBSBOT 相关视频，有则筛掉
+4. **竞品合作检查** — YouTube API 搜索频道内竞品视频（Insta360/Elgato/Logitech），有则标记为优先
+
+### 关键要求
+- ❌ 不找大博主（Top 级别）
+- ❌ 超过 3 个月没更新的筛掉
+- ❌ 与 OBSBOT 合作过的筛掉
+- ⭐ 重点关注竞品合作过但 OBSBOT 没合作过的
+- ⏭️ 暂不获取邮箱
+- 📊 排除之前已筛选的所有 KOL（建立 exclusion set）
+
+### 输出
+生成腾讯文档智能表格到 OBSBOT → 每日监测 文件夹（ID: DumZsGZJrwsf）
+
+## ⚠️ 用户偏好
+
+**连续执行，不要一步一停** — 用户明确要求：搜索→验证→生成表格，全程自动执行，不要中途停下来等确认。遇到错误（VPN断、API超时）自动重试，最终汇报结果。
 
 ## 并行策略
 
@@ -333,6 +408,17 @@ curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CHA
 ## 多轮搜索确保无遗漏
 
 用户明确要求（2026-05-31）：**必须多次检测确保没有遗漏。**
+
+**⚠️ 多工具交叉验证**（用户 2026-06-01 确认）。不能只用一种工具搜索，需要用 YouTube API + web_search + 浏览器搜索等多种方式交叉验证，确保不遗漏任何视频。用户明确说"你已经漏了很多视频和内容"。
+
+**⚠️ 必须全面**（用户 2026-06-01 确认）。所有视频链接都要写出来，不能只输出筛选后的结果，Part 1 必须列出所有找到的内容。用户明确说"所有的视频链接都要写出来，必须要全面"。
+
+**⚠️ 多工具交叉验证**（用户 2026-06-01 确认）。不能只用一种工具搜索，需要用多种方式交叉验证：
+1. YouTube Data API 搜索
+2. 浏览器直接搜索 YouTube（`browser_navigate` 到 YouTube 搜索页）
+3. web_search 搜索 `site:youtube.com OBSBOT`
+4. TikTok oembed API 验证
+5. Instagram/X web_search
 
 执行策略：
 1. **第一轮**：13 个产品关键词直接搜索（OBSBOT Tiny 3, OBSBOT Tail 2, ...）
@@ -362,6 +448,21 @@ mcporter call tencent-docs smartcanvas.edit --args '{"file_id": "FILE_ID", "acti
 - 搜索返回多个同名块时，需要根据上下文判断删除哪个（如 Part 1 和 Part 2 都有"TikTok（1条）"标题）
 - 表格内容在 get_content 中被提取为纯文本，Markdown 链接 `[文本](URL)` 显示为"文本"
 - 推荐直接用 `create_smartcanvas_by_mdx` 一次性创建完整内容，避免后续编辑
+
+## ⚠️ YouTube API 配额耗尽
+
+YouTube Data API 每日配额限制 100 次搜索。当返回 `429 Quota exceeded` 时：
+
+** fallback 策略**：
+1. **浏览器搜索**：`browser_navigate` 到 YouTube 搜索页，用 `browser_snapshot` 提取结果
+2. **web_search**：搜索 `site:youtube.com OBSBOT Tiny 3 2026`
+3. **已知视频 ID 验证**：用 `videos?part=snippet&id=VIDEO_ID` 获取详情（不消耗搜索配额）
+
+**配额管理**：
+- 每次搜索消耗 100 单位，每日上限 10,000 单位
+- 批量搜索 16 个关键词 = 1,600 单位
+- 多日报告（3天）需要 3 轮搜索 = 4,800 单位
+- 建议：优先搜索核心关键词（OBSBOT + 10个产品名），变体关键词用 fallback 策略
 
 ## ⚠️ 关键约束
 

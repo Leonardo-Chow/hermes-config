@@ -6,9 +6,9 @@ Complete workflow for searching Reddit posts, fetching comments, filtering, and 
 
 1. **VPN must be connected** — Reddit is blocked in China
    ```bash
-   scutil --nc start "Shadowrocket"
+   用户先手动开启 Shadowrocket VPN
    sleep 5
-   scutil --nc status "Shadowrocket" | head -3  # Verify "Connected"
+   用户确认 VPN 已连接后再继续
    ```
 
 2. **bb-browser daemon** must be running for `site` commands
@@ -288,7 +288,7 @@ fetch_and_save(
 
 ## Pitfalls
 
-1. **VPN disconnected mid-scrape** — Shadowrocket disconnects during long scrapes (50+ posts). Add periodic health check: `scutil --nc status "Shadowrocket" | head -3`. Reconnect with `scutil --nc start "Shadowrocket"` if needed. Run between batches of ~20 posts. **SESSION LEARNING (2026-05-13):** VPN disconnected after ~30 posts during 6-product batch scrape. Script returned empty results silently. Always check VPN status before each batch and after any "Search error" message.
+1. **VPN disconnected mid-scrape** — Shadowrocket disconnects during long scrapes (50+ posts). Ask user to reconnect if this happens. Run between batches of ~20 posts.
 
 2. **Unquoted search returns garbage** — Reddit search without quotes (`"..."`) returns completely irrelevant results. ALWAYS use exact phrase quotes: `'"OBSBOT Tiny 2"'`.
 

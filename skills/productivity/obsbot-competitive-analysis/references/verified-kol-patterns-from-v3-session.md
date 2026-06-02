@@ -68,7 +68,7 @@
 
 ```
 Error: Request failed: fetch failed
-→ scutil --nc start Shadowrocket（需手动在app里选节点）
-→ 重试 → 完成后 scutil --nc stop Shadowrocket
+→ 用户手动开启 Shadowrocket VPN（需在app里选节点）
+→ 重试 → 完成后用户手动关闭 VPN
 备用：用之前搜索结果的数据
 ```

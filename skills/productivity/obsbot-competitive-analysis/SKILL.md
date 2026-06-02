@@ -156,7 +156,9 @@ for name in wb.sheetnames:
 | `kol-video-analysis-workflow.md` | KOL 单视频分析流程 |
 | `youtube-full-search.md` | YouTube 全量视频搜索 |
 | `daily-monitoring-workflow.md` | 每日监测工作流（多平台搜索+智能表格） |
+| `competitive-monitoring-sop.md` | OBSBOT 竞品投放监测 SOP（竞品清单、数据字段、用户评论5大维度、竞争洞察） |
 | `html-template-guide.md` | HTML 报告模板指南 |
+| `obsbot-admin-api.md` | OBSBOT 内部管理系统 API（网红数据、大使列表、批量扫描） |
 
 ### Step 4: 报告生成
 - 使用 execute_code 一次性生成完整 HTML
@@ -372,7 +374,7 @@ for table in doc.tables:
 报告存放在 `~/Documents/` 目录，文件名加日期区分版本。不要覆盖旧文件。
 
 ### ⚠️ YouTube Data API 需要 VPN
-在中国大陆环境下，YouTube Data API 调用需要 VPN 连接（Shadowrocket）。调用前先检查 VPN 状态：`scutil --nc status "Shadowrocket"`。如果断开，先连接：`scutil --nc start "Shadowrocket"`。
+在中国大陆环境下，YouTube Data API 调用需要 VPN。如需使用，先让用户手动开启 Shadowrocket。
 
 ### ⚠️ 多平台搜索的置信度差异
 YouTube Data API 返回 HIGH 置信度结果。但 Instagram/TikTok/X 的 web_search 结果置信度仅为 MEDIUM/LOW：

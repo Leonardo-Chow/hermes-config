@@ -365,7 +365,7 @@ response-content-type=application/octet-stream&response-content-disposition=atta
 - 当用户提供 URL 添加到知识库时，必须先检测是否文件型 URL → see `references/api.md §URL Type Detection`
 - MediaType 枚举和文件大小限制 → see `references/api.md §MediaType` and `§文件大小限制`
 - **COS token 截断是常见陷阱**：`cos_credential.token` 值 875+ 字符，含特殊符号。绝对不能通过 shell 参数传递。使用 `scripts/upload-to-kb.cjs` 统一脚本（create_media → COS 上传 → add_knowledge 单进程完成）。
-- **IMA API 全局认证失败 (code 200002)**：所有 API 调用返回 `{"code":200002,"msg":"skill auth failed"}`。诊断：检查 `~/.config/ima/client_id` 和 `api_key` 是否存在且非空；运行 `node ima_api.cjs "openapi/check_skill_update" '{"version":"1.0.0"}'` 测试基本认证。如果返回 200002，说明是服务端认证问题（API Key 过期或应用权限被撤销）。降级方案：使用 Placeholder 图片作为封面，将日报保存到本地文件，联系 IMA 管理员检查凭证有效性。
+- **IMA API 全局认证失败 (code 200002)**：所有 API 调用返回 `{"code":200002,"msg":"skill auth failed"}`。诊断：检查 `~/.config/ima/client_id` 和 `api_key` 是否存在且非空；运行 `node ima_api.cjs "openapi/check_skill_update" '{"version":"1.0.0"}'` 测试基本认证。如果返回 200002，说明是服务端认证问题（API Key 过期或应用权限被撤销）。**恢复方法**：在 IMA 开放平台控制台延长时间/续费即可，client_id 和 api_key 文件无需改动。降级方案：使用 Placeholder 图片作为封面，将日报保存到本地文件。
 - **IMA 作为外部 Memory**：当 Hermes 内置 memory（4KB）不够用时，可将低频信息存储到 IMA 知识库。详见 `references/external-memory.md`。
 - **Hermes Memory/Skills 同步**：将 Hermes memory 和 skills 清单导出为笔记上传到知识库，用于每日备份和跨实例恢复。详见 `references/hermes-memory-sync.md`。
 - **Google Docs 爬取**：公开 Google Docs 可通过 `mobilebasic` URL 爬取全文内容，再用 `import_doc` + `add_knowledge` 创建笔记。详见 `references/google-docs-scraping.md`。

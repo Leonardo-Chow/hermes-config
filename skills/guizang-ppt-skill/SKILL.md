@@ -524,7 +524,7 @@ done
 
 ### ⚠️ 常见陷阱
 
-- **GitHub 下载超时**：中国大陆直接 `git clone` 或下载 zip 经常超时。解决方案：先连接 VPN（`scutil --nc start "Shadowrocket"`），再用 `curl -sL` 逐文件下载 raw 内容。
+- **GitHub 下载超时**：中国大陆直接 `git clone` 或下载 zip 经常超时。解决方案：让用户先手动开启 VPN，再用 `curl -sL` 逐文件下载 raw 内容。
 - **reference 文件名大小写**：实际文件名是小写（`themes.md`），但 `SKILL.md` 中引用可能是大写。下载时用 API 返回的实际文件名。
 - **获取完整文件树**：`curl -sL 'https://api.github.com/repos/op7418/guizang-ppt-skill/git/trees/main?recursive=1'`
 - **Chart.js CDN**：生成含图表的报告时，Chart.js 需要通过 CDN 加载（`https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js`），确保网络可访问。

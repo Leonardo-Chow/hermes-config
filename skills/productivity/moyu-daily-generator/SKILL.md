@@ -113,8 +113,8 @@ def evaluate_daily_report(report_content):
     score = 0
     
     # 1. 板块完整性 (15分)
-    required_sections = ['今日金句', '信息差', 'A股', '微博热搜', '百度热搜', '抖音热榜', 
-                        '全球市场', 'GitHub', '科技热点', 'AI发展', '娱乐圈', '国际新闻', '每日精选', '数据概览']
+    required_sections = ['今日金句', '信息差', 'A股', '微博热搜', '百度热搜', '抖音热榜', 'Reddit',
+                        '全球市场', 'GitHub', 'AI Agent Skill', '科技热点', 'AI发展', '娱乐圈', '国际新闻', '每日精选', '数据概览']
     present = sum(1 for s in required_sections if s in report_content)
     score += (present / len(required_sections)) * 15
     
@@ -166,12 +166,15 @@ def evaluate_daily_report(report_content):
         score += int(directness_ratio * 15)
     
     # 8. 数据源多样性 (5分)
-    source_urls = re.findall(r'\[(?:来源|查看)\]\((https?://[^)]+)\)', report_content)
+    source_links = re.findall(r'\[([^\]]+)\]\((https?://[^)]+)\)', report_content)
     domains = set()
-    for url in source_urls:
-        m = re.search(r'https?://([^/]+)', url)
-        if m: domains.add(m.group(1))
-    unique_sources = len(domains)
+    for label, url in source_links:
+        m = re.search(r'https?://(?:www\.)?([^/]+)', url)
+        if m:
+            domain = m.group(1)
+            if domain not in ('s.weibo.com', 'www.baidu.com', 'www.douyin.com'):
+                domains.add(domain)
+    unique = len(domains)
     if unique_sources >= 7: score += 5
     elif unique_sources >= 5: score += 3
     elif unique_sources >= 3: score += 1
@@ -705,7 +708,7 @@ Agent-Reach (v1.4.0) 提供额外渠道：
 source ~/.hermes/skills/scrapling/venv/bin/activate
 python3 ~/.hermes/skills/ima-skills/scripts/bbc_scraper.py --limit 10 --output /tmp/bbc_news.json
 ```
-**前提条件**：VPN 必须连接（`scutil --nc start "Shadowrocket"`）
+**前提条件**：VPN 需要用户手动开启
 
 2. **方案B：Tavily Search**（无需 VPN，速度快）
 3. **方案C：RSS Feed**（`feeds.bbci.co.uk/news/world/rss.xml`）
@@ -752,7 +755,7 @@ const result = await tavily_extract(urls=urls, format="markdown");
 curl -s -H "User-Agent: Mozilla/5.0" "https://www.reddit.com/r/all/hot.json?limit=10"
 ```
 
-**问题**：网络可能超时或被墙，需要 VPN。
+**问题**：2026-06-02 验证：JSON API 返回 HTML 而非 JSON（Reddit 反爬策略升级），无法解析。需要代理或使用 Tavily Extract。
 
 **方案C：AutoCLI**（⚠️ 需要 Chrome 扩展）
 
@@ -969,6 +972,26 @@ data = json.loads(raw)
 2. 用`"$(cat /tmp/ima_payload.json)"`命令替换传给`ima_api.cjs`
 3. 不要尝试用Python `subprocess` + `json.dumps` 直接传参（shell环境变量也会截断）
 
+### ⚠️ 全球市场数据获取困难（2026-06-02 验证）
+**问题：** Yahoo Finance API（query1/query2.finance.yahoo.com）和 autocli yahoo-finance 均返回空或超时。Google Finance 页面数据难以提取。
+**可用替代方案：**
+1. **加密货币**：CoinGecko API（可靠，无需认证）
+   ```bash
+   curl -s 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'
+   ```
+2. **A股**：腾讯股票 API（qt.gtimg.cn，GBK 编码需 iconv 转 UTF-8）
+3. **港股/日经**：暂时无法获取，在日报中标注"数据暂缺"即可
+**建议：** 不要花时间尝试 Yahoo Finance 的各种变体 URL，直接用 CoinGecko + 腾讯 API 覆盖能获取的部分。
+
+### ⚠️ 东方财富板块涨幅 API 返回空（2026-06-02 验证）
+**症状：** `push2.eastmoney.com` 返回 0 字节（文件为空），即使使用正确的请求参数。
+**原因：** 可能是 API 限流或临时维护。
+**降级方案：** 在 A 股板块只展示四大指数，注明"热门板块数据因 API 暂不可用而缺失"。或从微博/百度热搜中提取财经相关条目作为补充。
+
+### ⚠️ HN Firebase API 批量获取超时
+**问题：** 逐条获取 HN 故事详情（`hacker-news.firebaseio.com/v0/item/{id}.json`）在批量调用时容易超时（30秒内只完成部分）。
+**解决方案：** 使用 `autocli hackernews top --limit 10 --format json` 一次性获取（如果 autocli 可用），或只取前 5 条避免超时。
+
 ### ⚠️ 东方财富板块涨幅API默认按跌幅排序
 `push2.eastmoney.com`的`po=1`参数默认按涨幅降序，但API返回的第一批结果可能是跌幅榜。**解决方案：** 用`po=1`获取涨幅榜（上涨板块），或手动筛选`f3>0`的板块。
 
@@ -982,7 +1005,7 @@ data = json.loads(raw)
 **每次生成日报后、上传前必须执行质量评估。低于70分立即返工。** 这是强制要求，不可跳过。评分脚本见 `references/quality-check-script.py`。
 
 ### ⚠️ GitHub 内容下载需要 VPN
-从 GitHub 下载 SKILL.md / README.md 等 raw 文件时，中国大陆网络经常超时。**必须先连接 VPN**（`scutil --nc start "Shadowrocket"`），再用 curl 下载 raw.githubusercontent.com。git clone 同理。下载完成后可断开 VPN。
+从 GitHub 下载 SKILL.md / README.md 等 raw 文件时，中国大陆网络经常超时。**需要用户先手动开启 VPN**，再用 curl 下载。git clone 同理。
 
 ### ⚠️ web_search 不支持 site: 搜索操作符（2026-05-27 验证）
 `web_search(query="site:techcrunch.com AI news")` 会导致 DuckDuckGo 后端报错：
@@ -1007,6 +1030,21 @@ curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/fe
 **降级方案：** 如果急需生成日报，直接用 `web_search` 替代 Tavily 搜索新闻（质量略低但可用）。
 **验证 API Key：** `curl -s -X POST "https://mcp.tavily.com/mcp/" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'` — 401 表示 Key 过期，需更新；正常响应表示 Key 有效但会话连接断了。
 
+### ⚠️ Tavily MCP 每日配额耗尽（daily_cap_reached）（2026-06-02 验证）
+**症状：** 所有 Tavily MCP 调用返回 `{"code":"daily_keyless_daily_cap_reached","message":"You reached the daily keyless Tavily limit."}`。这与会话缓存断连不同——是 API Key 层面的配额限制。
+**诊断：** 错误码为 `daily_keyless_daily_cap_reached`（非 "not connected" 或 "unreachable"），说明 Tavily 免费额度已用完，所有会话都会失败。
+**解决方案：**
+1. **立即降级为 RSS feeds**（最可靠，30秒内完成）
+2. 如果有付费 Tavily API Key，在请求中添加 `Authorization: Bearer tvly-YOUR_KEY` 头
+3. 等待配额重置（`retry_after_seconds` 字段显示等待时间）
+**影响：** Tavily Search/Extract/Research 全部不可用，必须用 RSS + curl 替代
+**RSS 降级清单（按优先级）：**
+- 科技：TechCrunch RSS、Ars Technica RSS、The Verge RSS
+- 国际：BBC RSS、NPR RSS、Al Jazeera RSS、France 24 RSS
+- 娱乐：Variety RSS、Hollywood Reporter RSS
+- AI：Arstechnica Technology Lab RSS
+所有 RSS 通过 `api.rss2json.com` 转 JSON：`curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=<RSS_URL>'`
+
 ### ⚠️ Tavily MCP 断连时的完整降级方案（2026-05-27 验证）
 **场景：** Tavily MCP 连续失败 3 次后标记 unreachable，需要继续生成日报。
 **推荐降级路径：**
@@ -1015,6 +1053,7 @@ curl -sL 'https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/fe
    - 科技：`https://techcrunch.com/feed/` 和 `https://techcrunch.com/category/artificial-intelligence/feed/`
    - 国际：BBC (`feeds.bbci.co.uk/news/world/rss.xml`)、NPR (`feeds.npr.org/1004/rss.xml`)、Al Jazeera (`www.aljazeera.com/xml/rss/all.xml`)
    - 娱乐：`variety.com/feed/`、`www.hollywoodreporter.com/feed/`
+   - 补充：France 24 (`www.france24.com/en/rss`)、Ars Technica (`feeds.arstechnica.com/arstechnica/technology-lab`)、The Verge (`www.theverge.com/rss/index.xml`)
 3. **不要尝试** `web_extract` — DuckDuckGo 后端不支持 URL 内容提取，会报错
 **实测耗时：** RSS 采集 ~30s，web_search ~10s，总降级时间约 1 分钟
 **质量影响：** RSS 返回文章摘要而非全文，但足够填充日报内容；web_search 返回首页而非具体文章，需手动筛选

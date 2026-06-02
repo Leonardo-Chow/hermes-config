@@ -180,12 +180,7 @@ skill patch: autocli — 更新可用站点列表
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
 - **`skill_manage` 可用** — 可以在 cron 中 patch/create skills
-- **VPN 必须手动连接** — git fetch 等 GitHub 操作需要先连接 Shadowrocket
-
-### ⚠️ macOS 注意事项
-- `timeout` 命令不存在，用 terminal 工具的 `timeout` 参数代替
-- `git fetch` 超时时需连接 VPN: `scutil --nc start "Shadowrocket"`
-- 完成后断开: `scutil --nc stop "Shadowrocket"`
+- **VPN 由用户手动开启** — git fetch 等 GitHub 操作需要用户先开启 VPN
 
 ### 数据分流规则
 | 类型 | 目标 | 示例 |
@@ -208,7 +203,7 @@ skill patch: autocli — 更新可用站点列表
 2. **底层优先**：先提取底层逻辑存 memory，再存操作细节到 skill
 3. **层级清晰**：skill 分类按控制论层级，不要混杂
 4. **动态更新**：每次复盘后更新相关 skill，保持技能库鲜活
-5. **VPN 前置**：涉及 GitHub 操作时，先检查 VPN 状态再执行
+5. **VPN 由用户管理**：涉及 GitHub 操作时，如需 VPN 提示用户手动开启
 
 ## 参考资料
 

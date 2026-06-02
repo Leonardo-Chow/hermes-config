@@ -113,6 +113,13 @@ Agent 会按优先级依次尝试：环境变量 → 配置文件。缺少凭证
 
 ## 已知陷阱
 
+### 🔴 IMA API 需要代理（GFW 环境）
+在大陆 GFW 环境下，`ima_api.cjs` 调用可能返回 `{"code":-100,"msg":"fetch failed"}`。解决方案：添加代理环境变量：
+```bash
+https_proxy=http://127.0.0.1:1082 http_proxy=http://127.0.0.1:1082 node "$SKILL_DIR/ima_api.cjs" ...
+```
+搜索笔记（`search_docs`）也可能返回空结果而非报错——代理可用时重试通常能解决。
+
 ### 🔴 读取他人分享的笔记 — "not author" 错误
 当用户分享一个 IMA 笔记链接（如 `https://ima.qq.com/note/share/XXX`），用 `get_doc_content` 读取会返回 `GetNoteContent not author`，因为笔记不是当前 API Key 用户创建的。
 **解决方案**：用 `browser_navigate` 访问分享链接，从页面快照中读取内容。web_extract 对 IMA 页面也会失败，必须用 browser 工具。

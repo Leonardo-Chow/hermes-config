@@ -1,69 +1,81 @@
 # OBSBOT 每日上线 SOP 输出格式
 
-## 报告结构（两部分）
+## 格式规则（用户确认）
 
-报告必须包含两部分，不能只输出筛选结果。
+1. **链接用纯文本 URL**：不要用 `[链接](URL)` 格式，直接写 `https://...`
+2. **每条视频独立列出**：用加粗编号 + 标题作为独立条目，不要放在表格行里
+3. **过滤官方账号**：@obsbot、@OBSBOT_Official、@obsbotmy、@obsbot_us 等
+4. **Part 1 必须全面**：列出所有找到的内容
+5. **Part 2 必须附带链接**：每条视频都要有链接
+6. **Part 2 必须有质检**：视频内容质检 + 描述区质检（每项打勾或打叉）
 
 ---
 
-## Part 1：全平台搜索结果
-
-列出当日搜索到的**所有**第三方 OBSBOT 相关内容（已过滤官方账号）。
+## 报告结构（两部分 + 排除说明）
 
 ```markdown
-## 📋 MM.DD OBSBOT 上线资源报告
+## MM月DD日（周X）
+
+### 全平台搜索结果
+
+#### YouTube（N条）
+
+**1. 视频标题**
+- 博主：频道名
+- 链接：https://www.youtube.com/watch?v=xxx
+- 产品：Tiny 3
+- 类型：Dedicated Video
+
+**2. 视频标题**
+- 博主：频道名
+- 链接：https://www.youtube.com/watch?v=xxx
+- 产品：Tiny 2 Lite
+- 类型：Integration Video
+
+#### TikTok（N条）
+
+**1. 视频标题**
+- 博主：@username
+- 链接：https://www.tiktok.com/@user/video/xxx
+
+#### Instagram（N条）
+
+**1. 帖子标题**
+- 博主：@username
+- 链接：https://www.instagram.com/p/xxx
+
+#### X/Twitter（N条）
+
+**1. 帖子内容**
+- 账号：@username
+- 链接：https://x.com/user/status/xxx
 
 ---
 
-## Part 1：全平台搜索结果
+### 符合 SOP 要求的视频
 
-以下为今日所有第三方 OBSBOT 相关内容（已过滤官方账号）：
+**1. 视频标题**
+- 博主：频道名
+- 链接：https://www.youtube.com/watch?v=xxx
+- 产品：Tiny 3
+- 类型：Dedicated Video
+- 视频内容质检：
+  - ☑️ 常规产品测评
+  - ☑️ 原画直出演示
+  - ☑️ 特殊主题：无
+- 描述区质检：
+  - ☑️ 官网链接：有
+  - ☑️ 亚马逊链接：有
+  - ☑️ 折扣信息：有（折扣码）
+  - ☑️ 标签：有（#obsbot 等）
 
-### YouTube（N条）
-
-| # | 博主 | 视频标题 | 链接 | 发布时间 | 简介 |
-|:--|:-----|:---------|:-----|:---------|:-----|
-| 1 | MasteriTech | OBSBOT Tiny 2 Lite: ... | [链接](https://youtube.com/watch?v=xxx) | 21:00 | 远程医疗测评 |
-
-### TikTok（N条）
-
-| # | 博主 | 视频标题 | 链接 | 简介 |
-|:--|:-----|:---------|:-----|:-----|
-| 1 | @mrsmobster | OBSBOT Tiny 3 Unboxing! | [链接](https://www.tiktok.com/@user/video/xxx) | 开箱测评 |
-
-### Instagram（N条）
-
-今日无第三方新帖。
-
-### X/Twitter（N条）
-
-| # | 账号 | 内容 | 链接 |
-|:--|:-----|:-----|:-----|
-| 1 | @StreamElements | TwitchCon 抽奖 | [链接](https://x.com/user/status/xxx) |
-```
-
----
-
-## Part 2：符合 SOP 要求的视频
-
-从 Part 1 中筛选出符合要求的视频。
-
-```markdown\n---\n\n## Part 2：符合 SOP 要求的视频\n\n> 筛选标准：视频必须包含完整的产品测评内容，排除纯链接/官方素材切片/仅使用展示\n\n### YouTube（N条）\n\n| 博主 | 视频 | 链接 | 产品 | 视频类型 | 简析 |\n|:-----|:-----|:-----|:-----|:---------|:-----|\n| MasteriTech | OBSBOT Tiny 2 Lite | [链接](https://youtube.com/watch?v=xxx) | Tiny 2 Lite | Dedicated Video | 远程医疗场景专项测评 |\n\n### TikTok（N条）\n\n| 博主 | 视频 | 链接 | 产品 | 简析 |\n|:-----|:-----|:-----|:-----|:-----|\n| @mrsmobster | OBSBOT Tiny 3 Unboxing | [链接](https://www.tiktok.com/@user/video/xxx) | Tiny 3 | 开箱测评 |\n\n### Instagram（N条）\n\n今日无新帖。\n\n### X/Twitter（N条）\n\n今日无产品测评类内容。\n```\n\n**⚠️ Part 2 必须附带链接**（用户明确要求 2026-05-31）。不能只有视频标题没有链接。
-
----
-
-## 排除说明
-
-```markdown
 ---
 
 ## ⚠️ 排除说明
 
-| 排除项 | 平台 | 原因 |
-|:-------|:-----|:-----|
-| KidSmoove | YTB | 品牌大使直播中使用，非专门产品测评 |
-| wizhunt | YTB | 骑行直播，仅描述中提到使用 Tiny 2，无产品展示 |
-| @StreamElements | X | 抽奖活动，非产品测评 |
+**1. 视频标题**
+- 平台：YTB
+- 原因：品牌大使直播中使用，非专门产品测评
 ```
 
 ---
@@ -71,7 +83,7 @@
 ## 过滤规则
 
 **必须过滤的内容：**
-- OBSBOT 官方账号（@obsbot、@OBSBOT_Official、@obsbotmy、@obsbot_us、@obsbot.my、@obsbot_official 等）
+- OBSBOT 官方账号（@obsbot、@OBSBOT_Official、@obsbotmy、@obsbot_us、@obsbot.my 等）
 - 纯官方宣传素材切片
 
 **Part 2 排除标准：**
@@ -84,24 +96,13 @@
 
 ## 视频类型判断
 
-| 场景 | 类型 | 说明 |
-|:-----|:-----|:-----|
-| 整期评测 OBSBOT 产品 | Dedicated Video | 完整产品测评 |
-| 视频中使用但非主推 | Integration Video | 产品在视频中出现 |
-| YouTube Shorts 竖屏 | YTB Shorts | <60s 竖屏视频 |
-| TikTok 视频 | TT video | TikTok 平台 |
-| Instagram Reels | INS reel | Instagram 短视频 |
-| Instagram 图文帖 | INS post | Instagram 图文 |
-| X/Twitter 帖子 | X post | 推文 |
-| 品牌大使使用展示 | Integration（品牌大使） | 标记已合作红人 |
-
----
-
-## 质检要点
-
-1. **链接验证**：确保所有链接指向视频落地页，不是首页
-2. **标签检查**：#obsbot、#obsbot_tiny3lite 等标签是否完整
-3. **折扣信息**：是否有折扣码、购买链接
-4. **已合作红人**：需标记对应小伙伴名字（参考 KOL资源交接表）
-5. **官方账号过滤**：确认已过滤所有 OBSBOT 官方账号
-6. **两部分完整性**：Part 1 列出所有结果，Part 2 列出筛选结果
+| 场景 | 类型 |
+|:-----|:-----|
+| 整期评测 OBSBOT 产品 | Dedicated Video |
+| 视频中使用但非主推 | Integration Video |
+| YouTube Shorts 竖屏 | YTB Shorts |
+| TikTok 视频 | TT video |
+| Instagram Reels | INS reel |
+| Instagram 图文帖 | INS post |
+| X/Twitter 帖子 | X post |
+| 品牌大使使用展示 | Integration（品牌大使） |

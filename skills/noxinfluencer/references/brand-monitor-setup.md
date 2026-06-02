@@ -52,12 +52,12 @@ Product signal commands (`product-*`) currently support **YouTube only**. Do not
 
 NoxInfluencer's API server (`skill.noxinfluencer.com`) is behind the GFW. Connect Shadowrocket VPN first:
 ```bash
-scutil --nc start Shadowrocket
+用户需先手动开启 Shadowrocket VPN
 noxinfluencer doctor  # Verify reachable
 ```
 
 **⚠️ VPN conflicts with Tencent Docs:** After finishing NoxInfluencer work, disconnect VPN before uploading to Tencent Docs:
 ```bash
-scutil --nc stop Shadowrocket
+用户手动关闭 Shadowrocket VPN
 mcporter auth tencent-docs  # Re-authenticate if needed
 ```

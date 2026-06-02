@@ -99,5 +99,5 @@ mcporter call tencent-docs manage.import_progress task_id="xxx"
 - **导入超时**：大文件导入可能需要较长时间，轮询间隔 3-5 秒
 - **文件夹移动**：导入后文件默认在根目录，需要 `manage.move_file` 移动到目标文件夹
 - **file_key 格式**：file_key 是预导入返回的，不是文件路径
-- **VPN 导致 docs.qq.com 不可达**：Shadowrocket VPN 开启后 `mcporter call tencent-docs` 报 `fetch failed / ECONNRESET`，即使 `curl https://docs.qq.com` 正常。根因是 VPN 路由导致 mcporter 的 TLS 连接中断。解决：先关 VPN（`scutil --nc stop Shadowrocket`），再 `mcporter auth tencent-docs` 重刷 token，然后重试操作。
+- **VPN 导致 docs.qq.com 不可达**：Shadowrocket VPN 开启后 `mcporter call tencent-docs` 报 `fetch failed / ECONNRESET`，即使 `curl https://docs.qq.com` 正常。根因是 VPN 路由导致 mcporter 的 TLS 连接中断。解决：用户先关闭 VPN，再 `mcporter auth tencent-docs` 重刷 token，然后重试操作。
 - **mcporter token 过期**：当 `manage.pre_import` 返回 `tencent-docs appears offline (fetch failed)` 但网络正常时，通常是 mcporter 的 token 已过期。执行 `mcporter auth tencent-docs` 即可恢复。无需重启或重新配置。

@@ -469,18 +469,35 @@ NoxInfluencer's API server (`skill.noxinfluencer.com`) is behind the GFW. Sympto
 
 **Fix:** Connect Shadowrocket VPN first:
 ```bash
-scutil --nc start Shadowrocket  # Connect VPN
+用户需先手动开启 Shadowrocket VPN
 noxinfluencer doctor             # Verify reachable
 # ... use NoxInfluencer ...
 ```
 
 **⚠️ VPN conflicts with Tencent Docs:** Shadowrocket VPN makes `docs.qq.com` unreachable via mcporter (`Client network socket disconnected before secure TLS connection was established`). After finishing NoxInfluencer work, disconnect VPN before uploading to Tencent Docs:
 ```bash
-scutil --nc stop Shadowrocket   # Disconnect VPN
+# 用户手动关闭 Shadowrocket VPN
 mcporter auth tencent-docs      # Re-authenticate if needed
 ```
 
 **Pattern:** Connect VPN → use NoxInfluencer → disconnect VPN → upload to Tencent Docs.
+
+**⚠️ VPN instability during batch operations:** During long batch operations (40+ sequential `creator profile` or `creator content` calls), VPN may disconnect mid-batch. Symptoms: HTTP 403 or empty JSON responses mid-sequence. Fix pattern:
+```python
+# In batch loop, catch VPN failures and reconnect
+for i, creator in enumerate(creators):
+    r = terminal(f'noxinfluencer creator profile {shell_quote(cid)} --json 2>&1', timeout=30)
+    output = r.get('output','')
+    try:
+        d = json.loads(output)
+    except:
+        if '403' in output or 'Cloudflare' in output:
+            terminal('scutil --nc start "Shadowrocket"', timeout=10)
+            time.sleep(5)
+            # Retry once
+            r = terminal(f'noxinfluencer creator profile {shell_quote(cid)} --json 2>&1', timeout=30)
+```
+Allow 3-5 reconnects per batch. After that, stop and report VPN instability.
 
 ### 🔐 Tencent Docs Auth Expiry
 

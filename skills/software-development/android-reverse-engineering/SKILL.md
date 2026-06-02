@@ -22,7 +22,7 @@ tags: [android, reverse-engineering, jadx, apktool, frida, smali, flutter]
 
 ```bash
 # 连 VPN 再用 brew 安装
-scutil --nc start "Shadowrocket"
+用户需先手动开启 VPN（Shadowrocket）再操作
 HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles brew install openjdk@21
 
 # brew 下载队列卡住时删锁重试
@@ -1080,7 +1080,8 @@ with zipfile.ZipFile('output.apk') as z:
 
 ## 参考案例
 
-- `references/lmi-live-app-analysis.md` — Lmi 直播 App 完整逆向分析报告（Flutter + 自建门票系统 + Google Play Billing v7.1.1）
+- `references/lmi-live-app-analysis.md` — Lmi 直播 App 完整逆向分析报告（Flutter + 自建门票系统 + Google Play Billing v7.1.1）+ 千度热播网页版分析（Flutter Web PWA + HLS + AES 加密 API + 反爬蜜罐）
+- `references/mobile-stream-capture.md` — 移动端直播源抓取：mitmproxy + WiFi 代理方案（解决 Packet Capture/HTTP Canary 的 VPN 冲突问题）
 - `references/lmi-api-enumeration.md` — Lmi API 端点枚举结果（2026-05-30）：全部需要认证、无公开端点、无网页版
 - `references/trtc-live-streaming.md` — TRTC（腾讯云实时音视频）直播协议说明：为何无法提取 RTMP/FLV/HLS 流 URL，API 端点一览，CDN 转推判断方式
 - `references/lmi-v12-methodchannel-refresh.md` — Lmi v12 MethodChannel 软刷新实现（2026-05-29）

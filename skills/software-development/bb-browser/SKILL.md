@@ -161,7 +161,7 @@ tiny3_only = [p for p in posts if 'lite' not in p.get('title', '').lower()]
 - The **daemon must be running** for `site` commands to work
 - Chrome must be open with remote debugging enabled
 - First run `bb-browser site update` to pull community adapters
-- **Twitter and other blocked sites need a proxy in China** — connect Shadowrocket first: `scutil --nc start Shadowrocket`. Proxy address: `127.0.0.1:1082` (HTTP/SOCKS5).
+- **Twitter and other blocked sites need a proxy in China** — Ask user to connect Shadowrocket first. Proxy address: `127.0.0.1:1082` (HTTP/SOCKS5).
 - **TikTok video grid may show "出错了" (error)** — Even with valid cookies and real Chrome, TikTok's X-Bogus anti-bot token is needed for the video list API. The profile info (followers, bio, playlists) loads fine, but the video grid requires TikTok's own JS to generate the token. Cookie injection via `document.cookie` or `context.add_cookies()` may not be sufficient. If the video grid fails, use NoxInfluencer creator search or manual check as fallback.
 - Installed via npmmirror npm registry
 - **Reddit `reddit/post` does NOT exist** — use `reddit/search` for search, and direct `.json` URL for post body + comments
@@ -179,5 +179,5 @@ tiny3_only = [p for p in posts if 'lite' not in p.get('title', '').lower()]
   pageContent.substring(reviewStart, reviewStart + 8000);
   ```
 - **Script timeout** — split large scraping jobs into per-product runs, not one mega-script
-- **bb-browser search returns 0** — usually means VPN dropped. Reconnect VPN (`scutil --nc start "Shadowrocket"`) before retrying
+- **bb-browser search returns 0** — usually means VPN dropped. Ask user to reconnect Shadowrocket before retrying.
 - **Script timeout** — split large scraping jobs into per-product runs (50 posts max per script), not one mega-script covering all products

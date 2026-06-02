@@ -20,7 +20,7 @@ python3 ~/.hermes/skills/ima-skills/scripts/bbc_scraper.py --limit 10 --output /
 
 1. **VPN 必须连接**：BBC 被 GFW 封锁
    ```bash
-   scutil --nc start "Shadowrocket"
+   用户先手动开启 VPN（Shadowrocket）
    ```
 
 2. **Scrapling 虚拟环境**：Python 3.12 venv
