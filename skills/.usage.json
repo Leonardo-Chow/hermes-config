@@ -302,14 +302,14 @@
     "archived_at": null,
     "created_at": "2026-06-01T05:30:08.381066+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-06-01T09:53:47.308478+00:00",
-    "last_used_at": "2026-06-01T09:52:09.645199+00:00",
-    "last_viewed_at": "2026-06-01T09:52:09.643829+00:00",
-    "patch_count": 14,
+    "last_patched_at": "2026-06-03T03:15:29.128960+00:00",
+    "last_used_at": "2026-06-03T03:13:14.950658+00:00",
+    "last_viewed_at": "2026-06-03T03:13:14.949765+00:00",
+    "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 7,
-    "view_count": 7
+    "use_count": 8,
+    "view_count": 8
   },
   "obsbot-competitive-analysis": {
     "archived_at": null,
@@ -414,6 +414,19 @@
     "state": "active",
     "use_count": 12,
     "view_count": 12
+  },
+  "software-development/obsbot-admin-api": {
+    "archived_at": null,
+    "created_at": "2026-06-03T03:14:57.998481+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-03T03:14:57.999156+00:00",
+    "last_viewed_at": "2026-06-03T03:14:57.998488+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
   },
   "tavily-python": {
     "archived_at": null,

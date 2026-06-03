@@ -148,12 +148,15 @@ POST /pms/v1/netizen/ambassador/program/infos-deletion  # 删除
 8. **v2 端点 Body 可为空**：`{}` 或带分页参数均可，但 Python `urllib` 可能比 `curl` 更严格（400 vs 200）。
 9. **大使列表去重**：API 返回重复条目（同一创作者多条记录），需按 `url`（创作者ID）去重。
 10. **views distribution grade 含义**：grade1=最低浏览量, grade6=10万+浏览量。总数 = 确认网红总数（2,860）。
-11. **列表接口 500 的批量扫描替代方案**：当 `/v1/netizen/infos-filtering` 不可用时，用 `detail/infos?id=N` 逐 ID 扫描。用 `ThreadPoolExecutor(max_workers=50)` 并发可达 ~9 IDs/秒。ID 分布：1-20000 有有效数据，20000+ 基本报错。扫描 1-20000 约 18 分钟可获取 ~1,336 条确认网红（`communication_state=confirm`），约占总数 2,860 的 47%。详见 `references/batch-scanning-workaround.md`。
+11. **列表接口 500 的批量扫描替代方案**：当 `/v1/netizen/infos-filtering` 不可用时，用 `detail/infos?id=N` 逐 ID 扫描。用 `ThreadPoolExecutor(max_workers=50)` 并发可达 ~9 IDs/秒。ID 分布：1-20000 有有效数据，20000+ 基本报错。**多次重试扫描可显著提升覆盖率**：首次扫描（无重试）获取 ~1,572 条，对出错 ID 段重试后可达 ~2,320 条（96.4%）。高密度段：12000-16000（最多确认网红）、10000-12000（82 条新增）、8000-10000（64 条新增）。详见 `references/batch-scanning-workaround.md`。
 12. **detail 端点约 50% 错误率**：扫描过程中约一半请求返回 `IncompleteRead` 或超时，需要 retry 机制（建议 2 次重试，间隔 0.2s）。
 13. **operation_platforms 极度稀疏**：1,336 条确认网红中仅 5 条有 `operation_platforms` 数据（平台链接、粉丝数）。大多数记录只有基本信息（name, country, liaison, contact）。不要假设每条记录都有平台数据。
 14. **大使 ≠ 确认网红**：品牌大使列表（599 条）和确认网红列表（2,860 条）是**完全不同的数据集**。大使有 `url`（创作者ID）、`category`、`profile_image` 等独有字段。不要混用。
 15. **views distribution 总数 = 确认网红总数**：`/v2/netizen/confirmed/views/distribution` 返回的 `total_netizen_num` 汇总即为确认网红总数（2026-06-01: 2,860）。grade1=最低浏览量, grade6=10万+。
 16. **v2 端点 Python urllib vs curl 差异**：同一 v2 端点，curl 返回 200 但 Python `urllib.request` 返回 400。原因可能是 `Content-Length: 0`（空 body）vs `{}`（空 JSON）。curl 发送 `{}` 时自动加 content-length，Python 不发 body 时没有。始终传 `json.dumps({}).encode()` 作 body。
+17. **登录需邮箱验证码**：当 IP 变化时，登录 API 返回 `RM.100114 login ip is not recently`，需先调 `POST /ums/v1/users/operation/verification-code`（Body: `{"account":"xxx@obsbot.com"}`）发送验证码到邮箱，再用 `verification_code` 字段登录。验证码有效期短（~2分钟），过期返回 `RM.100110 user verification code is invalid`。
+18. **阿里邮箱 IMAP 自动获取验证码**：OBSBOT 企业邮箱使用阿里云邮箱（`imap.qiye.aliyun.com:993` SSL）。可用 Python `imaplib.IMAP4_SSL` 连接收件箱，搜索最新 `异地登录验证码` 邮件，从 HTML body 中正则提取 6 位数字验证码。配合 `POST /ums/v1/users/operation/verification-code` 触发发送，可实现全自动验证码获取。详见 `references/email-verification-flow.md`。
+19. **腾讯文档大批量上传策略**：smartsheet `add_records` 每批 ≤10 条，300s 超时可上传约 1,000 条。上传前先清空旧数据（`list_records` + `delete_records` 循环），避免重复。`list_records` 分页用 `offset` 参数（0-based），每页最多 100 条。详见 tencent-docs skill。
 
 ## 快速调用模板
 
