@@ -59,21 +59,29 @@ for creator in search_results:
 
 ### Step 3: YouTube API 三重验证
 
+> **配额优化**：使用 `~/.hermes/scripts/yt_optimizer.py`，每个频道从 300 单位降至 2 单位（节省 99%）。
+
 ```python
-API_KEY = "YOUR_YOUTUBE_API_KEY"
+import sys
+sys.path.insert(0, str(Path.home() / '.hermes' / 'scripts'))
+from yt_optimizer import api_call, get_channel_uploads
 
-# 验证 1: 活跃度（3 个月）
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CH_ID&type=video&maxResults=1&order=date&key=API_KEY"
-# 检查 publishedAt 是否在 90 天内
+# 验证 1: 活跃度（channels.list = 1 单位，代替 search.list 100 单位）
+ch = api_call("channels", {"id": "UC...", "part": "snippet,statistics"}, cost=1)
 
-# 验证 2: OBSBOT 合作历史
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CH_ID&q=obsbot+webcam&type=video&maxResults=5&order=date&key=API_KEY"
-# 标题包含 obsbot/tiny 3/tiny 2/tail 2/meet 2/talent → 排除
+# 验证 2: 最近视频（playlistItems.list = 1 单位，代替 search.list 100 单位）
+uploads = get_channel_uploads("UC...")
+# 检查最新视频的 publishedAt 是否在 90 天内
 
-# 验证 3: 竞品合作历史
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CH_ID&q=insta360+OR+elgato+OR+logitech+webcam&type=video&maxResults=5&order=date&key=API_KEY"
-# 标题包含 insta360 link/elgato facecam/logitech brio → 标记为竞品合作
+# 验证 3: OBSBOT/竞品合作（search.list = 100 单位，带缓存）
+obsbot_check = api_call("search", {
+    "channelId": "UC...",
+    "q": "obsbot OR tiny 3 OR tiny 2 OR tail 2 OR meet 2",
+    "type": "video", "part": "snippet", "maxResults": "5"
+}, cost=100, ttl=86400)  # 24h 缓存
 ```
+
+传统方式：300 单位/频道 → 优化方式：2 单位/频道（search 带缓存后更低）。
 
 ### Step 4: 排除已筛选 KOL
 

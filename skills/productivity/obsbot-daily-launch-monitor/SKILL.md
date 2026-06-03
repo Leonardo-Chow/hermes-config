@@ -64,14 +64,34 @@ scutil --nc start "Shadowrocket" 2>&1; sleep 3
 
 #### 方式1: YouTube Data API（推荐）
 
-```bash
-API_KEY="YOUR_YOUTUBE_API_KEY"
+> **配额优化**：使用 `~/.hermes/scripts/yt_optimizer.py`，10 关键词搜索 = 1000 单位首次，24h 内缓存 = 0 单位。下午执行 = 完全省配额。
 
-# 搜索每个产品关键词
-for kw in "OBSBOT" "OBSBOT+Tiny+3" "OBSBOT+Tiny+2" "OBSBOT+Tail+2" "OBSBOT+Meet+2" "OBSBOT+Talent" "OBSBOT+webcam"; do
-  curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${kw}&type=video&publishedAfter=${DATE}T00:00:00Z&publishedBefore=${DATE}T23:59:59Z&maxResults=20&key=$API_KEY"
-done
+```python
+import sys
+sys.path.insert(0, str(Path.home() / '.hermes' / 'scripts'))
+from yt_optimizer import api_call, batch_videos
+
+products = ["OBSBOT Tiny 3", "OBSBOT Tail 2", "OBSBOT Meet 2", ...]
+
+for product in products:
+    # 搜索（带 24h 缓存，同天下午 = 0 单位）
+    result = api_call("search", {
+        "q": product,
+        "type": "video", "part": "snippet",
+        "publishedAfter": "2026-06-03T00:00:00Z",
+        "publishedBefore": "2026-06-03T23:59:59Z",
+        "maxResults": "20", "order": "date",
+    }, cost=100, ttl=86400)
+
+# 批量获取视频详情（50个 = 1 单位）
+all_ids = [...]  # 从搜索结果收集
+details = batch_videos(all_ids)
 ```
+
+**配额对比**：
+- 传统方式：10 × 100 = 1000 单位/次，每天 2 次 = 2000 单位
+- 优化方式：上午 1000 单位，下午 0 单位（缓存），共 1000 单位/天
+- 3 Key 轮换 = 30,000 单位/天，优化后剩余 29,000 单位
 
 #### 方式2: 浏览器搜索（API 配额用完时）
 

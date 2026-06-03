@@ -33,11 +33,13 @@ user-invocable: true
 
 ## 定时任务时间规则
 
-| 执行日 | 时间范围 |
-|--------|---------|
-| 周一 | 上周六 ~ 本周一 |
-| 周三 | 周二 ~ 周三 |
-| 周五 | 周四 ~ 周五 |
+| 执行日 | 时间范围 | Cron 表达式 |
+|--------|---------|-------------|
+| 周一 | 上周六 ~ 本周一 | `0 9 * * 1` |
+| 周三 | 周二 ~ 周三 | `0 9 * * 3` |
+| 周五 | 周四 ~ 周五 | `0 9 * * 5` |
+
+**注意**：根据实际执行日确定搜索时间范围，不要硬编码日期。
 
 ## 过滤规则（必须严格执行）
 
@@ -70,16 +72,22 @@ user-invocable: true
 ## 执行流程
 
 ### Step 1: 搜索竞品视频
+**方法 A: curl 直接调用（推荐）**
 ```bash
-API_KEY="YOUR_YOUTUBE_API_KEY"
+curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=QUERY&type=video&publishedAfter=START&publishedBefore=END&maxResults=50&order=date&key=AIzaSy...aA1Q"
+```
 
-# 对每个品牌用 curl 搜索（直连，不走代理）
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=QUERY&type=video&publishedAfter=START&publishedBefore=END&maxResults=50&order=date&key=${API_KEY}"
+**方法 B: 浏览器搜索（备用）**
+```python
+# 对每个品牌搜索
+for brand, query in competitors.items():
+    browser_navigate(f'https://www.youtube.com/results?search_query={query}&sp=EgIIAw%3D%3D')
+    # 用 browser_console 提取视频ID
 ```
 
 ### Step 2: 获取视频统计
 ```bash
-curl -s "https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=VIDEO_IDS&key=${API_KEY}"
+curl -s "https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=VIDEO_IDS&key=AIzaSy...aA1Q"
 ```
 
 ### Step 3: 过滤
@@ -127,6 +135,90 @@ cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
 腾讯文档：云盘 → OBSBOT → 竞品监测
 文件夹 ID：`DnNkcnCRIHGt`
 
+## 已知陷阱（Pitfalls）
+
+### 🔴 YouTube API 配额优化（推荐）
+
+使用 `~/.hermes/scripts/yt_optimizer.py` 自动缓存 + 批量请求：
+
+```python
+import sys
+sys.path.insert(0, str(Path.home() / '.hermes' / 'scripts'))
+from yt_optimizer import api_call, batch_videos
+
+# 搜索（24h 缓存，重复执行 = 0 单位）
+result = api_call("search", {
+    "q": "Logitech Brio webcam",
+    "type": "video", "part": "snippet",
+    "publishedAfter": START, "publishedBefore": END,
+    "maxResults": "50", "order": "date",
+}, cost=100, ttl=86400)
+
+# 批量获取视频详情（50个 = 1 单位）
+video_ids = [item["id"]["videoId"] for item in result["data"]["items"]]
+details = batch_videos(video_ids)
+```
+
+**配额节省**：18品牌搜索 = 1800单位首次，24h内缓存=0。批量详情 = 1单位/50视频。
+
+### 🔴 YouTube API Key 在 Python heredoc 中被截断
+系统会将 `AIzaSy...` 开头的 API key 截断为 `***`。不要在 Python 脚本中硬编码 API key。
+
+**解决方案**：
+1. 用 `curl` 直接调用 API（推荐）：
+```bash
+curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=QUERY&type=video&publishedAfter=START&publishedBefore=END&maxResults=50&order=date&key=YOUR_YOUTUBE_API_KEY"
+```
+2. 或用浏览器搜索 YouTube（browser_navigate + browser_console）
+
+### 🔴 YouTube API 直连可用，不需要代理
+YouTube Data API v3 可以直连访问，不需要走代理。但 mcporter 调用腾讯文档需要代理。
+
+### 🔴 mcporter 调用腾讯文档需要代理
+```bash
+export https_proxy=http://127.0.0.1:1082
+export http_proxy=http://127.0.0.1:1082
+```
+
+### 🔴 浏览器搜索 YouTube 的 JS 选择器
+```javascript
+// 提取视频标题和链接
+const videos = [];
+document.querySelectorAll('a#video-title').forEach((el, i) => {
+    if (i < 15) {
+        const href = el.href || '';
+        const title = el.textContent?.trim()?.substring(0, 80) || '';
+        const videoId = href.split('v=')[1]?.split('&')[0] || '';
+        videos.push({ title, url: href, videoId });
+    }
+});
+
+// 从视频页面获取统计
+const title = document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim() || '';
+const channel = document.querySelector('#channel-name a')?.textContent?.trim() || '';
+const views = document.querySelector('#info-container span:first-child')?.textContent?.trim() || '';
+const likes = document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim() || '';
+```
+
+### 🔴 评论区提取 JS 代码
+```javascript
+const comments = [];
+document.querySelectorAll('ytd-comment-thread-renderer').forEach((el, i) => {
+    if (i < 20) {
+        const author = el.querySelector('#author-text')?.textContent?.trim() || '';
+        const text = el.querySelector('#content-text')?.textContent?.trim() || '';
+        if (text) comments.push({ author, text });
+    }
+});
+
+// 检查 OBSBOT 关键词
+const obsbotKeywords = ['obsbot', 'meet 2', 'meet se', 'tiny 2', 'tiny 3', 'tail 2', 'tail air'];
+const obsbotMentions = comments.filter(c => {
+    const lower = c.text.toLowerCase();
+    return obsbotKeywords.some(kw => lower.includes(kw));
+});
+```
+
 ## 注意事项
 
 1. YouTube API 直连可用（不需要代理）
@@ -134,3 +226,4 @@ cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
 3. API 配额限制：10,000 单位/天，每次搜索约 100 单位
 4. 评论区分析用浏览器（browser_navigate + browser_console）
 5. 每个品牌单独搜索，避免漏掉
+6. 搜索结果中可能包含不相关视频（如摩托车骑行视频），需要人工过滤
