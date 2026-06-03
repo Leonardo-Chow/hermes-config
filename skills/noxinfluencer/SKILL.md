@@ -120,6 +120,8 @@ If quota is low or exhausted, the error response's `action` field includes the b
 
 Turn an open-ended search into a usable shortlist.
 
+**连续执行** — 用户明确要求不要一步一停。用 `execute_code` 把搜索→profile获取→验证→写入全流程放在一个脚本里执行。中间遇到 VPN 断自动重连，不要停下来等确认。
+
 ### Clarification Strategy
 
 Do not search immediately if the request is too broad. Ask for 2–3 critical filters at a time:

@@ -92,28 +92,59 @@ curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/videos?part=snippet
 - description: 描述区全文
 - tags: 标签列表
 
-### Step 3: TikTok 搜索
+### Step 3: TikTok 搜索（必须用多策略交叉验证）
 
-⚠️ **关键限制（2026-06-01 验证）**：
-- web_search 无法索引最新发布的 TikTok 视频（索引延迟 1-2 周）
-- TikTok 搜索页面需要登录才能查看结果
-- 浏览器 Cookie 注入被安全策略阻止
-- oembed API 可用，但只能获取已知视频ID的信息
+> ⚠️ **重要教训**：web_search 索引有延迟，新发布的视频（1-3天内）不会被收录。必须用多种方式交叉验证，否则会漏掉视频。
 
-#### 方式1: oembed API 验证（推荐，最可靠）
+#### 策略1: web_search 间接搜索（覆盖历史视频）
 
-```bash
-# 用代理访问 oembed API
-curl -s --max-time 8 -x http://127.0.0.1:1082 "https://www.tiktok.com/oembed?url=https://www.tiktok.com/@USER/video/VIDEO_ID"
+```python
+# 搜索所有产品关键词，不能只搜热门产品
+for product in ["OBSBOT", "Tiny 3", "Tiny 2", "Tail 2", "Meet 2", "Talent", "Tiny 3 Lite", "Tiny 2 Lite", "Meet SE", "Tiny SE", "Tail Air"]:
+    web_search(f'site:tiktok.com "{product}" 2026', limit=10)
+    web_search(f'tiktok "{product}" review unboxing 2026', limit=10)
 ```
 
-#### 方式2: 视频 ID 解码时间
+#### 策略2: oembed API 验证已知视频（最可靠）
+
+```bash
+# 对已知视频ID用oembed验证，带Cookie效果更好
+COOKIE=$(python3 -c "import json; print(json.load(open('/Users/zhoulong/.hermes/cookies/platform_cookies.json'))['tiktok'])")
+curl -s --max-time 8 -x http://127.0.0.1:1082 \
+  -H "Cookie: $COOKIE" \
+  "https://www.tiktok.com/oembed?url=https://www.tiktok.com/@USER/video/VIDEO_ID"
+```
+
+#### 策略3: 已知账号定期扫描
+
+维护一个 OBSBOT 相关 TikTok 账号列表，定期检查最新视频：
+
+```
+@obsbot (OBSBOT Official, 17.5K粉丝)
+@obsbotmy1 (obsbotmy)
+@psscreativemedia (PSS Creative Media)
+@mrsmobster (MrsMobster)
+@maccagames (MaccaGames)
+@brainiacvp (BrainiacVP)
+@obsbot.thailand
+@obsbotmy
+@obsbotsingapore
+```
+
+#### 策略4: 视频 ID 解码时间
 
 ```python
 import datetime
 timestamp = int(video_id) >> 32
 date = datetime.datetime.fromtimestamp(timestamp).date()
 ```
+
+#### 策略5: Cookie 认证搜索（需要用户登录态）
+
+当以上策略都无法覆盖最新视频时，需要用户提供 TikTok Cookie：
+- 保存位置：`~/.hermes/cookies/platform_cookies.json`
+- 使用方式：curl 带 Cookie 头访问 TikTok API
+- Cookie 有效期：1-2 周，过期后需用户重新获取
 
 #### 方式3: 已知账号逐个检查
 
@@ -170,6 +201,8 @@ web_search('twitter OBSBOT camera May 2026', limit=10)
 
 ### Step 7: 质检（SOP 要求）
 
+> ⚠️ **用户明确要求**：每条符合SOP的视频都要附带质检详情，用 ☑️/☒ 标记每个检查项。
+
 #### 视频内容质检
 
 | 检查项 | 说明 | 标记 |
@@ -189,6 +222,13 @@ web_search('twitter OBSBOT camera May 2026', limit=10)
 | 渠道链接 | 经销商链接 | ☑️/☒ |
 | 标签 | #obsbot 等 hashtags | ☑️/☒ |
 | 折扣信息 | discount code / coupon | ☑️/☒ |
+
+#### 排除规则
+
+- 过滤官方账号（@obsbot、@OBSBOT_Official 等）
+- 故障展示/非产品测评 → 排除
+- 仅设备列表提及（非主要使用）→ 排除
+- 竞品评测（可能对比OBSBOT但不是主产品）→ 排除
 
 ### Step 8: 生成报告
 
@@ -284,14 +324,16 @@ mcporter call tencent-docs create_smartcanvas_by_mdx --args '{"title": "OBSBOT�
 mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "target_folder_id": "DjbGtzenXmbX"}'
 ```
 
-## 格式规范（用户明确要求）
+## 格式规范（用户明确要求，违反任何一条都是质量事故）
 
-1. **链接格式**：纯文本 URL，不用 Markdown 超链接 `[链接](URL)`（用户 2026-06-01 纠正）
-2. **视频标题**：每条视频单独一行展示，格式为 `**1. 视频标题**`（用户 2026-06-01 纠正）
+1. **链接格式**：纯文本 URL，不用 Markdown 超链接 `[链接](URL)`。用户 2026-06-01 纠正，原话："链接不要用超链接"
+2. **视频标题**：每条视频单独一行展示，格式为 `**1. 视频标题**`。用户 2026-06-01 纠正，原话："所有的视频要单列一条：视频标题"
 3. **质检标记**：☑️ 表示通过，☒ 表示未通过/无
-4. **过滤官方**：排除 @obsbot、@OBSBOT_Official 等官方账号（用户 2026-06-01 纠正）
-5. **搜索覆盖**：必须搜索全部 10 个产品关键词，不能只搜部分（用户 2026-06-01 纠正）
-6. **交叉验证**：用多个工具交叉验证视频，确保不遗漏（用户 2026-06-01 纠正）
+4. **过滤官方**：排除 @obsbot、@OBSBOT_Official 等官方账号。用户 2026-06-01 纠正，原话："过滤掉关于OBSBOT官方的内容"
+5. **搜索覆盖**：必须搜索全部 10 个产品关键词，不能只搜部分。用户 2026-06-01 纠正，原话："这些关键词都要去检索，不是只检索tiny3和tiny2"
+6. **交叉验证**：用多个工具交叉验证视频，确保不遗漏。用户 2026-06-01 纠正，原话："你需要用多个工具去交叉验证视频"
+7. **去重逻辑**：上午呈现的内容下午不要重复呈现，只呈现新内容
+8. **文件命名**：`YYYY-MM-DD——视频上线监测——上午` 或 `YYYY-MM-DD——视频上线监测——下午`
 
 ## 质检标准（SOP 要求）
 
@@ -350,9 +392,29 @@ Cookie 保存在 `references/cookies.md` 中，可用于 Scrapling 或 Playwrigh
 ## 已知限制
 
 1. **YouTube API 配额**：每天 100 次搜索，配额用完后用浏览器搜索
-2. **TikTok CAPTCHA**：Profile 页面有滑块验证，用 oembed API 获取单个视频详情
-3. **Instagram/X**：无法直接爬取，用 web_search 间接获取；可用 Cookie 认证提升成功率
-4. **VPN 稳定性**：长任务中 VPN 可能断开，需定期检查（用户 2026-06-01 明确要求不要乱切 VPN 节点）
+2. **TikTok 搜索延迟**：web_search 索引有 1-3 天延迟，新发布的视频不会立即被收录。必须用 oembed API + 已知账号列表 + Cookie 认证 多策略交叉验证
+3. **TikTok CAPTCHA**：Profile 页面有滑块验证，浏览器自动化无法绕过
+4. **Instagram/X**：无法直接爬取，用 web_search 间接获取
+5. **VPN 稳定性**：长任务中 VPN 可能断开，需定期检查
+6. **Cookie 有效期**：TikTok Cookie 约 1-2 周过期，需用户定期更新
+
+## 定时任务（用户 2026-06-02 要求）
+
+- **上午任务**：工作日 10:00 执行
+- **下午任务**：工作日 18:00 执行，只呈现下午新发布的内容（与上午去重）
+- **周一特殊处理**：搜索范围覆盖周五、周六、周日三天
+- **周二至周五**：正常搜索当天
+- **去重逻辑**：下午任务读取上午已发布的视频ID列表，排除后只输出新增
+
+## 常见陷阱（2026-06-01 教训）
+
+1. **不能只搜热门产品**：用户明确要求搜索全部 10 个产品关键词，遗漏任何一个都是质量事故
+2. **TikTok 视频必须用多策略**：仅靠 web_search 会漏掉最近 1-3 天的视频
+3. **链接格式**：腾讯文档 smartcanvas 中用纯文本 URL，不用 `[链接](URL)` 超链接格式
+4. **视频标题单列**：每条视频必须单独一行展示标题，不要合并到表格中
+5. **质检必须带标记**：每条符合 SOP 的视频都要 ☑️/☒ 逐项标记，不能省略
+6. **YouTube API 配额**：每天 100 次搜索，10 个关键词 × 多轮 = 很容易用完。配额用完后用浏览器搜索或等待次日重置
+7. **用户愤怒信号**："做啊"、"继续做"、"立刻马上" = 停止解释，直接执行。不要再问确认问题
 
 ## 输出位置
 

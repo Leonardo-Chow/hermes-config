@@ -32,6 +32,21 @@ version: 1.1.0
 
 详见 `references/daily-monitoring-workflow.md`。
 
+## 竞品投放监测工作流
+
+当用户要求「竞品监测」「竞品投放」「competitor monitoring」时，执行竞品投放监测流程。
+
+核心流程：YouTube Data API 搜索18款竞品 → 视频统计 → 评论区 OBSBOT 提及检测 → 生成 Excel（15列格式）→ 上传腾讯文档 OBSBOT/竞品监测 文件夹。
+
+**关键要求**：
+- 按日期筛选（publishedAfter/publishedBefore）
+- 评论区必须检测 OBSBOT 产品提及（obsbot/meet/tiny/tail 关键词）
+- 评论区舆论导向分析（正面/负面/中性）
+- Excel 格式必须匹配《竞品投放情况》模板
+- 上传到腾讯文档：OBSBOT/竞品监测 文件夹 (DnNkcnCRIHGt)
+
+详见 `references/competitive-monitoring-sop.md` 的「每日竞品监测执行工作流」章节。
+
 ## 适用场景
 
 - OBSBOT 产品竞品分析
@@ -159,6 +174,7 @@ for name in wb.sheetnames:
 | `competitive-monitoring-sop.md` | OBSBOT 竞品投放监测 SOP（竞品清单、数据字段、用户评论5大维度、竞争洞察） |
 | `html-template-guide.md` | HTML 报告模板指南 |
 | `obsbot-admin-api.md` | OBSBOT 内部管理系统 API（网红数据、大使列表、批量扫描） |
+| `smartsheet-batch-ops.md` | 腾讯文档智能表格批量操作（分页、删除、上传） |
 
 ### Step 4: 报告生成
 - 使用 execute_code 一次性生成完整 HTML
@@ -373,8 +389,8 @@ for table in doc.tables:
 ### ⚠️ 文件存放路径
 报告存放在 `~/Documents/` 目录，文件名加日期区分版本。不要覆盖旧文件。
 
-### ⚠️ YouTube Data API 需要 VPN
-在中国大陆环境下，YouTube Data API 调用需要 VPN。如需使用，先让用户手动开启 Shadowrocket。
+### ⚠️ YouTube Data API 直连可用（2026-06-02 更新）
+在中国大陆环境下，YouTube Data API 可直连访问（无需代理）。代理反而会返回 503/超时错误。如遇网络问题，先尝试移除代理设置。
 
 ### ⚠️ 多平台搜索的置信度差异
 YouTube Data API 返回 HIGH 置信度结果。但 Instagram/TikTok/X 的 web_search 结果置信度仅为 MEDIUM/LOW：
@@ -461,3 +477,15 @@ mcporter auth tencent-docs
 
 ### ⚠️ manage.create_file 中文标题报错
 先用英文标题创建，再用 `manage.rename_file_title` 改为中文。
+
+### ⚠️ /tmp 文件定期清理（macOS）
+macOS 的 `/tmp` 目录会被系统定期清理（通常在重启或磁盘空间不足时）。长时间运行的任务（扫描、批量上传）如果中间结果只存在 `/tmp`，可能丢失。**重要数据必须保存到 `~/Downloads/` 或 `~/Documents/`**。
+
+### ⚠️ OBSBOT Admin API 列表接口 500 错误
+`/v1/netizen/infos-filtering` 和 `/v1/netizen/infos/export` 持续返回 500（所有参数组合、所有 proxy 类型）。这是服务端 bug，非客户端问题。**替代方案**：逐 ID 扫描 `detail/infos?id=N`（50并发，~50 IDs/秒）。
+
+### ⚠️ 长时间扫描任务的输出缓冲
+Python 的 `print(flush=True)` 在 background terminal 中可能不输出。解决方案：
+- 脚本结束时一次性输出所有结果
+- 或用 `sys.stdout.reconfigure(line_buffering=True)` 强制行缓冲
+- 用 `process(action='poll')` 检查进程状态，用 `process(action='wait')` 等待完成

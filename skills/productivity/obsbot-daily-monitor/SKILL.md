@@ -464,6 +464,36 @@ YouTube Data API 每日配额限制 100 次搜索。当返回 `429 Quota exceede
 - 多日报告（3天）需要 3 轮搜索 = 4,800 单位
 - 建议：优先搜索核心关键词（OBSBOT + 10个产品名），变体关键词用 fallback 策略
 
+## OBSBOT Admin System API（确认网红管理）
+
+详细的 API 端点、认证方式、数据结构见 `references/obsbot-admin-api.md`。
+
+### 核心要点
+
+- **API 域名**: `https://api.obsbot.cn`（UMS = 用户管理, PMS = 网红/产品管理）
+- **认证**: JWT token 作为 `Authorization` header（无 Bearer 前缀）+ `dealer-proxy-type: Remo`
+- **用户**: leonardo@obsbot.com（周龙），Role=2（Market Admin）
+
+### ⚠️ 关键 Pitfall
+
+**`/v1/netizen/infos-filtering` 返回 500** — 这是唯一的批量列表接口，服务端 bug，所有参数组合都返回 500。浏览器上下文调也一样。
+
+**替代方案**: `scripts/scan_netizens.py` — 逐 ID 扫描 + 大使数据合并。扫描 ID 1-20000，约 20 分钟可获取 ~1,572 条确认网红 + ~398 条独立大使 = ~1,970 条唯一记录。
+
+### 数据计数说明
+
+| 数据源 | 总数 | 说明 |
+|--------|------|------|
+| `v2/confirmed/statistics` → `all_total_infos.total` | **2,385** | 唯一确认网红数 |
+| `v2/confirmed/views/distribution` → sum | **2,860** | 平台级条目（一个网红多个平台） |
+| 品牌大使列表 | **599** | 独立数据集，与网红列表部分重叠 |
+
+以 2,385 为确认网红总数。2,860 含重复平台条目。
+
+### 文件夹
+
+- **OBSBOT**: DjbGtzenXmbX
+
 ## ⚠️ 关键约束
 
 **VPN 稳定性是首要约束。** Shadowrocket 长时间任务会断开，需要定期检查连接状态。YouTube API 和 TikTok Scrapling 都依赖 VPN。遇到 VPN 断开时先重连再继续。

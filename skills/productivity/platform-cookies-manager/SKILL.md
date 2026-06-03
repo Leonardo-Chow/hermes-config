@@ -44,14 +44,29 @@ metadata:
 
 ## 如何获取Cookie
 
-### 浏览器获取方法
+### 浏览器获取方法（推荐）
 
 1. 打开目标平台并登录
 2. 按 F12 打开开发者工具
-3. 切换到 Network 标签
-4. 刷新页面
-5. 点击任意请求，在 Headers 中找到 Cookie 字段
-6. 复制完整的 Cookie 字符串
+3. 切换到 Console 标签
+4. 输入 `document.cookie` 并按回车
+5. 复制输出的 Cookie 字符串
+
+### ⚠️ 粘贴限制绕过
+
+某些网站（如 TikTok）会阻止控制台粘贴。解决方案：
+
+**方法1：地址栏执行**
+```
+javascript:void(document.title=document.cookie)
+```
+输入后按回车，页面标题会变成 Cookie 内容。
+
+**方法2：Chrome 扩展**
+安装 "Allow Right-Click" 扩展，允许在任何网站右键粘贴。
+
+**方法3：最短输入**
+在 Console 中手动输入 `document.cookie`（仅14个字符），不需要粘贴。
 
 ### Chrome Cookie导出
 
@@ -142,6 +157,8 @@ curl -s -H "Cookie: $COOKIE" "https://www.googleapis.com/youtube/v3/videos?part=
 2. **HttpOnly标记**：部分Cookie标记为HttpOnly，JavaScript无法访问
 3. **SameSite限制**：跨域请求可能被SameSite策略阻止
 4. **IP绑定**：部分平台的Cookie与IP地址绑定，切换VPN后可能失效
+5. **浏览器注入失败**：浏览器安全策略阻止通过 JavaScript 注入 Cookie（`document.cookie` 赋值被拒绝），需要用 curl 带 Cookie 头的方式替代
+6. **TikTok CAPTCHA**：即使用 Cookie，Profile 页面仍可能弹出滑块验证，视频网格不渲染
 
 ## 安全注意事项
 

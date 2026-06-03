@@ -78,6 +78,7 @@ mcporter call tencent-docs create_smartcanvas_by_mdx --args '{
 | 结构化数据管理 | smartsheet | `references/smartsheet_references.md`                                                       |
 | 计算、筛选、统计、Excel 操作 | sheet | `sheet/entry.md`（sheet.* 系列工具，已集成到 tencent-docs 中） |
 | 批量数据上传到表格 | sheet | `references/sheet_batch_upload.md`（JSON→表格批量写入完整流程） |
+| 大批量数据操作（1000+ 条） | smartsheet | `references/smartcanvas-bulk-operations.md`（清空重建、断点续传、并发扫描） |
 | Word 文档编辑 | word  | `references/docengine_references.md`（doc.* 系列工具，已集成到 tencent-docs 中））                       |
 | 论文、公文、合同等专业文档（作为docengine替补） | word (doc) | `doc/entry.md`                                                                              |
 | PPT / 演示文稿 | slide | `references/slide_references.md`                                                            |
@@ -326,8 +327,44 @@ curl -s "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&video
 - **格式偏好**：竞品分析数据使用**智能表格（smartsheet）**格式，不要 Word 文档
 - **模板匹配**：输出必须匹配已有模板的格式和写作风格
 - **标红和 emoji**：结论部分注意使用 ✅❌🎯🎬 等 emoji 增强可读性
+- **smartcanvas 链接格式**：用纯文本 URL，不用 `[链接](URL)` 超链接格式。用户 2026-06-01 明确纠正
 
 ## 已知陷阱
+
+### smartsheet.list_records 分页上限（重要）
+
+`list_records` 的 `page_size` 参数**实际最大返回 100 条**，无论设多大值（500、1000）都只返回 100 条。必须用 `offset` 参数逐页拉取：
+
+```python
+all_records = []
+offset = 0
+while True:
+    result = mcporter('smartsheet.list_records', file_id=..., sheet_id=..., offset=offset)
+    records = result.get('records', [])
+    if not records: break
+    all_records.extend(records)
+    offset += len(records)
+    if not result.get('has_more', True): break
+```
+
+### 大批量数据操作（1000+ 条记录）
+
+**超时问题**：mcporter 单次调用 ~300s 超时。上传 1000+ 条时 Python subprocess 会被 kill。
+
+**清空 + 重建模式**（去重/重建数据时推荐）：
+1. 逐批获取所有 record_id（offset 分页，每页 100）
+2. 逐批删除（每批 100 条 `delete_records`）
+3. 逐批上传（每批 10 条 `add_records`）
+
+**断点续传**：脚本内记录 `uploaded` 计数，超时后从断点继续：
+```python
+uploaded = 410  # 上次中断的位置
+for i in range(uploaded, len(data), 10):
+    # upload batch...
+    if time.time() - start > 280:
+        print(f"Resume from {i+10}")
+        break
+```
 
 ### mcporter 调用语法（重要）
 

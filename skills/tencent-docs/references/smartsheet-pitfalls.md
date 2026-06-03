@@ -35,12 +35,10 @@ for f in fields:
 
 **必须在添加数据后删除这些空记录：**
 ```python
-# 获取所有记录
 records = list_records(file_id, sheet_id)
-# 找出空记录
 empty_ids = [r['record_id'] for r in records if not r.get('field_values')]
-# 删除空记录
-delete_records(file_id, sheet_id, empty_ids)
+if empty_ids:
+    delete_records(file_id, sheet_id, empty_ids)
 ```
 
 ## 陷阱4：field_value 正确格式
@@ -78,49 +76,94 @@ delete_records(file_id, sheet_id, empty_ids)
 {"field": "Pros", "text_value": {"items": [{"text": r['Pros'] if r['Pros'] else "——", "type": "text"}]}}
 ```
 
+## 陷阱7：add_records 批量超时（2026-05-29 验证）
+
+**批量添加（即使是 3 条/批）在记录字段较多（14 列）时经常超时（30s limit）。**
+
+**唯一可靠方案：逐条添加，timeout 设 60s：**
+```python
+added = 0
+for rec in records:
+    payload = json.dumps({"file_id": file_id, "sheet_id": sheet_id, "records": [rec]}, ensure_ascii=False)
+    for attempt in range(3):  # 最多重试 3 次
+        try:
+            r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.add_records','--args',payload],
+                             capture_output=True, text=True, timeout=60)
+            if json.loads(r.stdout).get('records'):
+                added += 1
+                break
+        except: pass
+        time.sleep(2)
+    time.sleep(0.3)  # 每条间隔 0.3s
+```
+
+**关键参数**：
+- timeout=60（不是 30）
+- 每条间隔 0.3s
+- 失败重试 3 次，间隔 2s
+- 36 条记录（14 列）总耗时约 3-4 分钟
+
 ## 完整创建流程（Python 示例）
 
 ```python
-import subprocess, json
+import subprocess, json, time
 
 def create_smartsheet_with_data(title, records_data, folder_id):
     """创建智能表格并填充数据"""
     
     # 1. 创建表格
-    result = run_mcporter('manage.create_file', {"title": title, "file_type": "smartsheet"})
-    file_id = result['file_id']
+    r = subprocess.run(['mcporter','call','tencent-docs','manage.create_file','--args',
+        json.dumps({"title": title, "file_type": "smartsheet"})], capture_output=True, text=True, timeout=30)
+    file_id = json.loads(r.stdout)['file_id']
     
     # 2. 获取 sheet_id
-    result = run_mcporter('smartsheet.list_tables', {"file_id": file_id})
-    sheet_id = result['sheets'][0]['sheet_id']
+    r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.list_tables','--args',
+        json.dumps({"file_id": file_id})], capture_output=True, text=True, timeout=30)
+    sheet_id = json.loads(r.stdout)['sheets'][0]['sheet_id']
     
-    # 3. 删除默认字段
-    result = run_mcporter('smartsheet.list_fields', {"file_id": file_id, "sheet_id": sheet_id})
-    for f in result['fields']:
-        run_mcporter('smartsheet.delete_fields', 
-            {"file_id": file_id, "sheet_id": sheet_id, "field_ids": [f['field_id']]})
+    # 3. 删除默认字段（逐个）
+    r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.list_fields','--args',
+        json.dumps({"file_id": file_id, "sheet_id": sheet_id})], capture_output=True, text=True, timeout=30)
+    for f in json.loads(r.stdout)['fields']:
+        subprocess.run(['mcporter','call','tencent-docs','smartsheet.delete_fields','--args',
+            json.dumps({"file_id": file_id, "sheet_id": sheet_id, "field_ids": [f['field_id']]})],
+            capture_output=True, text=True, timeout=30)
+        time.sleep(0.2)
     
     # 4. 添加自定义字段
     fields = [...]  # 你的字段定义
-    run_mcporter('smartsheet.add_fields', 
-        {"file_id": file_id, "sheet_id": sheet_id, "fields": fields})
+    subprocess.run(['mcporter','call','tencent-docs','smartsheet.add_fields','--args',
+        json.dumps({"file_id": file_id, "sheet_id": sheet_id, "fields": fields})],
+        capture_output=True, text=True, timeout=30)
     
-    # 5. 分批添加记录（每批≤10条）
-    for i in range(0, len(records_data), 10):
-        batch = records_data[i:i+10]
-        records = [format_record(r) for r in batch]
-        run_mcporter('smartsheet.add_records', 
-            {"file_id": file_id, "sheet_id": sheet_id, "records": records})
+    # 5. 逐条添加记录（可靠方案）
+    added = 0
+    for rec in records_data:
+        payload = json.dumps({"file_id": file_id, "sheet_id": sheet_id, "records": [rec]}, ensure_ascii=False)
+        for attempt in range(3):
+            try:
+                r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.add_records','--args',payload],
+                                 capture_output=True, text=True, timeout=60)
+                if json.loads(r.stdout).get('records'):
+                    added += 1
+                    break
+            except: pass
+            time.sleep(2)
+        time.sleep(0.3)
     
     # 6. 删除默认空记录
-    result = run_mcporter('smartsheet.list_records', {"file_id": file_id, "sheet_id": sheet_id})
-    empty_ids = [r['record_id'] for r in result['records'] if not r.get('field_values')]
+    r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.list_records','--args',
+        json.dumps({"file_id": file_id, "sheet_id": sheet_id})], capture_output=True, text=True, timeout=30)
+    empty_ids = [r['record_id'] for r in json.loads(r.stdout)['records'] if not r.get('field_values')]
     if empty_ids:
-        run_mcporter('smartsheet.delete_records', 
-            {"file_id": file_id, "sheet_id": sheet_id, "record_ids": empty_ids})
+        subprocess.run(['mcporter','call','tencent-docs','smartsheet.delete_records','--args',
+            json.dumps({"file_id": file_id, "sheet_id": sheet_id, "record_ids": empty_ids})],
+            capture_output=True, text=True, timeout=30)
     
     # 7. 移动到目标文件夹
-    run_mcporter('manage.move_file', {"file_id": file_id, "target_folder_id": folder_id})
+    subprocess.run(['mcporter','call','tencent-docs','manage.move_file','--args',
+        json.dumps({"file_id": file_id, "target_folder_id": folder_id})],
+        capture_output=True, text=True, timeout=30)
     
     return file_id
 ```
@@ -133,3 +176,4 @@ def create_smartsheet_with_data(title, records_data, folder_id):
 - [ ] 记录数 = 预期数量
 - [ ] 每条记录的 field_values 不为空
 - [ ] 第一条记录包含所有预期字段
+- [ ] 没有重复记录（检查 KOL ID 等唯一字段）

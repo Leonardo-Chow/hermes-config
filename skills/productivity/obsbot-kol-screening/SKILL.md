@@ -146,15 +146,22 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 
 **竞品关键词**：`insta360 link, elgato facecam, logitech brio, logitech streamcam, razer kiyo, insta360 link 2, huddly, meeting owl`
 
+## ⚠️ 关键执行原则
+
+**不要一步一停** — 用户明确要求连续执行，不要每步都等确认。用 todo 跟踪进度，一个 execute_code 块完成搜索→验证→写入全流程。只在真正需要用户输入时才停下。
+
 ## 已知坑
 
 | 问题 | 解决方案 |
 |:-----|:---------|
 | NoxInfluencer 403/Cloudflare | VPN 断了，`scutil --nc start "Shadowrocket"` |
-| mcporter add_records 超时 | 逐条添加（1 条/次），不要批量 |
-| creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id |
-| 搜索结果无 channel_url | 必须单独调 `creator profile` 获取 |
-| 重复 KOL 跨批次 | 维护全局 excluded_names set |
+| mcporter add_records 超时 | **逐条添加**（1 条/次），timeout 设 60s，间隔 0.3s。批量必然超时 |
+| creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id，特殊字符会导致命令失败 |
+| 搜索结果无 channel_url | 必须单独调 `creator profile` 获取，search 结果只有 NoxInfluencer 内部 ID |
+| 重复 KOL 跨批次 | 维护全局 excluded_names set，每次新搜索前加载所有历史 JSON |
+| 新 smartsheet 默认字段 | 有 5 个默认字段（单选/数字/日期/图片/文本），必须先删除再添加自定义字段 |
+| NoxInfluencer VPN 长任务断连 | 每次 API 调用前检查，断了就重连。长搜索（50+ 创作者）中间会断 2-3 次 |
+| profile 获取只有 36/91 成功 | NoxInfluencer creator search 返回的 ID 并非都能解析为 YouTube 频道，成功率约 40% |
 
 ## 输出文件位置
 
@@ -166,3 +173,5 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 - `noxinfluencer/references/obsbot-kol-sourcing-workflow.md` — 完整品类映射和排除流程
 - `noxinfluencer/references/search-filters.md` — 搜索过滤器语义
 - `noxinfluencer/references/kcl-product-scenario-mapping.md` — 产品场景→KOL品类映射
+- `noxinfluencer/references/validated-search-niches.md` — 2026-05-29 验证的 15 个搜索品类及有效性
+- `noxinfluencer/references/mcporter-smartsheet-pitfalls.md` — mcporter 写入注意事项
