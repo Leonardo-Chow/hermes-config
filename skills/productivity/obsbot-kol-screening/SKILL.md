@@ -1,6 +1,6 @@
 ---
 name: obsbot-kol-screening
-description: OBSBOT KOL 筛选工作流 — NoxInfluencer 搜索 + YouTube API 三重验证 + 腾讯文档输出。排除已合作博主，优先竞品合作过的。覆盖 Tech/Camera/Livestream/Apple/Gamer/Desk Setup 等品类。
+description: OBSBOT KOL 筛选工作流 — NoxInfluencer 搜索 + YouTube API 三重验证 + 腾讯文档输出。包含 Post-Screening 补全流程（读取已有 Excel 表格、批量获取频道信息、填写分类和建议）。覆盖 Tech/Camera/Livestream/Apple/Gamer/Desk Setup 等品类。
 version: 1.0.0
 tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 ---
@@ -11,6 +11,12 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 
 通过 NoxInfluencer 搜索 + YouTube API 验证，筛选适合 OBSBOT 产品的中腰部 KOL。
 
+## ⚠️ 执行纪律（用户明确要求）
+
+1. **不要一步一停** — 用户多次强调"继续执行走，不要做一半的任务"。整个流程必须一口气跑完（搜索→验证→创建表格→写入），中间不要等用户指令。
+2. **开始前检查日期** — `date '+%Y-%m-%d %A'`，用当天日期命名文件。
+3. **想尽办法去找** — 搜索不够就换关键词再来一轮，直到数量达标。
+
 ## 核心筛选标准
 
 | 标准 | 要求 |
@@ -19,6 +25,11 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 | 活跃度 | 3 个月内有更新，超过 3 个月直接筛掉 |
 | OBSBOT 合作 | 已合作过的直接筛掉 |
 | 竞品合作 | 重点关注竞品合作过但 OBSBOT 未合作的 |
+| 产品官号 | **不要收录**（NexiGo、Hikvision、obsbot 等） |
+| 安防摄像头 | **不要收录**（security、surveillance、cctv、alarm） |
+| 纯 Shorts | **过滤掉**（频道只发短视频的） |
+| 纯游戏 | **过滤掉**（4/5 视频为游戏内容的） |
+| Vlog 类型 | **谨慎选择**（标记但不排除，审核时注意） |
 | 邮箱 | 暂不获取 |
 
 ## 完整流程（5 步）
@@ -166,18 +177,78 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 | mcporter add_records 超时 | **逐条添加**（1 条/次），timeout 设 60s，间隔 0.3s。批量必然超时 |
 | creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id，特殊字符会导致命令失败 |
 | 搜索结果无 channel_url | 必须单独调 `creator profile` 获取，search 结果只有 NoxInfluencer 内部 ID |
+| `--lang en` 搜索非英语国家返回 0 结果 | **`--lang` 参数决定搜索语言，不是 UI 语言**。搜法国 KOL 必须 `--lang fr`，搜德国 KOL 必须 `--lang de`。`--lang en` + `--country '["FR"]'` 返回 0 条。验证过的组合：`--lang fr --country '["FR"]'` 返回 5900+ 条 |
+| `--country` 和 `--keywords` 必须是 JSON 数组 | 字符串值会报 `Input should be a valid list`。正确格式：`--keywords '["a","b"]' --country '["FR"]'` |
 | 重复 KOL 跨批次 | 维护全局 excluded_names set，每次新搜索前加载所有历史 JSON |
 | 新 smartsheet 默认字段 | 有 5 个默认字段（单选/数字/日期/图片/文本），必须先删除再添加自定义字段 |
 | NoxInfluencer VPN 长任务断连 | 每次 API 调用前检查，断了就重连。长搜索（50+ 创作者）中间会断 2-3 次 |
 | profile 获取只有 36/91 成功 | NoxInfluencer creator search 返回的 ID 并非都能解析为 YouTube 频道，成功率约 40% |
+| execute_code 没有 openpyxl | execute_code 的沙盒环境没有 openpyxl，必须用 terminal 执行 Python 脚本 |
+| yt-dlp 批量获取频道信息超时 | yt-dlp 太慢（~30s/频道），批量处理会超时。改用 curl + YouTube 页面解析（~5s/频道） |
+| Tavily 日限额 | Tavily 有每日请求限额，批量搜索容易耗尽。频道信息获取优先用 curl 方案 |
 
 ## 输出文件位置
 
 - **腾讯文档**：OBSBOT → 每日监测（folder_id: `DumZsGZJrwsf`）
 - **本地临时**：`/tmp/kol_*.json`
 
+## Post-Screening 补全流程
+
+当拿到一个部分填写的 KOL 表格（如 Leonardo 手动筛选后需要补全剩余字段）时：
+
+### Step 1: 识别待填写行
+
+```python
+import openpyxl
+wb = openpyxl.load_workbook('path/to/file.xlsx')
+ws = wb.active
+
+need_fill = []
+for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=15, values_only=True), start=2):
+    if not row[7] and row[1]:  # H列(一级类目)为空且有KOL名称
+        need_fill.append({'row': row_idx, 'kol_id': row[1], ...})
+```
+
+### Step 2: 批量获取 YouTube 频道信息
+
+**优先级排序**（从快到慢）：
+1. **curl + YouTube 页面解析**（最快，~5s/频道）— 直接抓取频道页面 HTML，解析嵌入的 JSON
+2. **Tavily 搜索**（较快但有日限额）— 适合少量查询
+3. **yt-dlp**（最慢，易超时）— 不推荐批量使用
+
+```bash
+# 推荐方式：curl 抓取频道页面
+curl -s "https://www.youtube.com/channel/CHANNEL_ID" | grep -o '"channelMetadataRenderer":{[^}]*}' | head -1
+```
+
+**并行处理**：用 `delegate_task` 分 3 路并行，每路 6-7 个频道，总耗时约 3-5 分钟。
+
+### Step 3: 填写字段
+
+按照 Leonardo 的风格填写（详见 `references/leonardo-kol-writing-style.md`）：
+- **一级类目**（H列）：Tech / Setup / Livestream / Camera / Content Creator / Gamer / Sports
+- **二级类目**（I列）：3C / Setup / Desk Setup / Camera Settings / Photography 等
+- **视频形式&内容**（J列）：简短描述，5-10字
+- **合作平台**（K列）：youtube
+- **合作建议**（L列）：1-2句话，提到博主特点和合作切入点
+
+**不填写的列**：
+- N列（审核人员意见）
+- O列（建议合作价格）
+
+### Step 4: 生成新文件
+
+```python
+# 保存为新文件，带 _filled 后缀
+output_path = '原始文件名_filled.xlsx'
+wb.save(output_path)
+```
+
 ## 参考文件
 
+- `references/leonardo-kol-writing-style.md` — Leonardo 的 KOL 评价风格指南
+- `references/youtube-channel-scraping.md` — YouTube 频道信息抓取技术方案
+- `references/tournament-kol-research.md` — 赛事关联 KOL 研究方法论（EWC/VCT 等赛事赞助场景）
 - `noxinfluencer/references/obsbot-kol-sourcing-workflow.md` — 完整品类映射和排除流程
 - `noxinfluencer/references/search-filters.md` — 搜索过滤器语义
 - `noxinfluencer/references/kcl-product-scenario-mapping.md` — 产品场景→KOL品类映射

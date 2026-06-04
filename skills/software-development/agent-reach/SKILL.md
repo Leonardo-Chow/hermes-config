@@ -32,7 +32,7 @@ Installed at `/Users/zhoulong/.hermes/hermes-agent/venv/bin/agent-reach` (v1.4.0
 |---------|------|:-------------:|
 | 📕 **小红书** | `xhs` CLI v0.6.4 | ✅ Cookie 已配 |
 | 🐦 **微博** | mcp-server-weibo v1.0.7 | ✅ Cookie 已配 (WEIBO_COOKIE env) |
-| 🎵 **抖音** | douyin-mcp-server | 无需登录 |
+| 🎵 **抖音** | yt-dlp + Tavily | 需 cookies (yt-dlp)，搜索可用 |
 
 ### ❌ Available but not configured
 | Channel | Setup |
@@ -95,6 +95,7 @@ Uses Exa (free, no API key) via mcporter MCP.
 - Cookie-based auth (Twitter, XHS) needs Cookie-Editor Chrome extension → Export → Header String
 - Use dedicated secondary accounts for cookie-based platforms (封号风险)
 - V2EX may need proxy in China
+- **抖音 (Douyin) 实际状态** — `douyin-mcp-server` 因 mcp 依赖冲突无法安装（pip 报 ResolutionImpossible）。替代方案：1) yt-dlp 支持抖音但需要 cookies（`yt-dlp --dump-json URL`，无 cookies 报 "Fresh cookies needed"）；2) Tavily 搜索可找到抖音内容；3) Jina Reader 可读取抖音页面结构但无法获取动态加载的视频列表；4) 直接 curl 抖音返回 JS 混淆代码（反爬虫机制）。完整功能需配置 cookies。
 - **`pipx` might not be available** — fall back to `python3 -m pip install` directly
 
 ## Reference Files

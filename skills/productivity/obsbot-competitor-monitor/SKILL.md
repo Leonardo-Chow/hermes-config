@@ -8,11 +8,71 @@ user-invocable: true
 
 # OBSBOT 竞品上线监测
 
+## ⚠️ 关键执行原则
+
+1. **第一步必须检测日期** — 用 `date` 命令获取今天的实际日期和星期几，不要假设
+2. **连续执行，不要停顿** — 搜索→统计→过滤→生成→上传，全程自动，不要中途汇报等确认
+3. **日期必须准确** — 根据今天实际日期计算搜索范围，不要假设
+4. **API key 不要写在脚本里** — 会被系统截断，用浏览器搜索或直接 curl
+5. **时区说明** — YouTube API 返回的是 **UTC 时间**，用户在东八区（UTC+8）。搜索和筛选时以 UTC 时间为准，不需要转换时区。
+
+## 日期计算规则（严格执行）
+
+| 执行日 | 搜索范围 | 说明 |
+|--------|---------|------|
+| 周一 | 上周六 ~ 本周一 | 3天 |
+| 周三 | 周二 ~ 周三 | 2天 |
+| 周五 | 周四 ~ 周五 | 2天 |
+| 周四（手动触发） | 周三 ~ 周四 | 2天 |
+| 其他日期（手动触发） | 前一天 ~ 当天 | 2天 |
+
+**⚠️ 时区处理**：
+- YouTube API 返回的 `publishedAt` 是 UTC 时间（如 `2026-06-03T15:00:00Z`）
+- 用户在 UTC+8（北京时间），但搜索筛选时以 UTC 日期为准
+- 浏览器显示的 "X小时前"、"1天前" 是基于用户本地时区（UTC+8）的相对时间
+- **不需要手动转换时区**，直接用 UTC 日期即可
+
+**计算方法**：
+```bash
+# 获取今天日期和星期几（本地时间）
+TODAY=$(date +%Y-%m-%d)
+DAY_OF_WEEK=$(date +%u)  # 1=周一, 2=周二, ..., 7=周日
+DAY_NAME=$(date +%A)
+
+echo "今天是: $TODAY ($DAY_NAME, 星期$DAY_OF_WEEK)"
+
+# 根据星期几计算搜索范围（UTC 日期）
+case $DAY_OF_WEEK in
+    1)  # 周一
+        START_DATE=$(date -v-2d -u +%Y-%m-%d)  # 周六 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        ;;
+    3)  # 周三
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)  # 周二 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        ;;
+    5)  # 周五
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)  # 周四 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        ;;
+    4)  # 周四（手动触发）
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)  # 周三 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        ;;
+    *)  # 其他日期
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)
+        END_DATE=$(date -u +%Y-%m-%d)
+        ;;
+esac
+
+echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
+```
+
 ## 核心竞品清单（18款）
 
 | 品牌 | 搜索关键词 |
 |------|-----------|
-| Logitech Series | Logitech Brio webcam, Logitech C920 webcam, Logitech MX Brio, Logitech C922 |
+| Logitech Series | Logitech Brio webcam, Logitech C920, Logitech MX Brio, Logitech C922 |
 | Insta360 Link 2 | Insta360 Link 2 webcam |
 | Insta360 Link 2c | Insta360 Link 2c |
 | Insta360 Wave | Insta360 Wave webcam |
@@ -31,29 +91,44 @@ user-invocable: true
 | Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 |
 | UGREEN 4K Webcam | UGREEN 4K webcam |
 
-## 定时任务时间规则
-
-| 执行日 | 时间范围 | Cron 表达式 |
-|--------|---------|-------------|
-| 周一 | 上周六 ~ 本周一 | `0 9 * * 1` |
-| 周三 | 周二 ~ 周三 | `0 9 * * 3` |
-| 周五 | 周四 ~ 周五 | `0 9 * * 5` |
-
-**注意**：根据实际执行日确定搜索时间范围，不要硬编码日期。
-
 ## 过滤规则（必须严格执行）
 
-1. **播放量 < 50 且 粉丝数 < 1k** → 直接过滤，不展示
-2. **视频时长 < 1 分钟** → 直接过滤（Shorts 除外，Shorts 保留）
-3. **是否上评** → 仅在以下情况标记"是"：
-   - 评论区明确提到 obsbot/meet/tiny/tail 等关键词
-   - 整体舆论明显负面（差评集中）
+### 过滤1：官方账号排除
+- ❌ 排除竞品官方频道发布的视频（如 `Hollyland FAQ`、`Insta360`、`YoloLiv Tech` 等官号）
+- 判断方法：频道名包含品牌名 + "FAQ"/"Official"/"Tech"/"Tutorials" 等后缀
+
+### 过滤2：非 webcam 内容排除
+- 标题必须与 webcam 直接相关，排除以下：
+  - ❌ 运动相机、全景相机、无人机（如 Insta360 X5、Insta360 Luna、Insta360 Ace Pro）
+  - ❌ 麦克风、采集卡、NAS、Hub 等非摄像头产品
+  - ❌ 纯品牌选购指南（如「Insta360 全系列選購指南」）
+  - ❌ 游戏直播内容（如 FORZA HORIZON 6 + webcam 组合，但无产品测评）
+- ✅ 保留：标题包含 webcam/facecam/camera + streaming/review/unboxing/comparison 等关键词
+
+### 过滤3：游戏直播排除
+- ❌ 排除纯游戏直播内容，没有讲解 webcam 产品
+- 判断：标题含游戏名（FORZA、VALORANT、COD 等）且无 webcam 测评内容
+
+### 过滤4：低质量视频排除
+- 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
+
+### 过滤5：是否上评判断
+- 仅在以下情况标记"是"：
+  - 评论区明确提到 obsbot/meet/tiny/tail 等关键词
+  - 视频 hashtags 包含 obsbot 相关标签（如 `#streamwithobsbot`）
+  - 整体舆论明显负面（差评集中）
+- ⚠️ 注意：用户取消 OBSBOT 订单转选竞品 = 负面信号，需标记上评
+
+### 用户纠正案例（2026-06-03）
+- 「裝備魔 JBTVHK」的「Insta360 全系列選購指南」→ ❌ 排除（不是专门讲 webcam）
+- 「FORZA HORIZON 6 E WEBCAM EMEET PIXY 4K」→ ❌ 排除（纯游戏内容）
+- 「Hollyland FAQ」频道的所有视频 → ❌ 排除（官方账号）
 
 ## 数据字段
 
 | 字段 | 说明 |
 |------|------|
-| Date | 发布日期 |
+| Date | 发布日期（YYYY-MM-DD） |
 | 竞品 | 品牌名 |
 | 网红ID | 频道名 |
 | 视频链接 | YouTube URL |
@@ -71,44 +146,139 @@ user-invocable: true
 
 ## 执行流程
 
-### Step 1: 搜索竞品视频
-**方法 A: curl 直接调用（推荐）**
+### Step 0: 确定日期范围（第一步必须执行）
 ```bash
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=QUERY&type=video&publishedAfter=START&publishedBefore=END&maxResults=50&order=date&key=AIzaSy...aA1Q"
+# 获取今天是周几
+DAY_OF_WEEK=$(date +%u)  # 1=Mon, 7=Sun
+TODAY=$(date +%Y-%m-%d)
+DAY_NAME=$(date +%A)
+
+echo "今天是: $TODAY ($DAY_NAME)"
+
+# 计算搜索范围
+case $DAY_OF_WEEK in
+    1)  # 周一
+        START_DATE=$(date -v-2d +%Y-%m-%d)  # 周六
+        END_DATE=$TODAY
+        ;;
+    3)  # 周三
+        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周二
+        END_DATE=$TODAY
+        ;;
+    4)  # 周四（手动触发）
+        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周三
+        END_DATE=$TODAY
+        ;;
+    5)  # 周五
+        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周四
+        END_DATE=$TODAY
+        ;;
+    *)  # 其他日期（手动触发）
+        START_DATE=$(date -v-1d +%Y-%m-%d)
+        END_DATE=$TODAY
+        ;;
+esac
+
+echo "搜索范围: $START_DATE ~ $END_DATE"
 ```
 
-**方法 B: 浏览器搜索（备用）**
-```python
-# 对每个品牌搜索
-for brand, query in competitors.items():
-    browser_navigate(f'https://www.youtube.com/results?search_query={query}&sp=EgIIAw%3D%3D')
-    # 用 browser_console 提取视频ID
+### Step 1: 搜索竞品视频（浏览器方式 - 推荐）
+
+⚠️ **API key 在 shell 中会被截断，必须用浏览器搜索**
+
+```
+对每个品牌执行：
+1. browser_navigate 到 YouTube 搜索页：
+   https://www.youtube.com/results?search_query=BRAND+QUERY&sp=EgIIAw%3D%3D
+   （sp=EgIIAw%3D%3D = 按上传日期排序）
+
+2. browser_console 提取视频数据：
+   const vidList = [];
+   document.querySelectorAll('ytd-video-renderer').forEach((el, i) => {
+       if (i < 15) {
+           const titleEl = el.querySelector('#video-title');
+           const channelEl = el.querySelector('#channel-name a');
+           const metaSpans = el.querySelectorAll('#metadata-line span');
+           let views = '', date = '';
+           metaSpans.forEach(s => {
+               const t = s.textContent.trim();
+               if (t.includes('次观看') || t.includes('views')) views = t;
+               if (t.includes('前') || t.includes('ago')) date = t;
+           });
+           if (titleEl) {
+               vidList.push({
+                   title: titleEl.textContent.trim().substring(0, 80),
+                   channel: channelEl?.textContent.trim() || '',
+                   views: views,
+                   date: date,
+                   videoId: titleEl.href?.split('v=')[1]?.split('&')[0] || ''
+               });
+           }
+       }
+   });
+   JSON.stringify(vidList, null, 2);
+
+3. 从搜索结果中筛选日期范围内的视频
+   - "X小时前" = 今天
+   - "1天前" = 昨天
+   - "X天前" = 需要计算是否在范围内
 ```
 
-### Step 2: 获取视频统计
-```bash
-curl -s "https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=VIDEO_IDS&key=AIzaSy...aA1Q"
+### Step 2: 获取视频详情
+
+对每个视频，用 browser_navigate 访问视频页面，browser_console 提取：
+```javascript
+const title = document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim();
+const channel = document.querySelector('#channel-name a')?.textContent?.trim();
+const views = document.querySelector('#info-container span:first-child')?.textContent?.trim();
+const likes = document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim();
 ```
 
 ### Step 3: 过滤
-- 删除播放量<50且粉丝<1k的视频
-- 删除时长<1分钟的视频（Shorts除外）
+- 删除播放量<50且时长<1分钟的视频
+- 解析时长：从搜索结果的 heading 文本中提取（如 "8分钟12秒钟"）
 
 ### Step 4: 评论区分析
 对高互动视频（播放≥500 且 评论≥3），用浏览器提取评论：
+
+**4a. 先检查视频 hashtags（在视频描述区）：**
 ```javascript
-// browser_console 执行
+// 检查 hashtags 是否包含 obsbot 相关标签
+const hashtags = [];
+document.querySelectorAll('a[href*="hashtag"]').forEach(el => {
+    hashtags.push(el.textContent.trim().toLowerCase());
+});
+const obsbotHashtags = hashtags.filter(h => h.includes('obsbot') || h.includes('meet') || h.includes('tiny'));
+```
+
+**4b. 再检查评论区：**
+```javascript
 const comments = [];
 document.querySelectorAll('ytd-comment-thread-renderer').forEach((el, i) => {
-    if (i < 20) {
+    if (i < 30) {
         const author = el.querySelector('#author-text')?.textContent?.trim() || '';
         const text = el.querySelector('#content-text')?.textContent?.trim() || '';
-        if (text) comments.push({ author, text });
+        if (text) comments.push({ author, text: text.substring(0, 300) });
     }
 });
-// 检查 OBSBOT 关键词
+
+// OBSBOT 关键词匹配
 const obsbotKeywords = ['obsbot', 'meet 2', 'meet se', 'tiny 2', 'tiny 3', 'tail 2', 'tail air'];
+const obsbotMentions = comments.filter(c => {
+    const lower = c.text.toLowerCase();
+    return obsbotKeywords.some(kw => lower.includes(kw));
+});
 ```
+
+**4c. 负面信号识别：**
+- 用户说"cancelled the order"（取消订单）转选竞品 → 负面
+- 用户说"returned"/"sent back"/"refund" → 负面
+- 用户说"overheating"/"broke"/"defective" → 负面
+- 用户说"better alternative"/"switched to" → 负面
+
+**4d. 结果记录到 Comment 字段：**
+- 有 OBSBOT 提及：记录具体评论内容 + 正面/负面判断
+- 无 OBSBOT 提及：留空或写"无"
 
 ### Step 5: 生成 Excel
 ```python
@@ -119,111 +289,72 @@ import openpyxl
 
 ### Step 6: 上传腾讯文档
 ```bash
+# 先尝试直连
 cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
-# 然后调用 manage.async_import
-# 然后调用 manage.move_file 移动到 DnNkcnCRIHGt（竞品监测文件夹）
+
+# 如果失败，加代理重试
+https_proxy=http://127.0.0.1:1082 http_proxy=http://127.0.0.1:1082 \
+  cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
+
+# 触发导入
+mcporter call "tencent-docs" "manage.async_import" --args '{...}'
+
+# 等待 5 秒后搜索文件
+mcporter call "tencent-docs" "manage.search_file" --args '{"search_key": "TITLE"}'
+
+# 移动到目标文件夹
+mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "ID", "target_folder_id": "DnNkcnCRIHGt"}'
 ```
 
 ## 文件命名规则
 
 `{当天日期}——竞品检测报告——时间范围（{起始日期}-{结束日期}）`
 
-示例：`2026-06-02——竞品检测报告——时间范围（5.30-6.2）`
+示例：`2026-06-03——竞品检测报告——时间范围（6.2-6.3）`
 
 ## 保存位置
 
 腾讯文档：云盘 → OBSBOT → 竞品监测
 文件夹 ID：`DnNkcnCRIHGt`
 
-## 已知陷阱（Pitfalls）
+## 已知陷阱
 
-### 🔴 YouTube API 配额优化（推荐）
+> 📖 **OBSBOT 提及模式库**：详见 `references/obsbot-mention-patterns.md`，包含 hashtags 检查方法、评论区关键词列表、负面信号识别等。
 
-使用 `~/.hermes/scripts/yt_optimizer.py` 自动缓存 + 批量请求：
+### Pitfall 1: API Key 截断
+YouTube API key (`AIzaSy...aA1Q`) 在 shell heredoc/变量中会被系统截断为 `***`。
+**解决方案**：用浏览器搜索方式，不要在脚本中写 API key。
 
-```python
-import sys
-sys.path.insert(0, str(Path.home() / '.hermes' / 'scripts'))
-from yt_optimizer import api_call, batch_videos
+### Pitfall 2: 代理不稳定
+- `import_file.sh` 有时需要代理，有时不需要
+- `mcporter` 调用也类似
+- **策略**：先尝试直连，失败后加代理重试
 
-# 搜索（24h 缓存，重复执行 = 0 单位）
-result = api_call("search", {
-    "q": "Logitech Brio webcam",
-    "type": "video", "part": "snippet",
-    "publishedAfter": START, "publishedBefore": END,
-    "maxResults": "50", "order": "date",
-}, cost=100, ttl=86400)
+### Pitfall 3: 日期判断
+- 搜索结果中的 "X小时前"、"X天前" 需要根据当前时间推算
+- 不要只看 "最新" 标签，要看具体时间
 
-# 批量获取视频详情（50个 = 1 单位）
-video_ids = [item["id"]["videoId"] for item in result["data"]["items"]]
-details = batch_videos(video_ids)
-```
+### Pitfall 4: 不要中途停顿（最高优先级）
+用户明确要求连续执行（2026-06-03 多次强调）：
+- "开始啊，不要等我的指令！！说了很多次了"
+- "继续，不要停"
+- "不要一步一停，自己继续执行走"
 
-**配额节省**：18品牌搜索 = 1800单位首次，24h内缓存=0。批量详情 = 1单位/50视频。
+正确做法：搜索→统计→过滤→生成→上传→最终汇报，全程自动。
+错误做法：每完成一步就汇报等待确认、生成中间结果后询问是否继续、做一半就停下来。
 
-### 🔴 YouTube API Key 在 Python heredoc 中被截断
-系统会将 `AIzaSy...` 开头的 API key 截断为 `***`。不要在 Python 脚本中硬编码 API key。
+### Pitfall 6: 内容相关性判断不精确
+用户纠正（2026-06-03）：仅提到品牌但与 webcam 无关的视频必须排除。
+- 「Insta360 全系列選購指南」→ ❌ 排除
+- 「Insta360 Mic Pro Review」→ ❌ 排除（麦克风不是 webcam）
+- 「FORZA HORIZON 6 E WEBCAM EMEET PIXY 4K」→ ❌ 排除（纯游戏）
+- 「Insta360 Link 2 Pro Review」→ ✅ 保留
 
-**解决方案**：
-1. 用 `curl` 直接调用 API（推荐）：
-```bash
-curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=QUERY&type=video&publishedAfter=START&publishedBefore=END&maxResults=50&order=date&key=YOUR_YOUTUBE_API_KEY"
-```
-2. 或用浏览器搜索 YouTube（browser_navigate + browser_console）
+### Pitfall 7: 评论区分析必须检查 hashtags
+用户纠正（2026-06-03）：视频 hashtags 可能包含 `#streamwithobsbot` 等标签，即使评论区没有提到 OBSBOT，hashtags 中有也算提及。检查顺序：先 hashtags → 再评论区。
 
-### 🔴 YouTube API 直连可用，不需要代理
-YouTube Data API v3 可以直连访问，不需要走代理。但 mcporter 调用腾讯文档需要代理。
-
-### 🔴 mcporter 调用腾讯文档需要代理
-```bash
-export https_proxy=http://127.0.0.1:1082
-export http_proxy=http://127.0.0.1:1082
-```
-
-### 🔴 浏览器搜索 YouTube 的 JS 选择器
-```javascript
-// 提取视频标题和链接
-const videos = [];
-document.querySelectorAll('a#video-title').forEach((el, i) => {
-    if (i < 15) {
-        const href = el.href || '';
-        const title = el.textContent?.trim()?.substring(0, 80) || '';
-        const videoId = href.split('v=')[1]?.split('&')[0] || '';
-        videos.push({ title, url: href, videoId });
-    }
-});
-
-// 从视频页面获取统计
-const title = document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim() || '';
-const channel = document.querySelector('#channel-name a')?.textContent?.trim() || '';
-const views = document.querySelector('#info-container span:first-child')?.textContent?.trim() || '';
-const likes = document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim() || '';
-```
-
-### 🔴 评论区提取 JS 代码
-```javascript
-const comments = [];
-document.querySelectorAll('ytd-comment-thread-renderer').forEach((el, i) => {
-    if (i < 20) {
-        const author = el.querySelector('#author-text')?.textContent?.trim() || '';
-        const text = el.querySelector('#content-text')?.textContent?.trim() || '';
-        if (text) comments.push({ author, text });
-    }
-});
-
-// 检查 OBSBOT 关键词
-const obsbotKeywords = ['obsbot', 'meet 2', 'meet se', 'tiny 2', 'tiny 3', 'tail 2', 'tail air'];
-const obsbotMentions = comments.filter(c => {
-    const lower = c.text.toLowerCase();
-    return obsbotKeywords.some(kw => lower.includes(kw));
-});
-```
-
-## 注意事项
-
-1. YouTube API 直连可用（不需要代理）
-2. mcporter 调用腾讯文档需要代理（export https_proxy=http://127.0.0.1:1082）
-3. API 配额限制：10,000 单位/天，每次搜索约 100 单位
-4. 评论区分析用浏览器（browser_navigate + browser_console）
-5. 每个品牌单独搜索，避免漏掉
-6. 搜索结果中可能包含不相关视频（如摩托车骑行视频），需要人工过滤
+### Pitfall 5: mcporter 代理切换
+mcporter 有时直连成功，有时需要代理。如果遇到 HTTP 405 或连接超时：
+1. 先尝试不加代理
+2. 失败后 `export https_proxy=http://127.0.0.1:1082` 再试
+3. 两种都失败则等待几秒后重试

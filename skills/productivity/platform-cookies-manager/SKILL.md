@@ -157,6 +157,8 @@ curl -s -H "Cookie: $COOKIE" "https://www.googleapis.com/youtube/v3/videos?part=
 2. **HttpOnly标记**：部分Cookie标记为HttpOnly，JavaScript无法访问
 3. **SameSite限制**：跨域请求可能被SameSite策略阻止
 4. **IP绑定**：部分平台的Cookie与IP地址绑定，切换VPN后可能失效
+5. **浏览器注入失败**（2026-06-02 验证）：浏览器安全策略阻止 `document.cookie` 设置，无法通过 JavaScript 注入 Cookie 到已打开的页面。解决方案：让用户在自己 Chrome 中登录后，通过 Console 执行 `document.cookie` 提取 Cookie 字符串。
+6. **TikTok Cookie有效期**：约 1-2 周过期，需用户定期更新
 5. **浏览器注入失败**：浏览器安全策略阻止通过 JavaScript 注入 Cookie（`document.cookie` 赋值被拒绝），需要用 curl 带 Cookie 头的方式替代
 6. **TikTok CAPTCHA**：即使用 Cookie，Profile 页面仍可能弹出滑块验证，视频网格不渲染
 

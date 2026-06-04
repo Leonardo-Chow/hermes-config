@@ -898,7 +898,23 @@ Mid-session pitfall: if you log the ID but the `terminal()` call fails silently,
 - **Config changes:** In gateway: `/restart`. In CLI: exit and relaunch.
 - **Code changes:** Restart the CLI or gateway process
 
-### Skills not showing
+### Security — Git Secret Scanning
+
+Before every `git push` of `~/.hermes` to GitHub, scan for leaked credentials:
+
+```bash
+cd ~/.hermes && git ls-files | xargs grep -lE "AIzaSy[A-Za-z0-9_-]{33}|sk-[A-Za-z0-9]{48}" 2>/dev/null
+```
+
+If found: replace with placeholders → commit → `git push --force` → rotate the leaked keys.
+
+**Pitfall:** `memory/memory.md` and `memory/user.md` ARE tracked by git. Never write API keys to memory — they will leak to GitHub.
+
+**Full workflow:** See `references/git-secret-scanning.md`
+
+---
+
+## Skills not showing
 1. `hermes skills list` — verify installed
 2. `hermes skills config` — check platform enablement
 3. Load explicitly: `/skill name` or `hermes -s name`

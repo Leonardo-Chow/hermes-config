@@ -263,3 +263,11 @@ curl -s "https://transcriptapi.com/api/v2/youtube/transcript\
 ```
 
 Free tier: 100 credits, 300 req/min. Starter ($5/mo): 1,000 credits.
+
+## Related: YouTube Data API 优化
+
+当需要直接调用 YouTube Data API v3（非 TranscriptAPI）时，使用 `youtube-api-optimizer` skill：
+- 批量合并请求（50 ID/次 = 1 单位）
+- SQLite 本地缓存（24h TTL）
+- 配额追踪 + Key 轮换
+- 脚本: `~/.hermes/scripts/yt_optimizer.py`
