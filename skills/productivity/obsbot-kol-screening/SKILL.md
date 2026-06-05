@@ -169,15 +169,63 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 
 **不要一步一停** — 用户明确要求连续执行，不要每步都等确认。用 todo 跟踪进度，一个 execute_code 块完成搜索→验证→写入全流程。只在真正需要用户输入时才停下。
 
+## KOL 黑名单（用户反馈 2026-06-05）
+
+以下类型 KOL 直接排除，不要收录：
+
+| 类型 | 示例 | 原因 |
+|:-----|:-----|:-----|
+| 产品官号 | Reolink, Sling Pilot Academy, NexiGo | 品牌官方频道，无法合作 |
+| 安防摄像头 | ToolBox BD, CCTV Camera Pros | 不是 OBSBOT 赛道 |
+| 纯游戏 | HASIBxBRO, Eddie's DL | 受众不对齐 |
+| 纯 Shorts | DaizeDreams, Milktea Emma | 无深度内容 |
+| 偏离主题 | Big Bear Live Stream, PTZtv | 内容不合格，无人出镜 |
+| 野生动物/天气 | Scottish Wildlife Trust, DWDderWetterdienst | 严重偏离主题 |
+| 航空/飞行 | Sling Pilot Academy | 不相关 |
+| 定位不清 | Nightfury | 视频少且无明确定位 |
+| 画像偏差 | Sugarloaf, Alex Explorer | 受众严重不对齐 |
+
+## 排除关键词列表
+
+```python
+brand_patterns = ["official", "inc.", "systems", "reolink", "nexigo", "hikvision", "nikon", "bose", "acasis", "tp-link", "obsbot", "sling pilot", "ege", "gesellschaft"]
+security_patterns = ["security", "surveillance", "cctv", "alarm", "reolink", "toolbox"]
+offtopic_patterns = ["wildlife", "weather", "aviation", "pilot", "eulen", "sugarloaf", "scotventure", "nepal live", "live cam", "webcam live", "bear live"]
+gaming_patterns = ["game", "gaming", "twitch", "fortnite", "minecraft", "valorant", "cod", "apex", "league of legends", "overwatch"]
+```
+
+## YouTube API 验证规则
+
+```python
+# 1. 活跃度：3 个月未更新 → 排除
+if (datetime.now() - last_date).days > 90: skip
+
+# 2. 纯游戏：4/5 视频为游戏 → 排除
+if gaming_count >= 4: skip
+
+# 3. 纯 Shorts：4/5 视频含 #shorts → 排除
+if shorts_count >= 4: skip
+
+# 4. 偏离主题：3/5 视频含 off-topic 关键词 → 排除
+if offtopic_count >= 3: skip
+
+# 5. 视频太少：< 10 个视频 → 排除
+if video_count < 10: skip
+
+# 6. Vlog 类型：标记但不排除（需人工审核）
+c['_is_vlog'] = vlog_count >= 3
+```
+
 ## 已知坑
 
 | 问题 | 解决方案 |
 |:-----|:---------|
 | NoxInfluencer 403/Cloudflare | VPN 断了，`scutil --nc start "Shadowrocket"` |
-| mcporter add_records 超时 | **逐条添加**（1 条/次），timeout 设 60s，间隔 0.3s。批量必然超时 |
-| creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id，特殊字符会导致命令失败 |
-| 搜索结果无 channel_url | 必须单独调 `creator profile` 获取，search 结果只有 NoxInfluencer 内部 ID |
-| `--lang en` 搜索非英语国家返回 0 结果 | **`--lang` 参数决定搜索语言，不是 UI 语言**。搜法国 KOL 必须 `--lang fr`，搜德国 KOL 必须 `--lang de`。`--lang en` + `--country '["FR"]'` 返回 0 条。验证过的组合：`--lang fr --country '["FR"]'` 返回 5900+ 条 |
+| mcporter add_records 超时 | 逐条添加（1 条/次），不要批量 |
+| creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id |
+| 搜索结果无 channel_url | 必须单独调 `creator profile` 获取 |
+| 重复 KOL 跨批次 | 维护全局 excluded_names set |
+| mcporter smartsheet.list_tables 报 RPC invalid | `mcporter auth tencent-docs` 重新认证 |
 | `--country` 和 `--keywords` 必须是 JSON 数组 | 字符串值会报 `Input should be a valid list`。正确格式：`--keywords '["a","b"]' --country '["FR"]'` |
 | 重复 KOL 跨批次 | 维护全局 excluded_names set，每次新搜索前加载所有历史 JSON |
 | 新 smartsheet 默认字段 | 有 5 个默认字段（单选/数字/日期/图片/文本），必须先删除再添加自定义字段 |
@@ -185,12 +233,234 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 | profile 获取只有 36/91 成功 | NoxInfluencer creator search 返回的 ID 并非都能解析为 YouTube 频道，成功率约 40% |
 | execute_code 没有 openpyxl | execute_code 的沙盒环境没有 openpyxl，必须用 terminal 执行 Python 脚本 |
 | yt-dlp 批量获取频道信息超时 | yt-dlp 太慢（~30s/频道），批量处理会超时。改用 curl + YouTube 页面解析（~5s/频道） |
-| Tavily 日限额 | Tavily 有每日请求限额，批量搜索容易耗尽。频道信息获取优先用 curl 方案 |
+| Tavily 配额 | Tavily MCP 默认为 keyless 模式（有严格日限额 ~25-30 次）。**必须检查 config.yaml 中 tavilyApiKey 是否为真实 key**。配额耗尽后用 curl 直接调 REST API 绕过 MCP：`curl -s -X POST "https://api.tavily.com/search" -H "Authorization: Bearer $KEY" -d '{"query":"..."}'`。详见 tavily-python skill |
+| delegate_task 超时 | 子代理 600s 超时。如果 Tavily 配额耗尽，子代理会反复重试直到超时。**第一次超时后检查 /tmp/kol_batchN.json 是否有部分数据；第二次超时后放弃委托，用 training knowledge + curl 直接调 Tavily REST API 补全** |
+| IG handle 误匹配 | Tavily 返回的 IG 链接经常匹配到同名不同人（厨师/名人/完全不同的人）。**必须验证标题/内容包含目标人物名**才采信。短 handle（@p, @reel）直接过滤 |
+| YT URL 带后缀 | 搜索结果的 YT URL 经常带 /videos, /playlists, /shorts, /about 后缀。**必须清洗后再写入 Excel** |
+| 订阅数过期 | Tavily 搜索片段中的订阅数可能来自过期缓存（偏差可达 50-90%）。**必须做第二轮验证**，对所有有 YT 频道的 KOL 重新搜索确认 |
+| Notes 语言 | **Leonardo 要求 Notes 必须写中文**。即使原始数据是英文也要翻译 |
+| Google bot 检测 | 浏览器访问 Google 搜索会被拦截（CAPTCHA/sorry 页面）。用 Bing 或 DuckDuckGo 替代 |
+| execute_code 无 openpyxl | execute_code 沙盒环境没有 openpyxl/pandas，必须用 terminal 执行 Python 脚本 |
+| 跨平台 Excel 样式 | 用户期望绿色/橙色高亮区分已找到/未找到数据，方便快速识别空白项 |
+| 邮箱误匹配 | Tavily 返回的邮箱经常是同名不同人（学者/志愿者/员工）。**必须做二次验证**：搜索 "姓名 + 邮箱" 确认匹配。大学/组织/品牌邮箱需额外警惕。实测 30 个邮箱中 6 个为误匹配（20%） |
+| 邮箱搜索脚本 key 泄露 | Python 脚本中硬编码 API key 会被系统 censor（显示为 ***）。**必须用 grep 从 config.yaml 读取**：`cfg = subprocess.run(["grep", "tavilyApiKey", "~/.hermes/config.yaml"], ...).stdout` |
+| Leonardo 要求可点击链接 | Excel 中社交链接必须是完整 URL（https://instagram.com/xxx/），不能只是 @xxx。URL 列设置蓝色下划线字体 + hyperlink |
 
 ## 输出文件位置
 
 - **腾讯文档**：OBSBOT → 每日监测（folder_id: `DumZsGZJrwsf`）
 - **本地临时**：`/tmp/kol_*.json`
+
+## Cross-Platform KOL Research（跨平台调研）
+
+当拿到一份已有 KOL 名单（Excel/表格），需要跨 YouTube/Instagram/X/TikTok/Google 等平台补充信息时使用此流程。
+
+### 适用场景
+
+- Leonardo 提供了一份 KOL 名单，需要补全频道链接、订阅数、社交账号、任职机构等
+- 与 Post-Screening 的区别：Post-Screening 侧重 YouTube 频道分类和合作建议；Cross-Platform 侧重多平台信息发现
+
+### 搜索优先级
+
+| 优先级 | 工具 | 适用场景 | 注意事项 |
+|:-------|:-----|:---------|:---------|
+| 1 | Tavily MCP | 通用搜索 | 确认 config.yaml 中有真实 API Key（非占位符） |
+| 2 | curl + Tavily REST API | MCP 配额耗尽或 keyless 模式 | 直接 `curl -X POST "https://api.tavily.com/search"` 绕过 MCP |
+| 3 | 浏览器 Bing/DuckDuckGo | Tavily 完全不可用时 | Google 有 bot 检测，用 Bing |
+| 4 | Training knowledge | 已知知名创作者 | MKBHD/iJustine/Casey Neistat 等头部创作者可直接填充 |
+| 5 | Manual verification | 数据稀疏的 DP/Gaffer | 标记"需手动验证"，不要编造 |
+
+### 并行分批策略
+
+```
+55 人 → 分 3 路 delegate_task（每路 ~18 人）
+├── 每路独立搜索 + 写 JSON 到 /tmp/kol_batchN.json
+├── 最后合并 → 生成 Excel
+└── 超时处理：检查 /tmp/kol_batchN.json 是否有部分数据
+```
+
+**关键**：delegate_task 有 600s 超时。如果 Tavily 配额耗尽，子代理会反复重试直到超时。**第二次超时后应放弃委托，直接用 training knowledge 补全剩余数据。**
+
+### Tavily 配额管理
+
+- Tavily MCP **默认为 keyless 模式**，有严格日限额（~25-30 次搜索）。**必须检查 config.yaml 中 tavilyApiKey 是否为真实 key**
+- 有 API Key 后无日限额，但 55 人 × 3-5 次搜索/人 = 165-275 次仍需注意并发
+- **curl 直接调 REST API** 可绕过 MCP 连接限制，配额独立计算
+- 策略：delegate_task 分 3 路并行 → 子代理用 Tavily MCP 搜索 → 配额耗尽后子代理自动降级到 training knowledge → 超时后主代理用 curl 补全
+
+### Excel 输出格式
+
+```python
+# 列结构（扩展原始表格）
+headers = [
+    "First name", "Last name", "Type", "ROI",
+    "YouTube Channel", "YouTube Subscribers",
+    "Instagram", "X/Twitter", "TikTok",
+    "Affiliation / Employment",
+    "Notes"  # 合并原始备注 + 新增调研信息
+]
+
+# 样式
+found_fill = PatternFill(start_color="E2EFDA")     # 绿色 = 找到数据
+not_found_fill = PatternFill(start_color="FCE4D6")  # 橙色 = 未找到
+header_fill = PatternFill(start_color="2F5496")      # 深蓝表头
+```
+
+**注意事项**：
+- execute_code 沙盒没有 openpyxl/pandas，必须用 `terminal` 执行 Python
+- Notes 列合并原始备注 + 新增信息，用 ` | ` 分隔
+- 冻结首行 + 自动筛选，方便 Leonardo 过滤
+
+### Email Discovery（邮箱搜索）
+
+当拿到已有 KOL 名单需要补全邮箱时，使用 Tavily 搜索：
+
+```python
+import subprocess, json, re
+
+cfg = subprocess.run(["grep", "tavilyApiKey", "~/.hermes/config.yaml"],
+    capture_output=True, text=True).stdout
+API_KEY=cfg.st...o extract_emails(text):
+    return re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)
+
+def search(q, n=3):
+    r = subprocess.run(["curl", "-s", "-X", "POST", "https://api.tavily.com/search",
+        "-H", "Content-Type: application/json",
+        "-H", f"Authorization: Bearer ***        "-d", json.dumps({"query": q, "max_results": n})],
+        capture_output=True, text=True, timeout=30)
+    return json.loads(r.stdout)
+
+for kol in kol_list:
+    fn, ln = kol['first_name'], kol['last_name']
+    query = f'"{fn} {ln}" email contact'
+    r = search(query, 3)
+    for res in r.get("results", []):
+        emails = extract_emails(res.get("content", ""))
+        # Filter: check if email contains person's name
+        name_parts = [fn.lower(), ln.lower()]
+        for e in emails:
+            if any(p in e.lower() for p in name_parts):
+                kol['email'] = e
+                break
+```
+
+**邮箱验证（必须步骤）**：搜索结果中经常出现同名不同人的邮箱。**必须做二次验证**：
+
+```python
+# 搜索 "姓名 + 邮箱" 确认匹配
+r = search(f'"{name}" "{email}"', 2)
+for res in r.get("results", []):
+    if email in res.get("content", ""):
+        name_parts = name.lower().split()
+        if any(p in res["content"].lower() for p in name_parts):
+            print(f"Verified: {email}")  # confirmed
+```
+
+**已知错误模式**：
+- 大学邮箱（@yale.edu, @ucla.edu）经常匹配到同名学者
+- 志愿者组织邮箱（@nynjtc.org）匹配到同名志愿者
+- 时尚品牌邮箱（@loveshackfancy.com）匹配到同名员工
+- 管理公司邮箱（@xxxmanagement.com）可能是经纪人而非本人
+
+**过滤规则**：
+```python
+skip_patterns = ['example.com', 'test.com', 'noreply', 'no-reply',
+                 'support@', 'info@google', 'help@', 'abuse@',
+                 'privacy@', 'legal@']
+```
+
+**实测结果**（55人名单）：搜索到 30 个邮箱，验证后保留 24 个（20% 为误匹配）。
+
+### Social Media URL Conversion（社交链接格式化）
+
+**Leonardo 要求所有社交链接必须是可点击的完整 URL**，不能只是 @handle。
+
+```python
+def to_url(platform, handle):
+    h = handle.lstrip('@')
+    urls = {
+        'yt': f"https://www.youtube.com/@{h}" if not h.startswith('c/') else f"https://www.youtube.com/{h}",
+        'ig': f"https://www.instagram.com/{h}/",
+        'x': f"https://x.com/{h}",
+        'tk': f"https://www.tiktok.com/@{h}",
+    }
+    return urls.get(platform)
+
+# Excel 中 URL 设置为超链接
+from openpyxl.styles import Font
+link_font = Font(color="0563C1", underline="single")
+cell.font = link_font
+cell.hyperlink = url
+```
+
+### 数据质量分层
+
+| 层级 | 描述 | 处理方式 |
+|:-----|:-----|:---------|
+| Rich data | 头部创作者（MKBHD, iJustine, Casey Neistat 等） | 全平台信息齐全 |
+| Good data | 中腰部有 YouTube 频道的 | YouTube + IG + 部分其他 |
+| Partial data | 有 IG 但无 YT 的摄影师 | 标记已有信息 |
+| Limited data | 专业 DP/Gaffer，公开信息少 | 标记"需手动验证" |
+
+### 数据质量验证（必须步骤）
+
+初次采集后**必须做一轮验证**，修正误匹配数据。以下是已知的高频错误模式：
+
+#### Instagram Handle 误匹配
+
+Tavily 搜索返回的 IG 链接经常匹配到**同名不同人**。必须验证：
+
+| 错误模式 | 示例 | 验证方法 |
+|:---------|:-----|:---------|
+| 同名厨师/名人 | Tom Keller → @chefthomaskeller（厨师，不是DP） | 检查页面标题/内容是否提到 cinematographer/DP/photographer |
+| 同名不同人 | Timm Brückner → @alexander.bruckner（完全不同的人） | 检查 first name 是否匹配 |
+| 通用词误匹配 | Fred Johnny Hammerø → @_codyhammer_（hammer 误匹配） | 检查 full name 是否出现在标题中 |
+| 短 handle 噪音 | @p, @reel, @stories, @explore, @accounts | 直接过滤掉长度 ≤ 2 的 handle |
+
+**验证代码**：
+```python
+# 在搜索结果中，只有标题/内容包含目标人物名时才采信 IG handle
+person_first = kol['first_name'].lower()
+person_last = kol['last_name'].lower()
+if person_first in (title+content).lower() or person_last in (title+content).lower():
+    kol["instagram"] = "@" + ig_handle  # verified
+```
+
+#### YouTube URL 清洗
+
+搜索结果的 YT URL 经常带后缀，必须清理：
+```python
+clean = url.split("?")[0].rstrip("/")
+for suffix in ["/videos", "/playlists", "/shorts", "/about"]:
+    if clean.endswith(suffix):
+        clean = clean[:-len(suffix)]
+```
+
+#### 订阅数二次验证
+
+初次采集的订阅数可能来自过期缓存。**必须做第二轮验证**：
+```python
+# 对所有有 YT 频道的 KOL，用 Tavily 搜 "youtube.com @handle subscribers" 验证
+# 对比 expected vs actual，修正偏差 >20% 的数据
+```
+
+实际案例（2026-06-04）：
+- Matthew Allard: 初始 ~200K → 实际 18.4K（偏差 91%）
+- Justin Brown (PrimalVideo): 初始 ~4M → 实际 1.89M（偏差 53%）
+- Bharat Bala: 初始 ~500K → 实际 329K（偏差 34%）
+- Faruk Korkmaz: 初始 ~500K → 实际 633K（偏差 27%）
+
+#### Notes 语言要求
+
+**Leonardo 要求 Notes 必须写中文**。即使原始数据是英文，Notes 列也要翻译成中文。格式：
+```
+中文身份描述 | YT: @handle (订阅数) | IG: @handle | 其他平台 | 网站/机构
+```
+
+示例：
+```
+芬兰旅行电影人 | YT: @mattih (1.28M) | IG: @mattih | TravelFeels创始人 | 网站: mattihaapoja.com | 多伦多定居
+```
 
 ## Post-Screening 补全流程
 

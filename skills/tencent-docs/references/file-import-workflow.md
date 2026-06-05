@@ -101,3 +101,4 @@ mcporter call tencent-docs manage.import_progress task_id="xxx"
 - **file_key 格式**：file_key 是预导入返回的，不是文件路径
 - **VPN 导致 docs.qq.com 不可达**：Shadowrocket VPN 开启后 `mcporter call tencent-docs` 报 `fetch failed / ECONNRESET`，即使 `curl https://docs.qq.com` 正常。根因是 VPN 路由导致 mcporter 的 TLS 连接中断。解决：用户先关闭 VPN，再 `mcporter auth tencent-docs` 重刷 token，然后重试操作。
 - **mcporter token 过期**：当 `manage.pre_import` 返回 `tencent-docs appears offline (fetch failed)` 但网络正常时，通常是 mcporter 的 token 已过期。执行 `mcporter auth tencent-docs` 即可恢复。无需重启或重新配置。
+- **COS 上传失败降级方案**（2026-06-05）：`import_file.sh` 的 COS PUT 上传可能失败（`ERROR:upload_failed - curl 上传文件失败`），尤其在网络不稳定时。降级方案：直接创建腾讯文档 smartsheet 并用 `sheet.set_range_value` 写入数据，跳过 COS 上传流程。详见 `obsbot-competitor-monitor` skill 的 Pitfall 8。

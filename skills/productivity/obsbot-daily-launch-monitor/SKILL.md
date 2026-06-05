@@ -92,19 +92,21 @@ API_KEY=$(python3 ~/.hermes/scripts/youtube_api_pool.py current)
 
 #### 搜索所有产品关键词
 
-> ⚠️ **时区处理**：YouTube API 返回 UTC 时间，用户在北京时间（UTC+8）。搜索时需要将北京时间转换为 UTC。
+> ⚠️ **时区处理**：YouTube API 返回 UTC 时间，用户在北京时间（UTC+8）。搜索时需要扩大范围以覆盖北京时间当天所有视频。
 > 
-> 北京时间 00:00 = UTC 前一天 16:00
-> 北京时间 23:59 = UTC 当天 15:59
+> **搜索范围**：前一天 UTC 00:00 ~ 当天 UTC 15:59
+> 
+> 这样可以覆盖：
+> - 北京时间前一天 08:00 ~ 当天 23:59
+> - 捕获北京时间晚上发布的视频（UTC 时间为前一天）
 
 ```bash
-DATE="2026-06-04"  # 北京时间日期
+DATE="2026-06-05"  # 北京时间日期
 
 # 计算 UTC 时间范围
-# 北京时间 00:00 = UTC 前一天 16:00
-UTC_START=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)T16:00:00Z
-# 北京时间 23:59 = UTC 当天 15:59
-UTC_END=${DATE}T15:59:59Z
+YESTERDAY=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)
+UTC_START="${YESTERDAY}T00:00:00Z"  # 前一天 UTC 00:00
+UTC_END="${DATE}T15:59:59Z"         # 当天 UTC 15:59
 
 for kw in "OBSBOT" "OBSBOT+Tiny+3" "OBSBOT+Tiny+2" "OBSBOT+Tail+2" "OBSBOT+Meet+2" "OBSBOT+Talent" "OBSBOT+webcam" "OBSBOT+Tiny+3+Lite" "OBSBOT+Tiny+2+Lite" "OBSBOT+Meet+SE" "OBSBOT+Tail+Air" "OBSBOT+Tiny+SE"; do
   curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${kw}&type=video&publishedAfter=${UTC_START}&publishedBefore=${UTC_END}&maxResults=20&key=$API_KEY"
@@ -114,14 +116,14 @@ done
 **简化版本**（直接在脚本中计算）：
 
 ```bash
-DATE="2026-06-04"  # 北京时间日期
+DATE="2026-06-05"  # 北京时间日期
 
 # 计算 UTC 时间范围
 YESTERDAY=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)
-UTC_START="${YESTERDAY}T16:00:00Z"
-UTC_END="${DATE}T15:59:59Z"
+UTC_START="${YESTERDAY}T00:00:00Z"  # 前一天 UTC 00:00
+UTC_END="${DATE}T15:59:59Z"         # 当天 UTC 15:59
 
-echo "搜索范围（北京时间）: $DATE 00:00 ~ $DATE 23:59"
+echo "搜索范围（北京时间）: $YESTERDAY 08:00 ~ $DATE 23:59"
 echo "搜索范围（UTC时间）: $UTC_START ~ $UTC_END"
 ```
 
@@ -244,6 +246,16 @@ web_search('twitter OBSBOT camera May 2026', limit=10)
 - 故障展示/非产品测评 → 排除
 - 仅设备列表提及（非主要使用）→ 排除
 - 竞品评测（可能对比OBSBOT但不是主产品）→ 排除
+- **日韩东南亚博主自动过滤**：日本、韩国、泰国、越南、印尼、马来西亚、菲律宾、新加坡等地区博主 → 排除（内容以当地语言为主，对欧美市场参考价值低）
+
+#### 日韩东南亚地区识别方法
+
+| 标志 | 说明 |
+|:-----|:-----|
+| 语言 | 日语、韩语、泰语、越南语、印尼语、马来语、菲律宾语 |
+| 地区标签 | #indonesia #malaysia #thailand #vietnam #japan #korea #philippines |
+| 购买链接 | shopee.co.id / shopee.co.th / lazada.co.id / tokopedia.com / blibli.com |
+| 频道名 | 包含当地语言字符或地区标识 |
 
 ### Step 8: 生成报告
 

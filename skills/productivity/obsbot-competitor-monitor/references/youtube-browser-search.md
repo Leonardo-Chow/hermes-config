@@ -77,3 +77,23 @@ JSON.stringify(comments, null, 2);
 - YouTube 可能显示中文或英文界面，取决于浏览器语言
 - `次观看` = views, `前` = ago
 - 某些视频可能没有显示观看次数（如直播、新发布）
+
+## 已知问题（2026-06-05 发现）
+
+### URL 编码双重转义
+`browser_navigate` 会对 URL 进行编码，导致 `sp=EgIIAw%3D%3D` 被双重编码为 `sp=EgIIAw%253D%253D`。
+这可能导致排序过滤不生效，返回按相关性排序的结果。
+
+**解决方案**：
+- 直接使用 `sp=EgIIAw`（不带编码后的 `==`），或
+- 使用 YouTube 界面手动点击"最近上传"标签（ref 找 `tab "最近上传"`）
+- 或改用 yt-dlp 搜索 + upload_date 后过滤
+
+### 浏览器搜索结果不加载
+有时 YouTube 搜索页面加载但 `ytd-video-renderer` 元素为空（0 个结果）。
+原因可能是 bot 检测（stealth_warning: Running WITHOUT residential proxies）。
+
+**解决方案**：
+- 刷新页面或重新导航
+- 换用 yt-dlp 搜索
+- 检查 VPN 代理是否正常

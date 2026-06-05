@@ -313,6 +313,10 @@ if __name__ == "__main__":
 
 ## 使用方式
 
+### 评论爬取 + 产品反馈分析
+
+完整工作流见 [references/youtube-comment-analysis.md](references/youtube-comment-analysis.md)：批量获取评论 → 关键词分析 → Word 报告生成。
+
 ### 作为 Python 模块导入
 
 ```python
@@ -465,3 +469,12 @@ details = batch_videos(all_ids)
 6. **HTTP 错误** — 403=配额耗尽，429=速率限制，脚本会自动换 Key
 7. **GFW 代理** — Google API 在中国大陆被墙，脚本默认走 `socks5://127.0.0.1:1082`。可通过 `YT_PROXY` 环境变量覆盖，设为空则直连
 8. **Python 3.9 兼容** — 脚本使用 `from __future__ import annotations` 支持 3.9 的类型注解语法（`dict | None`）
+9. **urllib + SOCKS5 = IncompleteRead** — Python 标准库 `urllib` 搭配 SOCKS5 代理访问 YouTube API 时会报 `http.client.IncompleteRead` 错误（chunked transfer encoding 与 SOCKS5 不兼容）。**必须用 `requests` + `socks5h://` 代理**：
+   ```python
+   import requests
+   session = requests.Session()
+   session.proxies = {"http": "socks5h://127.0.0.1:1082", "https": "socks5h://127.0.0.1:1082"}
+   resp = session.get(url, params=params, timeout=30)
+   ```
+   `socks5h://` 表示 DNS 也通过代理解析（避免 DNS 污染）。需要 `pip install PySocks requests[socks]`。
+10. **commentThreads.list 端点** — 获取视频评论用 `commentThreads`（不是 `comments`）。`comments` 端点只用于获取回复。关键参数：`videoId`、`part=snippet`、`maxResults=100`（上限）、`order=relevance|time`、`textFormat=plainText`。分页用 `nextPageToken`。每调用 1 次 = 1 单位配额。

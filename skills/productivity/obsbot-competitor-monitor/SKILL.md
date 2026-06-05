@@ -16,6 +16,34 @@ user-invocable: true
 4. **API key 不要写在脚本里** — 会被系统截断，用浏览器搜索或直接 curl
 5. **时区说明** — YouTube API 返回的是 **UTC 时间**，用户在东八区（UTC+8）。搜索和筛选时以 UTC 时间为准，不需要转换时区。
 
+## ⚠️ 搜索关键词漏检教训（2026-06-05）
+
+**问题**：视频 "EMEET PIXY Wireless: Complete OBS Settings for Live Streaming & Recording" 被漏检
+**原因**：搜索词 "EMEET Pixy webcam" 未覆盖此视频，因为标题不含 "webcam"，只含 "OBS"、"Live Streaming"
+**解决方案**：每个品牌必须搜索多个关键词变体
+
+| 品牌 | 必须搜索的关键词变体 |
+|------|---------------------|
+| Logitech Series | Logitech Brio webcam, Logitech C920, Logitech MX Brio, Logitech C922 |
+| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 4K, Insta360 Link 2 Pro |
+| Insta360 Link 2c | Insta360 Link 2c |
+| Insta360 Wave | Insta360 Wave webcam |
+| Elgato Facecam 4K | Elgato Facecam 4K, Elgato Facecam review |
+| Elgato Facecam mk2 | Elgato Facecam mk2 |
+| Emeet Pixy | Emeet Pixy webcam, EMEET Pixy review, EMEET Pixy PTZ |
+| EMEET SmartCam S600 | EMEET S600 webcam, EMEET SmartCam S600 |
+| EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 |
+| EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY OBS, EMEET PIXY streaming |
+| EMEET S600L | EMEET S600L webcam |
+| Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review |
+| Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 |
+| Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv webcam |
+| Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra webcam |
+| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 |
+| UGREEN 4K Webcam | UGREEN 4K webcam |
+
+**核心原则**：标题可能不含 "webcam"，但含 "streaming"、"OBS"、"PTZ"、"review"、"camera" 等变体。每个品牌至少 2-3 个变体查询。
+
 ## 日期计算规则（严格执行）
 
 | 执行日 | 搜索范围 | 说明 |
@@ -70,26 +98,28 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 
 ## 核心竞品清单（18款）
 
-| 品牌 | 搜索关键词 |
+⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
+
+| 品牌 | 搜索关键词（必须全部搜索） |
 |------|-----------|
-| Logitech Series | Logitech Brio webcam, Logitech C920, Logitech MX Brio, Logitech C922 |
-| Insta360 Link 2 | Insta360 Link 2 webcam |
-| Insta360 Link 2c | Insta360 Link 2c |
-| Insta360 Wave | Insta360 Wave webcam |
-| Insta360 Link 2 Pro | Insta360 Link 2 Pro |
-| Elgato Facecam 4K | Elgato Facecam 4K |
-| Elgato Facecam mk2 | Elgato Facecam mk2 |
-| Emeet Pixy | Emeet Pixy webcam, EMEET Pixy |
-| EMEET SmartCam S600 | EMEET S600 webcam |
-| EMEET SmartCam S800 | EMEET S800 webcam |
-| EMEET PIXY Wireless | EMEET PIXY Wireless |
-| EMEET S600L | EMEET S600L webcam |
-| Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 |
-| Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 |
-| Hollyland VenusLiv Air | Hollyland VenusLiv Air |
-| Hollyland Lyra 4K | Hollyland Lyra 4K webcam |
-| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 |
-| UGREEN 4K Webcam | UGREEN 4K webcam |
+| Logitech Series | Logitech Brio webcam, Logitech C920 webcam, Logitech MX Brio, Logitech C922 webcam |
+| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming |
+| Insta360 Link 2c | Insta360 Link 2c webcam, Insta360 Link 2c review |
+| Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
+| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review |
+| Elgato Facecam 4K | Elgato Facecam 4K, Elgato Facecam 4K review, Elgato Facecam 4K streaming |
+| Elgato Facecam mk2 | Elgato Facecam mk2, Elgato Facecam mk2 review |
+| Emeet Pixy | Emeet Pixy webcam, EMEET Pixy review, EMEET Pixy streaming |
+| EMEET SmartCam S600 | EMEET S600 webcam, EMEET SmartCam S600 review |
+| EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 review |
+| EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review |
+| EMEET S600L | EMEET S600L webcam, EMEET S600L review |
+| Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming |
+| Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
+| Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
+| Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra 4K review |
+| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review |
+| UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review |
 
 ## 过滤规则（必须严格执行）
 
@@ -146,7 +176,21 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 
 ## 执行流程
 
-### Step 0: 确定日期范围（第一步必须执行）
+### Step 0: 确定日期范围 + VPN 检查（第一步必须执行）
+
+**⚠️ 先检查 VPN 连接状态**（Shadowrocket 长任务会断开）：
+```bash
+# 检查 VPN 状态，断开则重连
+VPN_STATUS=$(scutil --nc status "Shadowrocket" 2>&1 | head -1)
+if [ "$VPN_STATUS" != "Connected" ]; then
+    echo "VPN 断开，正在重连..."
+    scutil --nc start "Shadowrocket"
+    sleep 3
+fi
+# 验证代理可用
+curl -s --connect-timeout 5 --proxy http://127.0.0.1:1082 "https://www.youtube.com" -o /dev/null -w "%{http_code}"
+```
+
 ```bash
 # 获取今天是周几
 DAY_OF_WEEK=$(date +%u)  # 1=Mon, 7=Sun
@@ -182,9 +226,32 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE"
 ```
 
-### Step 1: 搜索竞品视频（浏览器方式 - 推荐）
+### Step 1: 搜索竞品视频
 
-⚠️ **API key 在 shell 中会被截断，必须用浏览器搜索**
+**推荐搜索策略（优先级排序）**：
+1. **YouTube Data API**（最快最准，需有效 API Key）
+2. **yt-dlp `ytsearch`**（无需 API Key，按相关性排序，需后过滤日期）
+3. **浏览器搜索**（最可靠但最慢，可能触发 bot 检测）
+4. **Exa MCP**（补充搜索，日期索引有延迟）
+
+#### 方式 A: yt-dlp 搜索（推荐，无需 API Key）
+
+⚠️ **前提**：确保 VPN 代理可用（见 Step 0）
+
+```bash
+# 搜索单个品牌（返回 JSON 格式）
+export https_proxy=http://127.0.0.1:1082
+yt-dlp --flat-playlist --no-warnings \
+  --print '{"title":"%(title)s","channel":"%(channel)s","views":"%(view_count)s","id":"%(id)s","duration":"%(duration)s"}' \
+  "ytsearch10:BRAND+QUERY"
+
+# 批量搜索所有品牌（用 execute_code）
+# 搜索结果按相关性排序，需后续用 upload_date 过滤
+```
+
+⚠️ **yt-dlp 搜索结果按相关性排序**，不是按日期。需要用 Step 2 获取 `upload_date` 后过滤日期范围。
+
+#### 方式 B: 浏览器搜索
 
 ```
 对每个品牌执行：
@@ -225,6 +292,29 @@ echo "搜索范围: $START_DATE ~ $END_DATE"
 ```
 
 ### Step 2: 获取视频详情
+
+**方式 A: yt-dlp（推荐，无需 API Key）**
+```bash
+# 获取单个视频详情
+export https_proxy=http://127.0.0.1:1082
+yt-dlp --no-warnings --no-download \
+  --print '%(id)s|||%(upload_date)s|||%(view_count)s|||%(like_count)s|||%(comment_count)s|||%(duration)s|||%(channel)s|||%(title)s' \
+  'https://www.youtube.com/watch?v=VIDEO_ID'
+
+# ⚠️ 注意：每个视频约 5-10 秒。批量处理时：
+# - execute_code 超时 300 秒，最多处理 ~50 个视频
+# - 超过 50 个视频需分批或用 YouTube Data API
+# - upload_date 格式：YYYYMMDD（如 20260604）
+```
+
+**方式 B: YouTube Data API（批量，需有效 Key）**
+```bash
+# 批量获取 50 个视频详情（1 单位配额）
+curl -s --proxy http://127.0.0.1:1082 \
+  "https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=ID1,ID2,...&key=API_KEY"
+```
+
+**方式 C: 浏览器（最慢，适合少量视频）**
 
 对每个视频，用 browser_navigate 访问视频页面，browser_console 提取：
 ```javascript
@@ -306,16 +396,55 @@ mcporter call "tencent-docs" "manage.search_file" --args '{"search_key": "TITLE"
 mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "ID", "target_folder_id": "DnNkcnCRIHGt"}'
 ```
 
+## 上传腾讯文档（替代方案）
+
+当 `import_file.sh` 上传 xlsx 文件失败（"upload_failed - curl 上传文件失败"）时，使用以下替代方案：
+
+```bash
+# 1. 创建新 Sheet
+mcporter call "tencent-docs" "manage.create_file" --args '{"title": "2026-06-05——竞品检测报告——时间范围（6.4-6.5）", "file_type": "sheet"}'
+# 获取 file_id
+
+# 2. 移动到目标文件夹
+mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "FILE_ID", "target_folder_id": "DnNkcnCRIHGt"}'
+
+# 3. 获取 sheet_id
+mcporter call "tencent-docs" "sheet.get_sheet_info" --args '{"file_id": "FILE_ID"}'
+
+# 4. 用 set_range_value 批量写入数据（比逐个 set_cell_value 快 10x）
+mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "FILE_ID", "sheet_id": "SHEET_ID", "values": [["Date", "竞品", ...], ["2026-06-05", "Logitech", ...]]}'
+```
+
+⚠️ **注意**：
+- `import_file.sh` 可能需要代理（`export https_proxy=http://127.0.0.1:1082`）
+- `mcporter` 有时直连成功，有时需要代理，先尝试直连
+- `sheet.set_cell_value` 逐个调用会超时（>300s），必须用 `sheet.set_range_value` 批量写入
+- 数据格式：所有值都是字符串类型，数字也要用 `"1356"` 而非 `1356`
+
 ## 文件命名规则
 
 `{当天日期}——竞品检测报告——时间范围（{起始日期}-{结束日期}）`
 
-示例：`2026-06-03——竞品检测报告——时间范围（6.2-6.3）`
+示例：`2026-06-05——竞品检测报告——时间范围（6.4-6.5）`
 
 ## 保存位置
 
 腾讯文档：云盘 → OBSBOT → 竞品监测
 文件夹 ID：`DnNkcnCRIHGt`
+
+## 评论区深度分析（YouTube API）
+
+当需要对指定视频列表进行深度评论爬取+分析（而非仅检查 OBSBOT 提及）时，使用 YouTube Data API `commentThreads.list` 端点。
+
+**详细流程**：`references/youtube-comment-scraping.md`，包含：
+- API 分页逻辑
+- SOCKS5 代理配置（环境变量方式更可靠）
+- 评论情感过滤（精准甄别真实吐槽 vs 误判）
+- 用户关心点分类（13 类）+ 应用场景分类（11 类）
+- Word 文档生成模板（python-docx 样式表格）
+- 配额估算
+
+**⚠️ 关键 Pitfall**：YouTube 视频评论中真实吐槽极少（<1%）。音乐/演出类视频的评论几乎全部与产品无关。必须用强负面词 + 排除模式双重过滤，不能用宽泛关键词匹配。
 
 ## 已知陷阱
 
@@ -353,8 +482,50 @@ YouTube API key (`AIzaSy...aA1Q`) 在 shell heredoc/变量中会被系统截断�
 ### Pitfall 7: 评论区分析必须检查 hashtags
 用户纠正（2026-06-03）：视频 hashtags 可能包含 `#streamwithobsbot` 等标签，即使评论区没有提到 OBSBOT，hashtags 中有也算提及。检查顺序：先 hashtags → 再评论区。
 
+### Pitfall 9: VPN (Shadowrocket) 长任务自动断开
+Shadowrocket VPN 在长时间执行（>5分钟）时会自动断开。症状：
+- yt-dlp 报 `ConnectionRefused` / `Failed to establish a new connection`
+- curl 返回空响应或 HTTP 000
+- 浏览器 `ERR_CONNECTION_TIMED_OUT`
+
+**修复**：`scutil --nc start "Shadowrocket"` + `sleep 3`
+**预防**：在每个主要步骤前检查代理可用性，特别是批量操作前。
+
+### Pitfall 10: yt-dlp 逐个获取详情超时
+yt-dlp `--print` 逐个获取视频元数据约 5-10 秒/个。192 个视频需 ~30 分钟，会超过 `execute_code` 的 300 秒超时。
+
+**解决方案**：
+1. 先用 yt-dlp `ytsearch` 搜索获取视频列表（快，~2秒/品牌）
+2. 用 Exa `web_search_exa` 补充搜索（快，但日期索引有延迟）
+3. 仅对疑似在日期范围内的视频用 yt-dlp 获取详情（减少调用量）
+4. 或用 YouTube Data API `videos.list` 批量获取（50 个/次 = 1 单位配额），前提是 API Key 有效
+
+### Pitfall 11: Exa 搜索日期索引延迟
+Exa MCP `web_search_exa` 不支持日期范围过滤参数。Exa 的日期索引对非常新的内容（<48小时）有延迟。
+- 搜索 2026-06-04 的视频，Exa 可能到 06-06 才索引到
+- **解决方案**：Exa 作为补充搜索源，不作为唯一搜索源。浏览器搜索或 yt-dlp 作为主要搜索方式。
+
 ### Pitfall 5: mcporter 代理切换
 mcporter 有时直连成功，有时需要代理。如果遇到 HTTP 405 或连接超时：
 1. 先尝试不加代理
 2. 失败后 `export https_proxy=http://127.0.0.1:1082` 再试
 3. 两种都失败则等待几秒后重试
+
+### Pitfall 8: COS 上传失败的降级方案
+`import_file.sh` 的 COS 上传可能失败（`ERROR:upload_failed - curl 上传文件失败`），尤其在网络不稳定时。
+**降级方案**：直接创建腾讯文档 smartsheet 并写入数据：
+```bash
+# 1. 创建 smartsheet
+mcporter call "tencent-docs" "manage.create_file" --args '{"title": "TITLE", "file_type": "sheet"}'
+# 获取 file_id
+
+# 2. 移动到目标文件夹
+mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "ID", "target_folder_id": "DnNkcnCRIHGt"}'
+
+# 3. 获取 sheet_id
+mcporter call "tencent-docs" "sheet.get_sheet_info" --args '{"file_id": "ID"}'
+
+# 4. 写入数据（用 set_range_value 批量写入）
+mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "ID", "sheet_id": "SID", "values": [["header1","header2",...], ["data1","data2",...]]}'
+```
+⚠️ 注意：`set_range_value` 的 values 是二维数组，第一行是表头。

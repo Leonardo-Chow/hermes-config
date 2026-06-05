@@ -156,7 +156,33 @@ mcporter call "tencent-docs" "<工具名>" --args '<JSON参数>'
 
 各品类工具的完整 API 说明（调用示例、参数说明、返回值说明）请参考场景路由表中对应的参考文档。公共接口和常见工作流详见 `references/workflows.md`。
 
-## 常见工作流
+### 当 `import_file.sh` 上传 xlsx 失败时的替代方案
+
+如果 `import_file.sh` 报错 `upload_failed - curl 上传文件失败`，不要反复重试。改用以下流程：
+
+1. `manage.create_file` 创建新 Sheet（file_type=sheet）
+2. `manage.move_file` 移动到目标文件夹
+3. `sheet.get_sheet_info` 获取 sheet_id
+4. `sheet.set_range_value` 批量写入数据（**必须用 set_range_value，不要用 set_cell_value** — 后者逐个调用会超时）
+5. 数据格式：所有值都是字符串，数字也要用 `"1356"` 而非 `1356`
+
+```bash
+# 完整示例
+mcporter call "tencent-docs" "manage.create_file" --args '{"title": "标题", "file_type": "sheet"}'
+# → 获取 file_id
+mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "xxx", "target_folder_id": "xxx"}'
+mcporter call "tencent-docs" "sheet.get_sheet_info" --args '{"file_id": "xxx"}'
+# → 获取 sheet_id
+mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "xxx", "sheet_id": "xxx", "values": [["Header1", "Header2"], ["val1", "val2"]]}'
+```
+
+⚠️ **已知坑**：
+- `import_file.sh` 上传 COS 有时失败（网络波动），先尝试加代理 `export https_proxy=http://127.0.0.1:1082`
+- `mcporter` 代理切换：先尝试直连，失败后加代理重试
+- `sheet.set_cell_value` 逐个调用 >300s 会超时，**必须用 `set_range_value` 批量写入**
+- 所有单元格值用字符串类型（`"1356"` 不是 `1356`）
+
+### 常见工作流
 
 详见 `references/workflows.md`，包含以下内容：
 

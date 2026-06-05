@@ -144,3 +144,12 @@ Tavily 仅提供 Python SDK，无独立 CLI。需通过 Python 脚本调用。
 - 需要 API Key，免费版 1000 次/月
 - Crawl 功能需要邀请才能使用
 - 与 Web Forager / Crawl4AI 互补使用，非替代关系
+
+## ⚠️ 已知坑
+
+| 问题 | 解决方案 |
+|:-----|:---------|
+| MCP 返回 `daily_cap_reached` / `keyless limit` | Tavily MCP 支持 keyless 模式（无 API Key），但有严格日限额（~25-30 次）。**检查 config.yaml 中 `tavilyApiKey` 是否为真实 key 而非占位符 `YOUR_TAVILY_API_KEY`**。修复后需重启 Hermes |
+| MCP 配额耗尽但需要继续搜索 | **用 curl 直接调 Tavily REST API**，绕过 MCP 连接：`curl -s -X POST "https://api.tavily.com/search" -H "Authorization: Bearer <key>" -d '{"query":"...","max_results":5}'`。REST API 配额独立于 MCP |
+| 子代理 (delegate_task) 耗尽共享 Tavily 配额 | 多个子代理共享同一个 API Key 的配额。先完成的子代理会耗尽配额，导致后续子代理反复重试直到超时。**策略：先用 Tavily 搜重要目标，配额耗尽后降级到 training knowledge** |
+| config.yaml 中 API Key 被系统脱敏 | `read_file` / `cat` 输出中 API Key 会被 Hermes 自动替换为 `***`。确认 key 是否正确的方法：`grep tavilyApiKey ~/.hermes/config.yaml` 检查长度，或直接用 curl 测试 |
