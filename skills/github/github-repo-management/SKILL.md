@@ -470,6 +470,42 @@ curl -s -X POST \
 
 When pushing local config directories (like `~/.hermes/`) to GitHub, you'll likely hit secret scanning push protection. See **`references/secret-scanning-and-push-protection.md`** for the full workflow: .gitignore templates, `git filter-branch` history rewriting, large file handling, and Classic vs Fine-Grained token behavior.
 
+### ⚠️ Pitfall: Proxy Fallback in GFW Environments
+
+In China/GFW environments, GitHub pushes via SOCKS5 proxy may fail even when the proxy is supposedly running. **Observed behavior (2026-06-05):**
+
+| Proxy | Port | Result |
+|:------|:----:|:------:|
+| Shadowrocket SOCKS5 | 1082 | ❌ Connection refused |
+| v2rayN SOCKS5 | 10808 | ❌ Connection refused |
+| Direct (no proxy) | — | ✅ Success |
+
+**Recommended push sequence:**
+```bash
+cd ~/.hermes
+
+# Try 1: SOCKS5 proxy (Shadowrocket)
+git config http.proxy socks5://127.0.0.1:1082
+git config https.proxy socks5://127.0.0.1:1082
+git push origin main 2>&1 && exit 0
+
+# Try 2: v2rayN proxy
+git config http.proxy socks5://127.0.0.1:10808
+git config https.proxy socks5://127.0.0.1:10808
+git push origin main 2>&1 && exit 0
+
+# Try 3: Direct (often works for github.com)
+git config --unset http.proxy
+git config --unset https.proxy
+git push origin main
+
+# Cleanup: unset proxy config after successful push
+git config --unset http.proxy 2>/dev/null
+git config --unset https.proxy 2>/dev/null
+```
+
+**Key insight:** `github.com` is not consistently blocked in China — direct HTTPS push often succeeds when proxies are down. Don't assume proxy is required; try direct first if proxy ports are unresponsive.
+
 ## 10. Gists
 
 **With gh:**

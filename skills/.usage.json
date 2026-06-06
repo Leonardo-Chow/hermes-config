@@ -107,14 +107,14 @@
     "archived_at": null,
     "created_at": "2026-05-09T11:05:04.361493+00:00",
     "created_by": null,
-    "last_patched_at": "2026-05-27T03:55:37.328965+00:00",
-    "last_used_at": "2026-05-29T06:04:40.449733+00:00",
-    "last_viewed_at": "2026-05-29T06:04:40.449041+00:00",
-    "patch_count": 11,
+    "last_patched_at": "2026-06-05T03:05:32.198850+00:00",
+    "last_used_at": "2026-06-05T03:04:17.419490+00:00",
+    "last_viewed_at": "2026-06-05T03:04:17.418007+00:00",
+    "patch_count": 14,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 10,
+    "view_count": 10
   },
   "daily-digest": {
     "archived_at": null,
@@ -134,26 +134,26 @@
     "created_at": "2026-05-27T16:12:18.592948+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-05-30T16:07:02.191916+00:00",
-    "last_used_at": "2026-05-30T15:31:38.103763+00:00",
-    "last_viewed_at": "2026-05-30T15:31:38.102369+00:00",
+    "last_used_at": "2026-06-05T10:43:39.061400+00:00",
+    "last_viewed_at": "2026-06-05T10:43:39.059401+00:00",
     "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 14,
-    "view_count": 14
+    "use_count": 15,
+    "view_count": 15
   },
   "gfw-bypass": {
     "archived_at": null,
     "created_at": "2026-05-09T07:43:32.633986+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-01T04:41:54.992685+00:00",
-    "last_used_at": "2026-06-03T03:27:04.094117+00:00",
-    "last_viewed_at": "2026-06-03T03:27:04.093148+00:00",
+    "last_used_at": "2026-06-05T10:43:39.057606+00:00",
+    "last_viewed_at": "2026-06-05T10:43:39.054220+00:00",
     "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 25,
-    "view_count": 25
+    "use_count": 26,
+    "view_count": 26
   },
   "guizang-ppt-skill": {
     "archived_at": null,
@@ -199,12 +199,12 @@
     "created_at": "2026-05-08T06:21:14.854643+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-02T02:41:33.666403+00:00",
-    "last_used_at": "2026-06-05T03:00:12.610588+00:00",
+    "last_used_at": "2026-06-06T03:12:53.451976+00:00",
     "last_viewed_at": "2026-06-02T06:24:03.099590+00:00",
     "patch_count": 7,
     "pinned": false,
     "state": "active",
-    "use_count": 55,
+    "use_count": 56,
     "view_count": 9
   },
   "jina-reader": {
@@ -316,26 +316,26 @@
     "created_at": "2026-06-01T05:30:08.381066+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-03T03:15:29.128960+00:00",
-    "last_used_at": "2026-06-03T03:13:14.950658+00:00",
-    "last_viewed_at": "2026-06-03T03:13:14.949765+00:00",
+    "last_used_at": "2026-06-05T10:43:52.476026+00:00",
+    "last_viewed_at": "2026-06-05T10:43:52.474226+00:00",
     "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 8,
-    "view_count": 8
+    "use_count": 9,
+    "view_count": 9
   },
   "obsbot-competitive-analysis": {
     "archived_at": null,
     "created_at": "2026-05-19T04:45:36.755112+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-02T15:47:22.534041+00:00",
-    "last_used_at": "2026-06-02T15:44:55.080140+00:00",
-    "last_viewed_at": "2026-06-02T15:44:55.078602+00:00",
+    "last_used_at": "2026-06-05T10:43:39.062499+00:00",
+    "last_viewed_at": "2026-06-05T10:43:39.060365+00:00",
     "patch_count": 42,
     "pinned": false,
     "state": "active",
-    "use_count": 33,
-    "view_count": 33
+    "use_count": 34,
+    "view_count": 34
   },
   "obsbot-competitor-monitor": {
     "archived_at": null,

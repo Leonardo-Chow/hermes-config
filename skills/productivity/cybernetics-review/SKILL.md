@@ -168,7 +168,8 @@ skill patch: autocli — 更新可用站点列表
 - 涉及 skill: `ima-skill`（IMA 记忆同步）、`hermes-agent`（更新检测）
 
 ### 执行步骤
-1. **运行 hermes-retro** — 脚本路径: `~/.hermes/audit/hermes-retro`（bash 脚本，非 npm 包）
+1. **安全审查（最优先）** — 扫描敏感信息、检查仓库隐私状态。详见 `references/security-audit-workflow.md`
+2. **运行 hermes-retro** — 脚本路径: `~/.hermes/audit/hermes-retro`（bash 脚本，非 npm 包）
    ```bash
    bash ~/.hermes/audit/hermes-retro --today
    ```
@@ -207,6 +208,7 @@ skill patch: autocli — 更新可用站点列表
 
 ## 参考资料
 
+- `references/security-audit-workflow.md` — 每日安全审查流程（敏感信息扫描、仓库检查、泄露处理）
 - `references/qian-xuesen-cybernetics.md` — 钱学森工程控制论核心理论详解
 - `references/pdf-generation-template.md` — 新闻风格 PDF 生成模板（CNN/BBC/经济学人）
 - `references/ima-memory-sync.md` — Memory 文件同步到 IMA Herme记忆库的完整流程

@@ -1,9 +1,9 @@
 {
-  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260529-101028",
-  "last_run_at": "2026-05-29T10:10:28.411969+00:00",
-  "last_run_duration_seconds": 290.222497,
-  "last_run_summary": "auto: no changes; llm: ## Curator Pass Summary\n\n**Input**: 5 agent-created skills\n**Output**: 3 active skills (2 archived via consolidation)\n\n### Clusters Processed\n\n**Cluster 1: APK/Flutter Reverse Engineering** (2 → 1)\n- `apk-network-extraction` (narrow: networ…\narchived 2 skill(s):\n  • apk-network-extraction → flutter-aot-apk-patching\n  • market-analysis-report → obsbot-competitive-analysis\nfull report: hermes curator status\nkeep an umbrella stable: hermes curator pin flutter-aot-apk-patching",
+  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260605-103017",
+  "last_run_at": "2026-06-05T10:30:17.414881+00:00",
+  "last_run_duration_seconds": 8056.891663,
+  "last_run_summary": "auto: no changes; llm: API call failed after 3 retries: Connection error.",
   "last_run_summary_shown_at": "2026-05-22T09:07:42.961617+00:00",
   "paused": false,
-  "run_count": 3
+  "run_count": 4
 }
