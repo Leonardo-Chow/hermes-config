@@ -506,6 +506,29 @@ git config --unset https.proxy 2>/dev/null
 
 **Key insight:** `github.com` is not consistently blocked in China — direct HTTPS push often succeeds when proxies are down. Don't assume proxy is required; try direct first if proxy ports are unresponsive.
 
+### ⚠️ Pitfall: Direct Push Timeout (GFW)
+
+Direct push to `github.com` from China can be **extremely slow** — observed 16 minutes on 2026-06-06. The TLS handshake and auth succeed quickly (~200ms), but the data transfer phase stalls for 10-15 minutes before completing.
+
+**Critical:** If you set a short timeout (30s), the push appears to fail. Increasing to 120s or more usually succeeds.
+
+```bash
+# ❌ WRONG: 30s timeout causes false failure diagnosis
+timeout 30 git push origin main  # Will time out even when push would succeed
+
+# ✅ RIGHT: Use 120s+ timeout, or run without timeout
+git push origin main 2>&1  # May take 10-16 minutes but will succeed
+
+# If using terminal() with timeout parameter, set timeout=600
+```
+
+**Observed timing (2026-06-06):**
+- TLS handshake + auth: ~400ms
+- Data transfer stall: ~16 minutes
+- Final push completion: instant after stall
+
+**Diagnosis pattern:** If you see `Recv failure: Operation timed out` followed by retry and `HTTP/2 200`, the push is working — just slowly. Don't abort or switch strategies mid-push.
+
 ## 10. Gists
 
 **With gh:**
