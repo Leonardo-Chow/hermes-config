@@ -434,7 +434,7 @@ result = mcp_tavily_tavily_extract(
 - 包含趋势话题（Trending）和热门帖子
 - 自动提取标题、板块、链接
 
-2. **方案B：使用 reddit.js 脚本**（模拟数据，用于测试）
+2. **方案B：使用 reddit.js 脚本**（✅ 2026-06-08验证可用，提供结构化Trending+Hot数据）
 ```bash
 # 默认获取10条
 node ~/.hermes/skills/ima-skills/scripts/reddit.js
@@ -443,6 +443,11 @@ node ~/.hermes/skills/ima-skills/scripts/reddit.js 8
 # 输出 JSON 格式
 node ~/.hermes/skills/ima-skills/scripts/reddit.js --json
 ```
+**优点**：
+- 返回格式化表格，含 Trending 话题（6条）+ Hot 帖子（3条）
+- 每条包含标题、板块名
+- 无需VPN，通过 Tavily Extract 解析
+- **在 Reddit JSON API 和直接 curl 都失败时，这是最可靠的降级方案**
 
 3. **方案C：Reddit JSON API**（需要代理）
 ```bash
@@ -959,15 +964,34 @@ node ~/.hermes/skills/ima-skills/knowledge-base/scripts/upload-to-kb.cjs /path/t
 ### ⚠️ 国际新闻缩水用户会非常不满
 国际新闻是用户最在意的板块。**每个子分类至少3条**，总数维持在12-15条。宁愿减少科技热点数量也要保国际新闻质量。
 
-### ⚠️ GitHub API JSON解析控制字符
-GitHub API返回的JSON可能包含控制字符（`\x00-\x1f`），导致`json.loads`报错`Invalid control character`或`Expecting ':' delimiter`。**解决方案：**
+### ⚠️ RSS批量采集必须逐条执行（2026-06-08验证）
+**症状：** 在 `execute_code` 中用 for 循环批量执行 `terminal(f"curl ... -o /tmp/rss_{name}.json")` 时，所有文件静默创建失败（0字节），无报错信息。
+**原因：** `execute_code` 中的 `terminal()` 调用在同一脚本中快速连续执行多个 curl 时，可能存在连接复用或并发问题。
+**解决方案：** 逐条执行，每条单独调用 `terminal()`：
 ```python
-# 写入文件后用 errors='replace' 读取，再清理控制字符
-with open('/tmp/github.json', 'r', encoding='utf-8', errors='replace') as f:
-    raw = f.read().replace('\x00', '').replace('\r', '')
-data = json.loads(raw)
+# ✅ 正确：逐条执行，每条都是独立的 terminal() 调用
+for name, url in feeds:
+    r = terminal(f"curl -sL --max-time 20 'https://api.rss2json.com/v1/api.json?rss_url={url}' -o /tmp/rss_{name}.json && echo OK || echo FAIL", timeout=30)
+
+# ❌ 错误：在 for 循环中用单个 terminal 批量执行
+for name, url in feeds:
+    terminal(f"curl ... -o /tmp/rss_{name}.json")  # 可能静默失败
 ```
-或使用正则：`clean = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)`
+
+### ⚠️ GitHub API JSON解析控制字符
+GitHub API返回的JSON可能包含控制字符（`\x00-\x1f`），导致`json.loads`报错`Invalid control character`或`Expecting ':' delimiter`。**解决方案（2026-06-08验证最佳方案）：**
+```python
+# 用 rb 模式读取 + decode('utf-8','replace') + re.sub 清理
+with open('/tmp/github.json', 'rb') as f:
+    raw = f.read().decode('utf-8', 'replace')
+clean = re.sub(r'[\x00-\x1f]', ' ', raw)
+data = json.loads(clean)
+```
+或在 terminal 中一行完成：
+```bash
+python3 -c "import json,re; f=open('/tmp/github.json','rb'); raw=f.read().decode('utf-8','replace'); clean=re.sub(r'[\x00-\x1f]',' ',raw); data=json.loads(clean); ..."
+```
+**注意：** 用 `'r'` 模式 + `errors='replace'` 读取文件可能仍然失败，因为 Python 的 text mode 在遇到某些控制字符时会提前截断。**必须用 `'rb'` 模式读取原始字节再手动 decode。**
 
 ### ⚠️ IMA上传 — 用临时文件+命令替换传递大JSON
 日报内容含大量emoji和特殊字符，直接通过shell传递JSON会截断。**验证可靠的方法：**
@@ -991,9 +1015,16 @@ data = json.loads(raw)
 **原因：** 可能是 API 限流或临时维护。
 **降级方案：** 在 A 股板块只展示四大指数，注明"热门板块数据因 API 暂不可用而缺失"。或从微博/百度热搜中提取财经相关条目作为补充。
 
-### ⚠️ HN Firebase API 批量获取超时
-**问题：** 逐条获取 HN 故事详情（`hacker-news.firebaseio.com/v0/item/{id}.json`）在批量调用时容易超时（30秒内只完成部分）。
-**解决方案：** 使用 `autocli hackernews top --limit 10 --format json` 一次性获取（如果 autocli 可用），或只取前 5 条避免超时。
+**⚠️ HN Firebase API 批量获取超时**
+**问题：** 逐条获取 HN 故事详情（`hacker-news.firebaseio.com/v0/item/{id}.json`）在批量调用时容易超时（30秒内只完成部分）。Firebase API 在中国大陆被墙，需 VPN。
+**解决方案：**
+1. **首选：HN RSS via rss2json**（✅ 2026-06-08验证可用，无需VPN）
+   ```bash
+   curl -sL --max-time 20 'https://api.rss2json.com/v1/api.json?rss_url=https://hnrss.org/frontpage'
+   ```
+   返回10条首页文章，包含标题和链接，质量与Firebase API相当。
+2. 使用 `autocli hackernews top --limit 10 --format json` 一次性获取（如果 autocli 可用）
+3. 只取前 5 条避免 Firebase API 超时
 
 ### ⚠️ 东方财富板块涨幅API默认按跌幅排序
 `push2.eastmoney.com`的`po=1`参数默认按涨幅降序，但API返回的第一批结果可能是跌幅榜。**解决方案：** 用`po=1`获取涨幅榜（上涨板块），或手动筛选`f3>0`的板块。

@@ -196,34 +196,37 @@ curl -s --connect-timeout 5 --proxy http://127.0.0.1:1082 "https://www.youtube.c
 DAY_OF_WEEK=$(date +%u)  # 1=Mon, 7=Sun
 TODAY=$(date +%Y-%m-%d)
 DAY_NAME=$(date +%A)
+START_DISPLAY=$(date -v-2d +%m.%d)  # 用于文件名（零填充）
+END_DISPLAY=$(date +%m.%d)
 
 echo "今天是: $TODAY ($DAY_NAME)"
 
-# 计算搜索范围
+# 计算搜索范围（UTC 日期，用于 yt-dlp 上传日期过滤）
 case $DAY_OF_WEEK in
     1)  # 周一
-        START_DATE=$(date -v-2d +%Y-%m-%d)  # 周六
-        END_DATE=$TODAY
+        START_DATE=$(date -v-2d -u +%Y-%m-%d)  # 周六 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        START_DISPLAY=$(date -v-2d +%m.%d)
         ;;
     3)  # 周三
-        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周二
-        END_DATE=$TODAY
-        ;;
-    4)  # 周四（手动触发）
-        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周三
-        END_DATE=$TODAY
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)  # 周二 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        START_DISPLAY=$(date -v-1d +%m.%d)
         ;;
     5)  # 周五
-        START_DATE=$(date -v-1d +%Y-%m-%d)  # 周四
-        END_DATE=$TODAY
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)  # 周四 UTC
+        END_DATE=$(date -u +%Y-%m-%d)  # 今天 UTC
+        START_DISPLAY=$(date -v-1d +%m.%d)
         ;;
     *)  # 其他日期（手动触发）
-        START_DATE=$(date -v-1d +%Y-%m-%d)
-        END_DATE=$TODAY
+        START_DATE=$(date -v-1d -u +%Y-%m-%d)
+        END_DATE=$(date -u +%Y-%m-%d)
+        START_DISPLAY=$(date -v-1d +%m.%d)
         ;;
 esac
 
-echo "搜索范围: $START_DATE ~ $END_DATE"
+echo "搜索范围(UTC): $START_DATE ~ $END_DATE"
+echo "文件名: ${TODAY}——竞品检测报告——时间范围（${START_DISPLAY}-${END_DISPLAY}）"
 ```
 
 ### Step 1: 搜索竞品视频
@@ -233,6 +236,15 @@ echo "搜索范围: $START_DATE ~ $END_DATE"
 2. **yt-dlp `ytsearch`**（无需 API Key，按相关性排序，需后过滤日期）
 3. **浏览器搜索**（最可靠但最慢，可能触发 bot 检测）
 4. **Exa MCP**（补充搜索，日期索引有延迟）
+
+**🎯 最佳组合策略（2026-06-08 验证）**：
+1. **Phase 1**：yt-dlp `ytsearch8` 搜索全部品牌（~75秒，242个视频），用 ThreadPoolExecutor 并行获取详情（~80秒）→ 过滤日期范围
+2. **Phase 2**：如果 Phase 1 结果为空或过少，用浏览器搜索（`sp=EgIIAw%3D%3D` 日期排序）补充 → 2 个 subagent 各搜索 9 个品牌
+3. **Phase 3**：对补充搜索到的视频用 yt-dlp 获取详情
+
+这种组合策略比纯浏览器搜索快 3x，比纯 yt-dlp 不会漏掉低播放量的新视频。
+
+> 📖 **完整混合搜索流程 + 代码模板**：详见 `references/hybrid-search-strategy.md`
 
 #### 方式 A: yt-dlp 搜索（推荐，无需 API Key）
 
@@ -396,7 +408,11 @@ mcporter call "tencent-docs" "manage.search_file" --args '{"search_key": "TITLE"
 mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "ID", "target_folder_id": "DnNkcnCRIHGt"}'
 ```
 
+⚠️ **import_file.sh 成功后的验证**：当 `import_file.sh` + `manage.async_import` 均成功时，**不需要用 `sheet.get_range_value` 逐单元格验证数据**。xlsx 文件已作为整体导入，数据完整。只需用 `manage.search_file` 确认文件存在 + `manage.move_file` 移动到目标文件夹即可。不要尝试用 `sheet.get_cell_value` 或 `sheet.get_range_value` 读取单元格——这些工具在 mcporter 中可能未注册（-32601 错误）。
+
 ## 上传腾讯文档（替代方案）
+
+> 📖 **完整上传工作流 + mcporter 工具参考**：详见 `references/tencent-docs-sheet-upload.md`
 
 当 `import_file.sh` 上传 xlsx 文件失败（"upload_failed - curl 上传文件失败"）时，使用以下替代方案：
 
@@ -425,7 +441,9 @@ mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "FILE_I
 
 `{当天日期}——竞品检测报告——时间范围（{起始日期}-{结束日期}）`
 
-示例：`2026-06-05——竞品检测报告——时间范围（6.4-6.5）`
+⚠️ 日期范围使用 `date +%m.%d` 格式（零填充）：
+- ✅ `2026-06-08——竞品检测报告——时间范围（06.06-06.08）`
+- ❌ `2026-06-08——竞品检测报告——时间范围（6.6-6.8）`
 
 ## 保存位置
 
@@ -472,6 +490,13 @@ YouTube API key (`AIzaSy...aA1Q`) 在 shell heredoc/变量中会被系统截断�
 正确做法：搜索→统计→过滤→生成→上传→最终汇报，全程自动。
 错误做法：每完成一步就汇报等待确认、生成中间结果后询问是否继续、做一半就停下来。
 
+### Pitfall 5: mcporter 代理切换
+mcporter 有时直连成功，有时需要代理。如果遇到 HTTP 405 或连接超时：
+1. 先尝试不加代理
+2. 失败后 `export https_proxy=http://127.0.0.1:1082` 再试
+3. 两种都失败则等待几秒后重试
+4. 详细工具参考：`references/tencent-docs-sheet-upload.md`
+
 ### Pitfall 6: 内容相关性判断不精确
 用户纠正（2026-06-03）：仅提到品牌但与 webcam 无关的视频必须排除。
 - 「Insta360 全系列選購指南」→ ❌ 排除
@@ -482,50 +507,47 @@ YouTube API key (`AIzaSy...aA1Q`) 在 shell heredoc/变量中会被系统截断�
 ### Pitfall 7: 评论区分析必须检查 hashtags
 用户纠正（2026-06-03）：视频 hashtags 可能包含 `#streamwithobsbot` 等标签，即使评论区没有提到 OBSBOT，hashtags 中有也算提及。检查顺序：先 hashtags → 再评论区。
 
-### Pitfall 9: VPN (Shadowrocket) 长任务自动断开
-Shadowrocket VPN 在长时间执行（>5分钟）时会自动断开。症状：
-- yt-dlp 报 `ConnectionRefused` / `Failed to establish a new connection`
-- curl 返回空响应或 HTTP 000
-- 浏览器 `ERR_CONNECTION_TIMED_OUT`
+### Pitfall 8: COS 上传失败的降级方案
+`import_file.sh` 的 COS 上传可能失败（`ERROR:upload_failed - curl 上传文件失败`），尤其在网络不稳定时。
+**降级方案**：直接创建腾讯文档 smartsheet 并写入数据（详见 `references/tencent-docs-sheet-upload.md`）
 
+### Pitfall 9: VPN (Shadowrocket) 长任务自动断开
+Shadowrocket VPN 在长时间执行（>5分钟）时会自动断开。
 **修复**：`scutil --nc start "Shadowrocket"` + `sleep 3`
-**预防**：在每个主要步骤前检查代理可用性，特别是批量操作前。
+**预防**：在每个主要步骤前检查代理可用性。
+
+⚠️ **execute_code 沙箱中的 VPN 断开**：当 yt-dlp 搜索阶段（~75秒）完成后，进入详情获取阶段时 VPN 可能已断开。症状：所有 yt-dlp 调用返回 `Unable to connect to proxy`。此时必须在 terminal 中重连 VPN，然后重新执行详情获取脚本。
 
 ### Pitfall 10: yt-dlp 逐个获取详情超时
 yt-dlp `--print` 逐个获取视频元数据约 5-10 秒/个。192 个视频需 ~30 分钟，会超过 `execute_code` 的 300 秒超时。
-
-**解决方案**：
-1. 先用 yt-dlp `ytsearch` 搜索获取视频列表（快，~2秒/品牌）
-2. 用 Exa `web_search_exa` 补充搜索（快，但日期索引有延迟）
-3. 仅对疑似在日期范围内的视频用 yt-dlp 获取详情（减少调用量）
-4. 或用 YouTube Data API `videos.list` 批量获取（50 个/次 = 1 单位配额），前提是 API Key 有效
+**解决方案**：先用 yt-dlp 搜索获取列表，再用 YouTube Data API 批量获取详情。
 
 ### Pitfall 11: Exa 搜索日期索引延迟
-Exa MCP `web_search_exa` 不支持日期范围过滤参数。Exa 的日期索引对非常新的内容（<48小时）有延迟。
-- 搜索 2026-06-04 的视频，Exa 可能到 06-06 才索引到
-- **解决方案**：Exa 作为补充搜索源，不作为唯一搜索源。浏览器搜索或 yt-dlp 作为主要搜索方式。
+Exa MCP 的日期索引对非常新的内容（<48小时）有延迟。作为补充搜索源，不作为唯一搜索源。
 
-### Pitfall 5: mcporter 代理切换
-mcporter 有时直连成功，有时需要代理。如果遇到 HTTP 405 或连接超时：
-1. 先尝试不加代理
-2. 失败后 `export https_proxy=http://127.0.0.1:1082` 再试
-3. 两种都失败则等待几秒后重试
-
-### Pitfall 8: COS 上传失败的降级方案
-`import_file.sh` 的 COS 上传可能失败（`ERROR:upload_failed - curl 上传文件失败`），尤其在网络不稳定时。
-**降级方案**：直接创建腾讯文档 smartsheet 并写入数据：
-```bash
-# 1. 创建 smartsheet
-mcporter call "tencent-docs" "manage.create_file" --args '{"title": "TITLE", "file_type": "sheet"}'
-# 获取 file_id
-
-# 2. 移动到目标文件夹
-mcporter call "tencent-docs" "manage.move_file" --args '{"file_id": "ID", "target_folder_id": "DnNkcnCRIHGt"}'
-
-# 3. 获取 sheet_id
-mcporter call "tencent-docs" "sheet.get_sheet_info" --args '{"file_id": "ID"}'
-
-# 4. 写入数据（用 set_range_value 批量写入）
-mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "ID", "sheet_id": "SID", "values": [["header1","header2",...], ["data1","data2",...]]}'
+### Pitfall 12: yt-dlp 并行获取详情（ThreadPoolExecutor）
+yt-dlp 逐个获取视频详情约 5-10 秒/个，242 个视频串行需要 20+ 分钟。使用 `ThreadPoolExecutor(max_workers=8)` 并行处理可在 ~80 秒内完成全部 242 个视频。
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
+with ThreadPoolExecutor(max_workers=8) as executor:
+    futures = {executor.submit(get_video_date, vid_id): vid_id for vid_id in video_ids}
+    for future in as_completed(futures):
+        result = future.result()
 ```
-⚠️ 注意：`set_range_value` 的 values 是二维数组，第一行是表头。
+⚠️ **注意**：并行度不要超过 8，否则可能触发 YouTube 限流。每次调用需重新设置 `https_proxy` 环境变量。
+
+### Pitfall 13: 浏览器搜索 subagent 品牌数量控制
+用 delegate_task 做浏览器搜索时，每个 subagent 最多搜索 **9 个品牌**（每次搜索 ~30-40 秒）。超过 9 个品牌会导致 subagent 在 600 秒超时前无法完成。
+- ✅ 推荐：2 个 subagent，各搜索 9 个品牌
+- ❌ 避免：1 个 subagent 搜索全部 18 个品牌（会超时）
+
+### Pitfall 14: Excel 生成必须用 terminal 而非 execute_code
+`openpyxl` 在 execute_code 的沙箱环境中不可用（`ModuleNotFoundError`）。必须：
+1. 用 `write_file` 写 Python 脚本到 `/tmp/gen_report.py`
+2. 用 `terminal` 执行 `python3 /tmp/gen_report.py`
+
+### Pitfall 15: 文件名日期格式一致性
+文件名中的日期范围必须使用一致的格式：`{MM.DD}-{MM.DD}`（零填充）。
+- ✅ `2026-06-08——竞品检测报告——时间范围（06.06-06.08）`
+- ❌ `2026-06-08——竞品检测报告——时间范围（6.6-6.8）`
+计算时用 `date +%m.%d` 而非手动拼接。

@@ -108,6 +108,25 @@ curl -sL -X PUT "http://127.0.0.1:9090/proxies/Proxy" -H "Content-Type: applicat
 - **⚠️ 优先级:** git 操作默认使用 `socks5://127.0.0.1:1082`，不要用 `http://127.0.0.1:1082`
 - **用户需确保 Shadowrocket 已手动开启**
 
+### git push 代理回退策略
+
+当 `socks5://127.0.0.1:1082` 不可用时，按序尝试其他代理端口：
+```bash
+# 1. Shadowrocket (1082)
+git config http.proxy socks5://127.0.0.1:1082 && git config https.proxy socks5://127.0.0.1:1082 && git push origin main
+
+# 2. v2rayN (10808)
+git config http.proxy socks5://127.0.0.1:10808 && git config https.proxy socks5://127.0.0.1:10808 && git push origin main
+
+# 3. ClashX Pro (7890)
+git config http.proxy http://127.0.0.1:7890 && git config https.proxy http://127.0.0.1:7890 && git push origin main
+
+# 全部失败：清理代理配置，commit 已本地保存
+git config --unset http.proxy && git config --unset https.proxy
+```
+
+**⚠️ 关键 pitfall：** 推送失败后**必须**清理 git proxy config（`--unset`），否则后续所有 git 操作（包括非 GitHub 的本地操作）都会走失败的代理而超时。
+
 ### 订阅服务器 504
 - **症状:** 订阅链接返回 `504 Gateway Time-out`
 - **原因:** 订阅服务器 `47.242.55.240` 宕机

@@ -86,12 +86,20 @@ curl -sL "https://api.rss2json.com/v1/api.json?rss_url=https://techcrunch.com/ca
 ```
 适合 AI 板块独立采集，内容与主 RSS 有重叠但 AI 专题更集中。
 
-### Hacker News ✅ 可靠
+### Hacker News ✅ 可靠（需VPN或RSS降级）
+
+**方案A：Firebase API**（需VPN，中国大陆被墙）
 ```bash
-# Firebase API
-curl -s "https://hacker-news.firebaseio.com/v0/topstories.json"
-# 或通过 news.ycombinator.com 页面抓取
+curl -s --proxy http://127.0.0.1:1082 "https://hacker-news.firebaseio.com/v0/topstories.json"
 ```
+
+**方案B：HN RSS via rss2json**（✅ 2026-06-08验证可用，无需VPN）
+```bash
+curl -sL --max-time 20 'https://api.rss2json.com/v1/api.json?rss_url=https://hnrss.org/frontpage'
+```
+返回10条首页文章，包含标题和链接，质量与Firebase API相当。`hnrss.org` 是 HN 官方认可的第三方 RSS 服务。
+
+**⚠️ 批量获取Firebase详情容易超时：** 逐条获取HN故事详情（`/v0/item/{id}.json`）在批量调用时容易超时。建议用RSS方案一次性获取，或只取前5条。
 
 ---
 
@@ -119,8 +127,11 @@ url = f"https://api.rss2json.com/v1/api.json?rss_url={rss_url}"
 `http://rss.cnn.com/rss/edition_world.rss` 通过 rss2json 转换后，返回的文章可能是 2022-2023 年的旧内容，而非当天新闻。CNN 的 RSS feed 可能已停止更新或被重定向到存档。
 **替代方案：** 用 `web_search(query="CNN world news today")` 获取当天 CNN 新闻，或使用 NPR/BBC/Al Jazeera 的 RSS 代替。
 
-### France 24 ✅ 之前成功
-无稳定RSS，尝试直接请求首页或通过搜索获取
+### France 24 ✅ 可靠（2026-06-08验证）
+```bash
+curl -sL --max-time 20 'https://api.rss2json.com/v1/api.json?rss_url=https://www.france24.com/en/rss'
+```
+返回10条当天新闻，质量稳定，适合作为国际新闻第4-5来源。
 
 ### Reuters ⚠️ 经常超时
 无稳定可用RSS端点

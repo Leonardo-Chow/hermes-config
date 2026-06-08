@@ -44,6 +44,20 @@ gh repo view Leonardo-Chow/hermes-config --json isPrivate -q '.isPrivate'
 cd ~/.hermes && git log --oneline -5
 ```
 
+### 仓库可见性处理
+
+如果 `isPrivate` 返回 `false`，**立即标记为 🔴 高风险**并报告：
+- 即使当前密钥已脱敏，PUBLIC 仓库暴露完整配置结构、skill 细节、工具链信息
+- 修复命令：`gh repo edit Leonardo-Chow/hermes-config --visibility private`
+- 历史 commit 中可能残留已删除的密钥（force push 前需检查 `git log --all --oneline` 中的旧 commit）
+
+### .gitignore 陷阱
+
+`config.yaml.bak.*` 模式**不匹配** `config.yaml.bak`（无后缀版本）。如果 `config.yaml.bak` 包含敏感信息，需要：
+1. 添加 `config.yaml.bak` 到 `.gitignore`
+2. `git rm --cached config.yaml.bak` 取消跟踪
+3. 提交并推送
+
 ## 3. 发现泄露时的处理
 
 ```bash
@@ -58,6 +72,26 @@ git commit -m "SECURITY: Remove leaked API keys"
 git push --force origin main
 ```
 
+### Git Push 代理回退策略
+
+当 `git push` 需要代理时，按序尝试：
+```bash
+# 尝试 Shadowrocket (1082)
+git config http.proxy socks5://127.0.0.1:1082 && git config https.proxy socks5://127.0.0.1:1082 && git push origin main
+
+# 失败则尝试 v2rayN (10808)
+git config http.proxy socks5://127.0.0.1:10808 && git config https.proxy socks5://127.0.0.1:10808 && git push origin main
+
+# 失败则尝试 ClashX Pro (7890)
+git config http.proxy http://127.0.0.1:7890 && git config https.proxy http://127.0.0.1:7890 && git push origin main
+
+# 全部失败：清理代理配置，commit 已本地保存，记录待推送
+git config --unset http.proxy && git config --unset https.proxy
+echo "⚠️ 推送失败：所有代理不可用。commit 已本地保存，代理恢复后手动推送。"
+```
+
+**重要**：推送失败后必须清理 git proxy config，否则后续 git 操作也会走失败的代理。
+
 ## 4. 常见误报过滤
 
 以下文件中的匹配通常是文档示例，非真实泄露：
@@ -65,6 +99,25 @@ git push --force origin main
 - `git-secret-scanning.md` 中的演示代码
 - `native-mcp/SKILL.md` 中的 Authorization header 示例
 - 二进制文件 (`bin/tirith` 等 Mach-O 可执行文件)
+- 任何 `password`/`secret` 出现在 YAML narrative 文本中（如 noir prompt 里的 "city of silicon and secrets"）
+- `redact_secrets: true` 等配置选项名
+
+### ⚠️ grep 模式选择
+
+**不要使用宽泛模式**（如 `password|secret`），会产生大量误报。使用严格正则：
+
+```bash
+# ✅ 推荐：严格匹配真实 key 格式
+git ls-files | xargs grep -n 'AIzaSy[A-Za-z0-9_-]\{30\}\|sk-[A-Za-z0-9]\{20,\}\|ghp_[A-Za-z0-9]\{30\}'
+
+# ❌ 避免：宽泛模式（误报率极高）
+git ls-files | xargs grep -l 'AIzaSy\|sk-\|password\|secret'
+```
+
+**验证流程**：grep 找到匹配后，必须读取实际内容判断：
+1. 含 `...` 的截断字符串 → 已掩码，安全
+2. 完整 39 字符 API key → 真实泄露
+3. 出现在文档/注释中的模式引用 → 误报
 
 ## 5. 安全审查报告模板
 

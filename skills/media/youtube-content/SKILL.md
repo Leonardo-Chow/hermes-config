@@ -15,8 +15,10 @@ Extract transcripts from YouTube videos and convert them into useful formats.
 ## Setup
 
 ```bash
-pip install youtube-transcript-api
+pip install youtube-transcript-api PySocks
 ```
+
+**PySocks is required** for SOCKS5 proxy support (Shadowrocket, v2rayN, etc.). Without it, `Missing dependencies for SOCKS support` error will occur when proxy is active.
 
 ## Helper Script
 
@@ -64,6 +66,29 @@ After fetching the transcript, format it based on what the user asks for:
 3. **Chunk if needed**: if the transcript exceeds ~50K characters, split into overlapping chunks (~40K with 2K overlap) and summarize each chunk before merging.
 4. **Transform** into the requested output format. If the user did not specify a format, default to a summary.
 5. **Verify**: re-read the transformed output to check for coherence, correct timestamps, and completeness before presenting.
+
+## Direct Python API (when script fails)
+
+If the helper script fails, use the API directly. **The API is instance-based** (not class methods):
+
+```python
+import os
+os.environ['HTTPS_PROXY'] = 'socks5h://127.0.0.1:1082'  # if behind GFW/proxy
+
+from youtube_transcript_api import YouTubeTranscriptApi
+api = YouTubeTranscriptApi()
+transcript = api.fetch(video_id, languages=['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko'])
+
+for entry in transcript:
+    print(f"[{int(entry.start//60):02d}:{int(entry.start%60):02d}] {entry.text}")
+```
+
+## Pitfalls
+
+- **API changed (v1.2+)**: No `YouTubeTranscriptApi.get_transcript()` or `YouTubeTranscriptApi.list_transcripts()`. Use `api = YouTubeTranscriptApi()` then `api.fetch(video_id, languages=[...])`.
+- **PySocks required for proxy**: Without PySocks installed in the same Python environment, SOCKS5 proxy (`socks5h://`) will fail with `Missing dependencies for SOCKS support`. Install with `pip install PySocks`.
+- **Proxy env vars**: Set `HTTPS_PROXY=socks5h://127.0.0.1:1082` (Shadowrocket default). Python `requests` (used internally) reads env vars, not `session.proxies`.
+- **Python version mismatch**: `pip install` may install to system Python 3.9 while Hermes uses 3.12. Use `python3 -m pip install` to target the correct environment.
 
 ## Error Handling
 
