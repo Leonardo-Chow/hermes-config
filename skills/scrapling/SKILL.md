@@ -481,6 +481,7 @@ class MySpider(Spider):
 - **TikTok — Use search+oembed, not profile scraping**: Profile scraping triggers CAPTCHA for most accounts. Use the search page → oembed API → video ID timestamp approach documented in Verified Patterns below.
 - **CLI `extract` command**: As of v0.2.99, the CLI only has `install` command. Use Python API instead for older versions. v0.4.8+ has full CLI.
 - **Legal**: Always check robots.txt and website ToS. Use `robots_txt_obey = True` on spiders.
+- **API 爬取替代**：当 Scrapling 浏览器爬取太慢或资源消耗过大时，考虑用 ScraperAPI（通用网页）或 ScrapeCreators（社交媒体 API）。详见 `references/web-scraping-apis.md`
 
 ## Performance Benchmarks
 
@@ -625,6 +626,7 @@ for url in video_links:
 
 ## Support Files
 
+- `references/web-scraping-apis.md` — ScraperAPI/ScrapeCreators API 服务配置和用法（替代浏览器爬取）
 - `references/youtube-scraping.md` — YouTube video scraping patterns
 - `references/youtube-comment-scraping.md` — YouTube comment scraping via API (commentThreads endpoint)
 - `references/reddit-scraping.md` — Reddit anti-detection scraping

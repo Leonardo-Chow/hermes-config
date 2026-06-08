@@ -53,36 +53,115 @@ links += page.css('a[href*="/reel/"]::attr(href)').getall()
 
 ## TikTok 爬取流程
 
-Profile 页面会被 CAPTCHA 阻断，使用搜索页 + oembed API + 视频 ID 时间解码：
+### 额度管理（⚠️ 重要）
+
+**Omar TikTok API（omkar.cloud）每月仅 100 次免费请求，必须合理分配！**
+
+| 用途 | 预算/月 | 说明 |
+|:-----|:--------|:-----|
+| OBSBOT 竞品监测 | 40 次 | 每周一/三/五，每次约 3-5 个关键视频详情 |
+| KOL 资料验证 | 30 次 | 高价值 KOL 的详细资料和视频历史 |
+| 应急备用 | 30 次 | 用户临时需求、特殊查询 |
+
+**优先级规则**：
+1. **🔴 必须用 Omar API**：获取视频完整数据（含 HD 下载链接）、验证 KOL 资料真实性
+2. **🟡 用免费替代**：视频基本信息 → oembed API、批量搜索 → ScraperAPI
+
+### TikTok 数据源优先级
+
+| 优先级 | 方案 | 额度消耗 | 适用场景 |
+|:-------|:-----|:---------|:---------|
+| 1 | oembed API + 代理 | 免费 | 视频基本信息（标题、作者、封面） |
+| 2 | ScraperAPI | 按量计费 | 通用网页抓取 |
+| 3 | Omar API | 100次/月 | 视频详情、用户资料、搜索 |
+| 4 | Scrapling | 免费 | 搜索页获取链接列表 |
+
+### Omar API 端点
 
 ```python
-from scrapling.fetchers import StealthyFetcher
+import requests
+
+OMKAR_API_KEY = "YOUR_OMKAR_API_KEY"  # 存 ~/.config/last30days/.env
+OMKAR_BASE = "https://tiktok-scraper.omkar.cloud"
+
+def get_tiktok_profile(handle):
+    """获取用户资料 - 消耗1次额度"""
+    resp = requests.get(
+        f"{OMKAR_BASE}/tiktok/users/profile",
+        params={"handle": handle},
+        headers={"API-Key": OMKAR_API_KEY}
+    )
+    return resp.json()
+
+def get_video_details(video_url):
+    """获取视频详情 - 消耗1次额度"""
+    resp = requests.get(
+        f"{OMKAR_BASE}/tiktok/videos/details",
+        params={"video_url": video_url},
+        headers={"API-Key": OMKAR_API_KEY}
+    )
+    return resp.json()
+
+def search_videos(query):
+    """搜索视频 - 消耗1次额度"""
+    resp = requests.get(
+        f"{OMKAR_BASE}/tiktok/videos/search",
+        params={"search_query": query},
+        headers={"API-Key": OMKAR_API_KEY}
+    )
+    return resp.json()
+```
+
+### 免费替代方案（优先使用）
+
+```python
 import subprocess, json
 from datetime import datetime
 
 proxy = 'http://127.0.0.1:1082'  # Shadowrocket
 
-# Step 1: 搜索页获取视频链接
-page = StealthyFetcher.fetch('https://www.tiktok.com/search?q=OBSBOT',
-    headless=True, network_idle=True, disable_resources=True,
-    proxy=proxy, block_webrtc=True, hide_canvas=True)
-video_links = page.css('a[href*="/video/"]::attr(href)').getall()
-
-# Step 2: oembed API 获取视频详情（必须用代理，直连会 connection reset）
-for url in video_links[:10]:
+# oembed API - 免费，获取视频基本信息
+def get_video_info_free(video_url):
+    """用 oembed 获取基本信息 - 免费"""
     result = subprocess.run(
         ['curl', '-s', '--max-time', '8', '-x', proxy,
-         f'https://www.tiktok.com/oembed?url={url}'],
+         f'https://www.tiktok.com/oembed?url={video_url}'],
         capture_output=True, text=True, timeout=15)
-    data = json.loads(result.stdout)
-    print(f"{data['author_name']}: {data['title'][:80]}")
+    return json.loads(result.stdout)
 
-# Step 3: 视频 ID 解码发布时间
-for url in video_links:
-    vid_id = url.split('/video/')[-1]
+# 视频 ID 解码时间 - 免费
+def decode_video_time(video_url):
+    """从视频 URL 解码发布时间 - 免费"""
+    vid_id = video_url.split('/video/')[-1]
     ts = int(vid_id) >> 32  # Unix timestamp (秒)
-    dt = datetime.fromtimestamp(ts)
-    print(f"{url} → {dt.strftime('%Y-%m-%d')}")
+    return datetime.fromtimestamp(ts)
+```
+
+### 搜索页爬取（免费）
+
+```python
+from scrapling.fetchers import StealthyFetcher
+
+# 搜索页获取视频链接 - 免费
+def search_tiktok_links(keyword):
+    """搜索页获取视频链接 - 免费"""
+    page = StealthyFetcher.fetch(
+        f'https://www.tiktok.com/search?q={keyword}',
+        headless=True, network_idle=True, disable_resources=True,
+        proxy=proxy, block_webrtc=True, hide_canvas=True
+    )
+    return page.css('a[href*="/video/"]::attr(href)').getall()
+```
+
+### 额度追踪文件
+
+```bash
+# 追踪文件位置
+~/.hermes/config/omkar_usage.txt
+
+# 格式：日期: 使用次数 (用途)
+2026-06-08: 5 (初始测试)
+2026-06-09: 3 (OBSBOT竞品监测)
 ```
 
 **注意**：VPN 必须连接（Shadowrocket at 127.0.0.1:1082），否则 Scrapling 和 oembed API 都会超时。已知 OBSBOT TikTok 账号：`@obsbot`（17.5K粉丝）、`@obsbot_us`、`@obsbot.my`。标签：`#obsbot`、`#obsbot_tiny3lite`。
@@ -499,3 +578,5 @@ YouTube Data API 每日配额限制 100 次搜索。当返回 `429 Quota exceede
 **VPN 稳定性是首要约束。** Shadowrocket 长时间任务会断开，需要定期检查连接状态。YouTube API 和 TikTok Scrapling 都依赖 VPN。遇到 VPN 断开时先重连再继续。
 
 详见 `references/platform-constraints.md` 获取每个平台的详细状态和工具矩阵。
+详见 `references/tiktok-api-matrix.md` 获取 TikTok 多 API 对比、端点速查、额度分配策略。
+详见 `references/last30days-setup.md` 获取 last30days 深度研究工具的安装、配置、pitfall。

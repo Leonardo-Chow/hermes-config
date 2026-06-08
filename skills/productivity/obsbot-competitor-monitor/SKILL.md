@@ -551,3 +551,55 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 - ✅ `2026-06-08——竞品检测报告——时间范围（06.06-06.08）`
 - ❌ `2026-06-08——竞品检测报告——时间范围（6.6-6.8）`
 计算时用 `date +%m.%d` 而非手动拼接。
+
+### Pitfall 16: TikTok 数据源额度限制
+
+**Omar TikTok API（omkar.cloud）每月仅 100 次免费请求，必须合理分配！**
+
+| 用途 | 预算/月 | 说明 |
+|:-----|:--------|:-----|
+| OBSBOT 竞品监测 | 40 次 | 每周一/三/五，每次约 3-5 个关键视频详情 |
+| KOL 资料验证 | 30 次 | 高价值 KOL 的详细资料和视频历史 |
+| 应急备用 | 30 次 | 用户临时需求、特殊查询 |
+
+**优先级规则**：
+1. **🔴 必须用 Omar API**：获取视频完整数据（含 HD 下载链接）、验证 KOL 资料真实性
+2. **🟡 用免费替代**：视频基本信息 → oembed API、批量搜索 → ScraperAPI
+
+**额度管理脚本**：
+```bash
+# 检查额度
+python3 ~/.hermes/scripts/omkar_usage.py check
+
+# 记录使用
+python3 ~/.hermes/scripts/omkar_usage.py add 3 "竞品监测"
+```
+
+**免费替代方案（优先使用）**：
+```python
+import subprocess, json
+
+proxy = 'http://127.0.0.1:1082'  # Shadowrocket
+
+# oembed API - 免费
+def get_video_info_free(video_url):
+    result = subprocess.run(
+        ['curl', '-s', '--max-time', '8', '-x', proxy,
+         f'https://www.tiktok.com/oembed?url={video_url}'],
+        capture_output=True, text=True, timeout=15)
+    return json.loads(result.stdout)
+
+# 视频 ID 解码时间 - 免费
+def decode_video_time(video_url):
+    vid_id = video_url.split('/video/')[-1]
+    ts = int(vid_id) >> 32
+    return datetime.fromtimestamp(ts)
+```
+
+**Omar API 端点**：
+- 用户资料：`GET /tiktok/users/profile?handle=obsbot`（消耗1次）
+- 视频详情：`GET /tiktok/videos/details?video_url=...`（消耗1次）
+- 视频搜索：`GET /tiktok/videos/search?search_query=...`（消耗1次）
+- 热门推荐：`GET /tiktok/videos/trending`（消耗1次）
+
+**API Key**：`YOUR_OMKAR_API_KEY`，存 `~/.config/last30days/.env`

@@ -2,7 +2,7 @@
 name: cybernetics-review
 description: 基于钱学森工程控制论的复盘框架。复盘时用控制论闭环（输入→处理→输出→反馈→修正）梳理经验。底层逻辑存 memory，操作细节存 skill。Hermes 首要标准。
 tags: [review, cybernetics, qian-xuesen, retrospection, control-theory, primary-standard]
-version: 1.1.0
+version: 1.2.0
 ---
 
 # 控制论复盘框架 (Cybernetics Review Framework)

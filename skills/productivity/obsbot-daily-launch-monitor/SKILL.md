@@ -82,7 +82,10 @@ scutil --nc start "Shadowrocket" 2>&1; sleep 3
 
 ### Step 2: YouTube 搜索
 
-> **配额管理**：使用 API 池轮换，配置文件 `~/.hermes/config/youtube_api_pool.json`，管理脚本 `~/.hermes/scripts/youtube_api_pool.py`。
+> **配额管理**：使用 API 池轮换 + yt_optimizer.py 批量优化。
+> - 配置文件：`~/.hermes/config/youtube_api_pool.json`
+> - 管理脚本：`~/.hermes/scripts/youtube_api_pool.py`
+> - 优化器：`~/.hermes/scripts/yt_optimizer.py`（批量请求、本地缓存、配额追踪）
 
 #### 获取当前 API Key
 
@@ -113,18 +116,13 @@ for kw in "OBSBOT" "OBSBOT+Tiny+3" "OBSBOT+Tiny+2" "OBSBOT+Tail+2" "OBSBOT+Meet+
 done
 ```
 
-**简化版本**（直接在脚本中计算）：
+#### 批量获取视频详情（省 98% 配额）
 
-```bash
-DATE="2026-06-05"  # 北京时间日期
+```python
+from yt_optimizer import batch_videos
 
-# 计算 UTC 时间范围
-YESTERDAY=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)
-UTC_START="${YESTERDAY}T00:00:00Z"  # 前一天 UTC 00:00
-UTC_END="${DATE}T15:59:59Z"         # 当天 UTC 15:59
-
-echo "搜索范围（北京时间）: $YESTERDAY 08:00 ~ $DATE 23:59"
-echo "搜索范围（UTC时间）: $UTC_START ~ $UTC_END"
+# 批量获取 50 个视频 = 1 单位（不是 50）
+videos = batch_videos(["vid1", "vid2", ..., "vid50"])
 ```
 
 #### API 池轮换（配额用完时）
@@ -135,13 +133,11 @@ python3 ~/.hermes/scripts/youtube_api_pool.py list     # 查看所有 Key
 python3 ~/.hermes/scripts/youtube_api_pool.py add NEW_KEY  # 添加新 Key
 ```
 
-#### 获取视频详情
+#### 配额检查
 
 ```bash
-curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/videos?part=snippet&id=$VIDEO_ID&key=$API_KEY"
+python3 ~/.hermes/scripts/yt_optimizer.py quota  # 查看配额报告
 ```
-
-返回字段：title, channelTitle, description（前500字用于质检）
 
 ### Step 3: TikTok 搜索（多策略交叉验证）
 
@@ -149,7 +145,32 @@ curl -s --max-time 12 "https://www.googleapis.com/youtube/v3/videos?part=snippet
 > 
 > **2026-06-01 教训**：仅靠 web_search 漏掉了 @psscreativemedia 的视频（6月2日凌晨发布）。原因是搜索引擎索引延迟。
 
-#### 策略1: oembed API 验证已知视频（最可靠）
+#### 策略1: ScrapeCreators hashtag 搜索（推荐，最可靠）
+
+```python
+import requests
+
+API_KEY = "YOUR_SCRAPERCREATORS_API_KEY"
+BASE = "https://api.scrapecreators.com"
+
+def search_tiktok_hashtag(hashtag, count=20):
+    """hashtag 搜索 - 比关键词搜索更可靠"""
+    resp = requests.get(
+        f"{BASE}/v1/tiktok/search/hashtag",
+        params={"hashtag": hashtag, "count": count},
+        headers={"x-api-key": API_KEY}
+    )
+    return resp.json()
+
+# 搜索 OBSBOT 相关 hashtags
+for tag in ["obsbot", "obsbot_tiny3", "obsbot_tail2", "obsbot_meet2"]:
+    results = search_tiktok_hashtag(tag)
+    # 处理结果...
+```
+
+**已知问题**：关键词搜索返回空，hashtag 搜索更可靠。
+
+#### 策略2: oembed API 验证已知视频（免费，无限次）
 
 ```bash
 PROXY="http://127.0.0.1:1082"
@@ -158,7 +179,7 @@ curl -s --max-time 8 -x $PROXY "https://www.tiktok.com/oembed?url=https://www.ti
 
 返回：author_name, title, thumbnail_url。用于验证视频是否存在及获取标题。
 
-#### 策略2: 视频 ID 解码时间（判断发布日期）
+#### 策略3: 视频 ID 解码时间（判断发布日期）
 
 ```python
 import datetime
@@ -166,7 +187,7 @@ timestamp = int(video_id) >> 32
 date = datetime.datetime.fromtimestamp(timestamp).date()
 ```
 
-#### 策略3: 已知账号扫描
+#### 策略4: 已知账号扫描
 
 已知 OBSBOT TikTok 账号（定期检查最新视频）：
 - @obsbot（OBSBOT Official，17.5K 粉丝）
@@ -178,7 +199,7 @@ date = datetime.datetime.fromtimestamp(timestamp).date()
 - @obsbot.thailand
 - @obsbotsingapore
 
-#### 策略4: web_search 间接搜索（补充）
+#### 策略5: web_search 间接搜索（补充）
 
 ```python
 web_search('site:tiktok.com OBSBOT 2026-06', limit=10)
@@ -187,7 +208,25 @@ web_search('tiktok OBSBOT Tiny 3 review 2026', limit=10)
 
 注意：Tavily 有每日配额限制（keyless ~10次/天），优先用于其他平台搜索。
 
-#### 策略5: Cookie 认证（需要用户登录态）
+#### 策略6: Omar API（视频详情+HD下载链接）
+
+```python
+OMKAR_KEY = "YOUR_OMKAR_API_KEY"
+OMKAR_BASE = "https://tiktok-scraper.omkar.cloud"
+
+def get_video_details(video_url):
+    """获取视频详情 - 含 HD 无水印下载链接"""
+    resp = requests.get(
+        f"{OMKAR_BASE}/tiktok/videos/details",
+        params={"video_url": video_url},
+        headers={"API-Key": OMKAR_KEY}
+    )
+    return resp.json()
+```
+
+**额度**：100 次/月，用于高价值视频详情获取。
+
+#### 策略7: Cookie 认证（需要用户登录态）
 
 Cookie 保存在 `~/.hermes/cookies/platform_cookies.json`。有效期 1-2 周。
 

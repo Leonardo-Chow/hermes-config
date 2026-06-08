@@ -108,9 +108,33 @@ curl -sL -X PUT "http://127.0.0.1:9090/proxies/Proxy" -H "Content-Type: applicat
 - **⚠️ 优先级:** git 操作默认使用 `socks5://127.0.0.1:1082`，不要用 `http://127.0.0.1:1082`
 - **用户需确保 Shadowrocket 已手动开启**
 
-### git push 代理回退策略
+### git push 代理回退策略（2026-06-08 更新）
 
-当 `socks5://127.0.0.1:1082` 不可用时，按序尝试其他代理端口：
+当 `socks5://127.0.0.1:1082` 不可用时，按序尝试其他代理端口。
+
+**⚠️ 关键经验：SOCKS5 优先于 HTTP 代理**
+
+Shadowrocket HTTP 代理（1082 端口）对 git push 返回 `503 CONNECT tunnel failed`，但同端口的 SOCKS5 协议正常工作。始终使用 `socks5://` 前缀：
+
+```bash
+# ✅ 推荐：SOCKS5（稳定）
+git config http.proxy socks5://127.0.0.1:1082
+git config https.proxy socks5://127.0.0.1:1082
+
+# ❌ 不推荐：HTTP 代理（返回 503）
+# git config http.proxy http://127.0.0.1:1082
+```
+
+回退顺序：
+1. `socks5://127.0.0.1:1082`（Shadowrocket SOCKS5）
+2. `socks5://127.0.0.1:10808`（v2rayN SOCKS5）
+3. `http://127.0.0.1:7890`（ClashX Pro HTTP）
+
+**清理代理配置**（推送后必须执行）：
+```bash
+git config --unset http.proxy
+git config --unset https.proxy
+```
 ```bash
 # 1. Shadowrocket (1082)
 git config http.proxy socks5://127.0.0.1:1082 && git config https.proxy socks5://127.0.0.1:1082 && git push origin main
