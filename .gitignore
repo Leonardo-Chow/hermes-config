@@ -84,3 +84,4 @@ Thumbs.db
 skills/.curator_backups/
 kanban.db-shm
 kanban.db-wal
+config/youtube_api_pool.json
