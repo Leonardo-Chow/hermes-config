@@ -895,6 +895,21 @@ result = subprocess.run(
 
 ## 常见陷阱
 
+### ⚠️ Heredoc 中的 `&` 触发后台进程检测（2026-06-09 验证）
+**症状：** 在 `terminal` 中使用 `cat > file << 'EOF'` 写入包含 `&` 字符的内容时，Hermes 安全扫描器报错 `Foreground command uses '&' backgrounding. Use terminal(background=true)`。
+**原因：** `&` 是 shell 后台操作符，即使在 heredoc 内部也会被检测器拦截。
+**解决方案：** 使用 `write_file` 工具直接写入文件，完全绕开 shell 解析。对于大段 Markdown 内容（如日报全文），这是最可靠的方式。
+```python
+# ✅ 正确：使用 write_file
+write_file(path="/tmp/moyu_daily.md", content=report_content)
+
+# ❌ 会被拦截
+terminal("cat > /tmp/moyu_daily.md << 'EOF'\n...content with &...\nEOF")
+```
+
+### ⚠️ subprocess.run 使用 returncode 而非 exit_code（2026-06-09 验证）
+Python `subprocess.run()` 返回的 `CompletedProcess` 对象属性是 `returncode`，不是 `exit_code`。`result.returncode` 才是正确的写法。
+
 ### ⚠️ 安全扫描阻止 curl | python3 管道模式（2026-05-29 验证）
 **症状：** terminal 命令中使用 `curl ... | python3 -c "..."` 模式会被 Hermes 安全扫描器（tirith）拦截，返回 `pending_approval` 状态而非执行。涉及百度热搜、抖音热榜、东方财富板块涨幅等多个数据源。
 **原因：** 安全扫描器将 `curl | python3` 标记为 HIGH 风险（"Pipe to interpreter: curl | python3: Command pipes output from 'curl' directly to interpreter 'python3'"），因为下载的内容未经检查就被执行。

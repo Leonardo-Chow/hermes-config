@@ -133,11 +133,28 @@ curl -sL --max-time 20 'https://api.rss2json.com/v1/api.json?rss_url=https://www
 ```
 返回10条当天新闻，质量稳定，适合作为国际新闻第4-5来源。
 
-### Reuters ⚠️ 经常超时
-无稳定可用RSS端点
+### Reuters ⚠️ 经常超时/返回空（2026-06-09验证：rss2json返回空items）
+无稳定可用RSS端点，不要依赖此源
+
+### NYT World ⚠️ 经常返回空（2026-06-09验证：rss2json返回空items）
+`https://rss.nytimes.com/services/xml/rss/nyt/World.xml` → rss2json 后 items 为空
+
+### TMZ ⚠️ 返回空（2026-06-09验证）
+`https://www.tmz.com/rss.xml` → rss2json 后 items 为空
+
+### EW (Entertainment Weekly) ⚠️ 返回空（2026-06-09验证）
+`https://ew.com/feed/` → rss2json 后 items 为空
 
 ### AP News ⚠️ 经常超时
 `https://apnews.com/rss/world` → 经常 timeout
+
+### ✅ 验证可靠的RSS源清单（2026-06-09实测）
+按类别排列，优先使用这些源：
+- **科技：** TechCrunch · Ars Technica · The Verge · Wired
+- **国际：** BBC · NPR · Al Jazeera · France 24
+- **娱乐：** Variety · Hollywood Reporter
+- **AI：** TechCrunch AI 专栏
+- **综合：** HN RSS (hnrss.org)
 
 ---
 

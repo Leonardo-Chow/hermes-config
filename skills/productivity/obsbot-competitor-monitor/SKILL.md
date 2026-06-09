@@ -118,6 +118,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
 | Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra 4K review |
+| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 webcam |
 | Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review |
 | UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review |
 
@@ -470,7 +471,25 @@ mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "FILE_I
 
 ### Pitfall 1: API Key 截断
 YouTube API key (`AIzaSy...aA1Q`) 在 shell heredoc/变量中会被系统截断为 `***`。
-**解决方案**：用浏览器搜索方式，不要在脚本中写 API key。
+**解决方案**：
+- **方式 A**：用浏览器搜索方式，不要在脚本中写 API key
+- **方式 B**：将 API key 存入 `~/.config/youtube/api_key` 文件，脚本中用 `$(cat ~/.config/youtube/api_key)` 读取
+- **方式 C**：直接用 `curl` 命令行调用（不经过 Python heredoc）
+
+### Pitfall 1b: YouTube API 直连可用，代理反而失败（2026-06-09 验证）
+YouTube Data API 在中国大陆可以**直连访问**（`unset https_proxy http_proxy`），不需要代理。
+- ✅ 直连：`curl -s "https://www.googleapis.com/youtube/v3/..."` — 成功
+- ❌ 代理：`curl -s --proxy http://127.0.0.1:1082 "https://www.googleapis.com/youtube/v3/..."` — 返回 503 或超时
+
+但 **YouTube 网页版**（browser_navigate）需要代理才能访问。API 和网页版的网络路径不同。
+
+### Pitfall 1c: 视频链接必须是真实 URL，不能用占位符（2026-06-09 用户纠正）
+**用户反馈**："视频链接有问题，点不开是怎么回事"
+**原因**：脚本中使用了 `REPLACE_ME_1` 等占位符，没有替换为真实的 YouTube 视频 ID。
+**解决方案**：
+- 从浏览器搜索结果中提取的 `videoId` 必须直接用于构建 URL：`https://www.youtube.com/watch?v={videoId}`
+- 生成 Excel 前必须验证所有 URL 格式正确（包含 11 位 video ID）
+- 不要先写占位符再替换，直接用真实数据构建
 
 ### Pitfall 2: 代理不稳定
 - `import_file.sh` 有时需要代理，有时不需要
@@ -517,6 +536,15 @@ Shadowrocket VPN 在长时间执行（>5分钟）时会自动断开。
 **预防**：在每个主要步骤前检查代理可用性。
 
 ⚠️ **execute_code 沙箱中的 VPN 断开**：当 yt-dlp 搜索阶段（~75秒）完成后，进入详情获取阶段时 VPN 可能已断开。症状：所有 yt-dlp 调用返回 `Unable to connect to proxy`。此时必须在 terminal 中重连 VPN，然后重新执行详情获取脚本。
+
+⚠️ **VPN 状态检测不可靠**：`scutil --nc status "Shadowrocket"` 可能返回中间状态（如 "Disconnecting"）。**可靠方法**：直接用 curl 测试代理连通性：
+```bash
+curl -s --connect-timeout 5 --proxy http://127.0.0.1:1082 "https://www.youtube.com" -o /dev/null -w "%{http_code}"
+# 返回 200 = 连接正常，其他 = 需要重连
+```
+不要依赖 `scutil` 的状态文本判断。
+
+⚠️ **execute_code 内不需要 import openai**：yt-dlp 搜索和 curl 调用只用 `subprocess`、`json`、`datetime`、`concurrent.futures`。不要导入未使用的模块。
 
 ### Pitfall 10: yt-dlp 逐个获取详情超时
 yt-dlp `--print` 逐个获取视频元数据约 5-10 秒/个。192 个视频需 ~30 分钟，会超过 `execute_code` 的 300 秒超时。
