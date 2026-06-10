@@ -3,12 +3,12 @@ name: obsbot-daily-launch-monitor
 description: |
   OBSBOT 每日上线资源检测 — 自动搜索 YouTube/TikTok/Instagram/X 四平台，
   覆盖10个产品关键词，按日期范围筛选，生成质检报告并上传腾讯文档。
-version: 1.1.0
+version: 1.2.0
 author: Leonardo
 metadata:
   hermes:
     tags: [OBSBOT, YouTube, TikTok, Instagram, Twitter, monitoring, daily-report]
-    related_skills: [tencent-docs, youtube-full, scrapling, noxinfluencer, platform-cookies-manager]
+    related_skills: [tencent-docs, youtube-full, scrapling, noxinfluencer, platform-cookies-manager, leonardo-brand]
 ---
 
 # OBSBOT 每日上线资源检测
@@ -248,12 +248,56 @@ web_search('x.com OBSBOT Tiny 3 2026', limit=10)
 web_search('twitter OBSBOT camera May 2026', limit=10)
 ```
 
-### Step 6: 去重与筛选
+### Step 6: 日期验证与筛选（⚠️ 所有平台必须执行）
+
+> ⚠️ **核心教训（2026-06-10）**：不能只靠搜索引擎返回的"X天前"来判断日期。必须验证每条视频的实际发布日期，超出范围的坚决排除。
+> 
+> 用户原话：「很多都是好几天前就上架了，注意时间我只要指定日期范围内上架的视频」
+
+#### 平台级日期验证方法
+
+| 平台 | 验证方法 | 精度 |
+|:-----|:---------|:-----|
+| YouTube | `snippet.publishedAt`（API 直接返回 ISO 日期） | 精确到秒 |
+| TikTok | 视频 ID 解码：`int(video_id) >> 32` → Unix 时间戳 | 精确到秒 |
+| Instagram | 搜索结果中的日期元数据，或帖子 URL 中的日期编码 | 天级 |
+| X/Twitter | 搜索结果中的 `created_at` 字段 | 精确到秒 |
+
+#### TikTok 视频 ID 解码（必须对每条视频执行）
+
+```python
+import datetime
+
+def decode_tiktok_date(video_id):
+    """从 TikTok 视频 ID 提取精确发布时间"""
+    timestamp = int(video_id) >> 32
+    return datetime.datetime.fromtimestamp(timestamp)
+
+# 示例
+video_id = "7513089494989898989"
+dt = decode_tiktok_date(video_id)
+print(f"发布时间: {dt}")  # 精确到秒
+print(f"日期: {dt.date()}")
+```
+
+#### 浏览器"X天前"换算
+
+浏览器显示"3 days ago"需要换算为实际日期：
+```python
+from datetime import datetime, timedelta
+actual_date = datetime.now() - timedelta(days=3)
+```
+
+**判断规则**：`actual_date` 必须在搜索日期范围内，否则排除。
+
+#### 去重与筛选流程
 
 1. 按 video_id / post_url 去重
-2. 过滤官方账号（@obsbot, @OBSBOT_Official 等）
-3. 按日期分组
-4. 确认是否为 OBSBOT 产品相关（标题或描述中包含产品关键词）
+2. **日期验证**（必须第一步）：对每条视频验证实际发布日期，排除超出范围的
+3. 过滤官方账号（@obsbot, @OBSBOT_Official 等）
+4. 过滤日韩东南亚博主、<1分钟视频、纯直播
+5. 按日期分组
+6. 确认是否为 OBSBOT 产品相关（标题或描述中包含产品关键词）
 
 ### Step 7: 质检（SOP 要求）
 
@@ -420,6 +464,13 @@ mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "targ
 7. **去重逻辑**：上午呈现的内容下午不要重复呈现，只呈现新内容
 8. **文件命名**：`YYYY-MM-DD——视频上线监测——上午` 或 `YYYY-MM-DD——视频上线监测——下午`
 
+## 视觉规范
+
+报告上传到腾讯文档时，使用 `leonardo-brand` skill 的视觉规范：
+- 链接用纯文本 URL（不用 Markdown 超链接）
+- 视频标题用 `**1. 标题**` 格式单列
+- 质检项用 ☑️/☒ 标记
+
 ## 质检标准（SOP 要求）
 
 ### 视频内容质检
@@ -493,11 +544,17 @@ mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "targ
 11. **VPN 长任务中断**：定期检查 VPN 状态，断开时重新连接
 12. **smartcanvas API 故障**：`create_smartcanvas_by_mdx` 可能返回 RPC 错误，fallback 到 doc 类型 + `doc.insert_markdown`
 
+### 日期与时间陷阱
+
+16. **所有平台必须日期验证**：不能只靠搜索引擎返回的"X天前"。YouTube 用 `publishedAt`，TikTok 用 ID 解码，INS/X 用搜索元数据。超出范围坚决排除。用户原话：「很多都是好几天前就上架了，注意时间我只要指定日期范围内上架的视频」
+17. **YouTube API 返回 UTC**：北京时间 00:00 = UTC 前一天 16:00，必须用 UTC 范围搜索否则漏视频
+18. **TikTok web_search 索引延迟 1-3 天**：新发布的视频不会被收录，必须用 oembed + ID 解码交叉验证
+
 ### 用户行为信号
 
-13. **「做啊」「继续做」「立刻马上」** = 停止解释，直接执行
-14. **「不要废话」「开始啊」** = 跳过确认，立即行动
-15. **用户纠正格式/风格** = 立即更新 skill，不要重复犯错
+19. **「做啊」「继续做」「立刻马上」** = 停止解释，直接执行
+20. **「不要废话」「开始啊」** = 跳过确认，立即行动
+21. **用户纠正格式/风格/日期** = 立即更新 skill，不要重复犯错
 
 ## 输出位置
 

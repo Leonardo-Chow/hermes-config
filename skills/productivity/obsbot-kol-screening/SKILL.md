@@ -25,7 +25,45 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 | 活跃度 | 3 个月内有更新，超过 3 个月直接筛掉 |
 | OBSBOT 合作 | 已合作过的直接筛掉 |
 | 竞品合作 | 重点关注竞品合作过但 OBSBOT 未合作的 |
-| 产品官号 | **不要收录**（NexiGo、Hikvision、obsbot 等） |
+| 邮箱 | 暂不获取 |
+| **语言** | **只找英语类博主，欧洲/法语/西班牙语直接 pass，优先北美（US/CA）** |
+| **Shorts** | **全是 Shorts 的频道直接过滤掉** |
+| **游戏** | **全是游戏内容的频道直接过滤掉** |
+| **官号** | **产品官号不要收录（Reolink、Sling Pilot Academy 等）** |
+| **安防** | **安防摄像头类不要收录** |
+| **偏离主题** | **野生动物/天气/航空/无人画面直播等偏离主题的不要** |
+| **视频数** | **视频数 < 10 的频道直接过滤** |
+
+## 执行风格（用户明确要求）
+
+- **不要一步一停** — 搜索→验证→创建表格→写入，一气呵成，不要等用户说"继续"
+- **每次开始前检查日期** — `date '+%Y-%m-%d %A'` 确认今天日期
+- **一天至少 50 个合格 KOL** — 因为用户审核会淘汰一部分，所以要多找
+
+## 用户黑名单（不合格 KOL）
+
+以下 KOL 已确认不合格，永久排除：
+
+| KOL | 不合格原因 |
+|:-----|:-----|
+| Coast Cams | 内容偏离 |
+| Reolink | 官号 |
+| DaizeDreams | 全是 Shorts |
+| Milktea Emma | 全是 Shorts |
+| ToolBox BD | 安防摄像头 |
+| Nightfury | 视频少，定位不明确 |
+| Eddie's DL | 偏游戏 |
+| Big Bear Live Stream | 严重偏离主题，无人画面 |
+| HASIBxBRO | 纯游戏 |
+| PTZtv | 内容不合格 |
+| DWDderWetterdienst | 内容不合格（天气） |
+| WEBCAM NEPAL LIVE | 内容不合格 |
+| Sling Pilot Academy | 官号 |
+| Scottish Wildlife Trust | 内容不合格（野生动物） |
+| EGE – Gesellschaft | 内容不合格 |
+| Sugarloaf | 画像严重偏差 |
+| Alex Explorer - Scotventure | 画像严重偏差 |
+| VISIONPLUS TV RDC | 法语频道 |
 | 安防摄像头 | **不要收录**（security、surveillance、cctv、alarm） |
 | 纯 Shorts | **过滤掉**（频道只发短视频的） |
 | 纯游戏 | **过滤掉**（4/5 视频为游戏内容的） |
@@ -141,6 +179,38 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 | Podcast/Audio | `podcast setup,home studio,microphone review` | 录音棚多机位 |
 | Streaming Gear | `streaming setup,stream gear,obs setup` | 直播设备 |
 
+### ⚠️ Talent 产品核心策略（2026-06-09 用户纠正）
+
+**不要找终端用户（教会频道、活动公司），要找做设备评测/教程的专业博主。**
+
+Talent 是直播制作设备，KOL 应该是**评测这类设备的人**，不是使用这类设备的机构。
+
+| ✅ 正确 | ❌ 错误 |
+|:--------|:--------|
+| PhotoJoseph（ATEM评测） | Paula White Ministries（教会频道） |
+| ProAV（专业视频设备评测） | The Brooklyn Tabernacle（教会频道） |
+| Aaron Parecki（直播技术教程） | Living Stream Church（教会频道） |
+| Stream Scheme（直播设备评测） | VISIONPLUS TV（法语频道） |
+
+**搜索关键词应聚焦设备评测，不是终端场景：**
+- ✅ `ATEM Mini review, video switcher review, multicam setup tutorial`
+- ❌ `church streaming, worship live stream, event production`
+
+**语言要求：只找英语区博主（US/CA/UK/AU），欧洲/法语/西班牙语直接 pass。**
+
+## Talent 产品专属关键词
+
+| 品类 | NoxInfluencer keywords | 定位 |
+|:-----|:----------------------|:-----|
+| Church Stream | `church streaming,worship live stream,church live production,multicam church` | 教会直播 |
+| Event Production | `live event production,event streaming,multicam live,event camera` | 活动制作 |
+| ATEM Switch | `ATEM switcher,video switcher,live production switcher,multicam switching` | 视频切换 |
+| Sports Stream | `sports live streaming,sports camera,sports production,live sports` | 体育直播 |
+| Music Live | `live music stream,music production live,concert streaming,band live stream` | 音乐直播 |
+| Education | `classroom streaming,education live,teaching camera,lecture streaming` | 教育直播 |
+| PTZ Multicam | `PTZ camera,multicam setup,multi camera,live production camera` | 多机位 |
+| Live Production | `live production setup,broadcast equipment,studio production,live gear` | 直播制作 |
+
 ## 量级筛选参数
 
 | 目标 | avg_view | follower |
@@ -222,9 +292,14 @@ c['_is_vlog'] = vlog_count >= 3
 |:-----|:---------|
 | NoxInfluencer 403/Cloudflare | VPN 断了，`scutil --nc start "Shadowrocket"` |
 | mcporter add_records 超时 | 逐条添加（1 条/次），不要批量 |
+| mcporter list_tables 失败 | 直接用 `sheet_id="t00i2h"`，跳过 list_tables |
 | creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id |
 | 搜索结果无 channel_url | 必须单独调 `creator profile` 获取 |
 | 重复 KOL 跨批次 | 维护全局 excluded_names set |
+| VPN 长任务断连 | 每 10 个 profile 查询后重连 VPN：`scutil --nc start "Shadowrocket"` + `sleep 5` |
+| YouTube API 验证失败 | VPN 断了导致 curl 返回空。重连后重试。或跳过验证直接用 NoxInfluencer 数据 |
+| mcporter move_file 超时 | timeout 设 60s，不要用默认 30s |
+| 非英语频道混入 | 搜索时加 `--country '[US,CA,UK,AU]'`，过滤掉欧洲/法语/西班牙语频道 |
 | mcporter smartsheet.list_tables 报 RPC invalid | `mcporter auth tencent-docs` 重新认证 |
 | `--country` 和 `--keywords` 必须是 JSON 数组 | 字符串值会报 `Input should be a valid list`。正确格式：`--keywords '["a","b"]' --country '["FR"]'` |
 | 重复 KOL 跨批次 | 维护全局 excluded_names set，每次新搜索前加载所有历史 JSON |
@@ -514,8 +589,21 @@ output_path = '原始文件名_filled.xlsx'
 wb.save(output_path)
 ```
 
+## Creator Deep Research（创作者深度调研）
+
+当需要为**特定产品/活动**（如 Meet 3 粉色款、IP联名）寻找合作创作者时，使用深度调研流程。与常规筛选互补：筛选找候选人，深度调研评估具体合作适配度。
+
+详见 `references/creator-deep-research-workflow.md`，包含：
+- 四阶段流程（框架→筛选→分析→产出）
+- 6维度博主分析模板
+- 评论区用户需求金字塔
+- 评估矩阵维度定义
+- Word报告生成技巧
+- 创意Brief模板
+
 ## 参考文件
 
+- `references/creator-deep-research-workflow.md` — 创作者深度调研方法论（多平台搜索+分析+Word报告）
 - `references/leonardo-kol-writing-style.md` — Leonardo 的 KOL 评价风格指南
 - `references/youtube-channel-scraping.md` — YouTube 频道信息抓取技术方案
 - `references/tournament-kol-research.md` — 赛事关联 KOL 研究方法论（EWC/VCT 等赛事赞助场景）

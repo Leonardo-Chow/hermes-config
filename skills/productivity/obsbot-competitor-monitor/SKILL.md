@@ -113,7 +113,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | EMEET SmartCam S600 | EMEET S600 webcam, EMEET SmartCam S600 review |
 | EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 review |
 | EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review |
-| EMEET S600L | EMEET S600L webcam, EMEET S600L review |
+| EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K |
 | Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
