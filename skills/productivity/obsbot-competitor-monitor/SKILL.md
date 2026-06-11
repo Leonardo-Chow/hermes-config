@@ -96,30 +96,32 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ```
 
-## 核心竞品清单（18款）
+## 核心竞品清单（19款）
 
 ⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
+⚠️ **必须覆盖多语言**：英语、日语、葡萄牙语、西班牙语、法语、德语等。
 
 | 品牌 | 搜索关键词（必须全部搜索） |
 |------|-----------|
-| Logitech Series | Logitech Brio webcam, Logitech C920 webcam, Logitech MX Brio, Logitech C922 webcam |
+| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 PTZ |
+| Logitech Series | Logitech Brio webcam, Logitech C920 webcam, Logitech MX Brio, Logitech C922 webcam, Logitech Brio レビュー |
 | Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming |
 | Insta360 Link 2c | Insta360 Link 2c webcam, Insta360 Link 2c review |
 | Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
 | Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review |
 | Elgato Facecam 4K | Elgato Facecam 4K, Elgato Facecam 4K review, Elgato Facecam 4K streaming |
 | Elgato Facecam mk2 | Elgato Facecam mk2, Elgato Facecam mk2 review |
-| Emeet Pixy | Emeet Pixy webcam, EMEET Pixy review, EMEET Pixy streaming |
+| Emeet Pixy | Emeet Pixy webcam, EMEET Pixy review, EMEET Pixy PTZ, EMEET Pixy レビュー |
 | EMEET SmartCam S600 | EMEET S600 webcam, EMEET SmartCam S600 review |
 | EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 review |
-| EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review |
-| EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K |
-| Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming |
+| EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review, EMEET PIXY Wireless レビュー, EMEET PIXY Wireless resenha |
+| EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K, EMEET S600L レビュー |
+| Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming, Yolocam S3 レビュー |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
 | Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra 4K review |
-| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 webcam |
 | Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review |
+| UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review, UGREEN webcam レビュー, UGREEN webcam resenha |
 | UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review |
 
 ## 过滤规则（必须严格执行）
