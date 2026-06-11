@@ -1017,13 +1017,14 @@ python3 -c "import json,re; f=open('/tmp/github.json','rb'); raw=f.read().decode
 ### ⚠️ 全球市场数据获取困难（2026-06-02 验证）
 **问题：** Yahoo Finance API（query1/query2.finance.yahoo.com）和 autocli yahoo-finance 均返回空或超时。Google Finance 页面数据难以提取。
 **可用替代方案：**
-1. **加密货币**：CoinGecko API（可靠，无需认证）
+1. **加密货币**：CoinGecko API（⚠️ 2026-06-11验证：在中国大陆GFW环境下经常超时15秒无响应，非100%可靠）
    ```bash
-   curl -s 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'
+   curl -s --max-time 15 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'
    ```
-2. **A股**：腾讯股票 API（qt.gtimg.cn，GBK 编码需 iconv 转 UTF-8）
+   **降级**：超时时在日报中标注"加密货币数据因API超时暂缺"，不要反复重试浪费时间
+2. **A股**：腾讯股票 API（qt.gtimg.cn，GBK 编码需 iconv 转 UTF-8）— 最可靠
 3. **港股/日经**：暂时无法获取，在日报中标注"数据暂缺"即可
-**建议：** 不要花时间尝试 Yahoo Finance 的各种变体 URL，直接用 CoinGecko + 腾讯 API 覆盖能获取的部分。
+**建议：** 不要花时间尝试 Yahoo Finance 的各种变体 URL，直接用腾讯 API 覆盖A股，CoinGecko 尝试一次获取加密货币，超时即跳过。
 
 ### ⚠️ 东方财富板块涨幅 API 返回空（2026-06-02 验证）
 **症状：** `push2.eastmoney.com` 返回 0 字节（文件为空），即使使用正确的请求参数。

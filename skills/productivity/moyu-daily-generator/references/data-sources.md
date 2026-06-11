@@ -172,3 +172,14 @@ curl -sL "https://variety.com/feed/" -H 'User-Agent: Mozilla/5.0'
 
 ### AceShowbiz ⚠️
 RSS有时404，可用THR和Variety替代
+
+---
+
+## 加密货币
+
+### CoinGecko API ⚠️ 中国大陆经常超时（2026-06-11验证）
+```bash
+curl -s 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'
+```
+该API在中国大陆GFW环境下经常超时（15秒timeout内无响应）。CoinGecko服务器可能对大陆IP限流。
+**降级方案**：在日报中标注"加密货币数据因API超时暂缺"，或从百度/微博热搜中提取财经相关条目补充。不要反复重试浪费时间。

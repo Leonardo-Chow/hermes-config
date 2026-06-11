@@ -234,18 +234,48 @@ Cookie 保存在 `~/.hermes/cookies/platform_cookies.json`。有效期 1-2 周�
 
 ### Step 4: Instagram 搜索
 
+> ⚠️ **重要**：必须搜索所有产品关键词变体，不能只搜通用关键词。2026-06-11 漏掉了 @fabianpulidozorro 的帖子。
+
 ```python
-web_search('site:instagram.com OBSBOT May 2026', limit=10)
-web_search('instagram OBSBOT Tiny 3 2026', limit=10)
-web_search('instagram.com/p obsbot 2026-05', limit=10)
+# 必须搜索的关键词变体
+search_queries = [
+    'site:instagram.com OBSBOT June 2026',
+    'site:instagram.com OBSBOT Tiny 3 2026',
+    'site:instagram.com OBSBOT Tiny 2 2026',
+    'site:instagram.com OBSBOT Tail 2 2026',
+    'site:instagram.com OBSBOT Meet 2 2026',
+    'site:instagram.com OBSBOT Meet SE 2026',
+    'site:instagram.com OBSBOT Tail Air 2026',
+    'site:instagram.com OBSBOT Talent 2026',
+    'instagram OBSBOT webcam June 2026',
+    'instagram OBSBOT camera June 2026',
+    'instagram.com/p obsbot 2026-06',
+    'instagram.com/reel obsbot 2026-06',
+]
 ```
 
 ### Step 5: X/Twitter 搜索
 
+> ⚠️ **重要**：必须搜索所有产品关键词变体，不能只搜通用关键词。2026-06-11 漏掉了 @applejackeroni 的推文。
+
 ```python
-web_search('site:x.com OBSBOT 2026-05-30', limit=10)
-web_search('x.com OBSBOT Tiny 3 2026', limit=10)
-web_search('twitter OBSBOT camera May 2026', limit=10)
+# 必须搜索的关键词变体
+search_queries = [
+    'site:x.com OBSBOT 2026-06-11',
+    'site:x.com OBSBOT 2026-06-10',
+    'site:x.com OBSBOT June 2026',
+    'site:x.com OBSBOT Tiny 3 2026',
+    'site:x.com OBSBOT Tiny 2 2026',
+    'site:x.com OBSBOT Tail 2 2026',
+    'site:x.com OBSBOT Meet 2 2026',
+    'site:x.com OBSBOT Meet SE 2026',
+    'site:x.com OBSBOT Tail Air 2026',
+    'site:x.com OBSBOT Talent 2026',
+    'twitter OBSBOT camera June 2026',
+    'twitter OBSBOT webcam June 2026',
+    'OBSBOT giveaway twitter June 2026',
+    'OBSBOT ambassador twitter June 2026',
+]
 ```
 
 ### Step 6: 日期验证与筛选（⚠️ 所有平台必须执行）
@@ -332,6 +362,24 @@ actual_date = datetime.now() - timedelta(days=3)
 - **日韩东南亚博主自动过滤**：日本、韩国、泰国、越南、印尼、马来西亚、菲律宾等地区博主 → 排除（内容以当地语言为主，对欧美市场参考价值低）
 - **视频时长不到1分钟** → 排除（太短无法展示产品特性）
 - **纯直播类型（没有讲解）** → 排除（只有画面没有产品介绍/评测内容）
+- **视频质量差** → 排除（画质差、内容浅、制作粗糙、剪辑混乱等）
+- **日期必须确认**：必须确认是当天发布的视频，昨天的不算
+
+#### 视频质量判断标准
+
+| 标准 | 说明 |
+|:-----|:-----|
+| 画质 | 至少 720p，画面清晰不模糊 |
+| 内容深度 | 有实际产品展示和讲解，不是简单开箱 |
+| 剪辑质量 | 剪辑流畅，不是拼凑感强 |
+| 音频质量 | 声音清晰，无杂音 |
+| 整体观感 | 专业感强，不是业余随意拍摄 |
+
+#### 日期验证方法
+
+1. **YouTube**：用 publishedAt 字段验证
+2. **TikTok**：用视频 ID 解码验证（`int(video_id) >> 32`）
+3. **Instagram/X**：用搜索结果中的日期信息验证
 
 #### 日韩东南亚地区识别方法
 
