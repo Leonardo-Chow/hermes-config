@@ -234,7 +234,7 @@ Cookie 保存在 `~/.hermes/cookies/platform_cookies.json`。有效期 1-2 周�
 
 ### Step 4: Instagram 搜索
 
-> ⚠️ **重要**：必须搜索所有产品关键词变体，不能只搜通用关键词。2026-06-11 漏掉了 @fabianpulidozorro 的帖子。
+> ⚠️ **重要**：必须搜索所有产品关键词变体，不能只搜通用关键词。2026-06-11 漏掉了 @fabianpulidozorro 的帖子，2026-06-12 漏掉了 @farmsim25builds 的帖子。
 
 ```python
 # 必须搜索的关键词变体
@@ -251,6 +251,12 @@ search_queries = [
     'instagram OBSBOT camera June 2026',
     'instagram.com/p obsbot 2026-06',
     'instagram.com/reel obsbot 2026-06',
+    'instagram OBSBOT code discount 2026',
+    'instagram OBSBOT ambassador 2026',
+    'instagram OBSBOT affiliate 2026',
+    'instagram OBSBOT brand ambassador 2026',
+    'instagram OBSBOT giveaway 2026',
+    'instagram OBSBOT promo code 2026',
 ]
 ```
 
@@ -261,8 +267,8 @@ search_queries = [
 ```python
 # 必须搜索的关键词变体
 search_queries = [
+    'site:x.com OBSBOT 2026-06-12',
     'site:x.com OBSBOT 2026-06-11',
-    'site:x.com OBSBOT 2026-06-10',
     'site:x.com OBSBOT June 2026',
     'site:x.com OBSBOT Tiny 3 2026',
     'site:x.com OBSBOT Tiny 2 2026',
@@ -275,6 +281,9 @@ search_queries = [
     'twitter OBSBOT webcam June 2026',
     'OBSBOT giveaway twitter June 2026',
     'OBSBOT ambassador twitter June 2026',
+    'OBSBOT affiliate twitter June 2026',
+    'OBSBOT brand ambassador twitter 2026',
+    'OBSBOT promo code twitter 2026',
 ]
 ```
 
@@ -359,7 +368,7 @@ actual_date = datetime.now() - timedelta(days=3)
 - 故障展示/非产品测评 → 排除
 - 仅设备列表提及（非主要使用）→ 排除
 - 竞品评测（可能对比OBSBOT但不是主产品）→ 排除
-- **日韩东南亚博主自动过滤**：日本、韩国、泰国、越南、印尼、马来西亚、菲律宾等地区博主 → 排除（内容以当地语言为主，对欧美市场参考价值低）
+- **日韩东南亚博主谨慎过滤**：日本、韩国、泰国、越南、马来西亚、菲律宾等地区博主 → 排除（内容以当地语言为主，对欧美市场参考价值低）。**但印尼博主如果是KOL自发评测/开箱/对比等有价值内容，应保留**（2026-06-12 教训：Legawa Gadget 印尼语 Tiny3+vox se 评测被误过滤）
 - **视频时长不到1分钟** → 排除（太短无法展示产品特性）
 - **纯直播类型（没有讲解）** → 排除（只有画面没有产品介绍/评测内容）
 - **视频质量差** → 排除（画质差、内容浅、制作粗糙、剪辑混乱等）

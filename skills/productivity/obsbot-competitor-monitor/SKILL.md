@@ -96,7 +96,7 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ```
 
-## 核心竞品清单（19款）
+## 核心竞品清单（21款）
 
 ⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
 ⚠️ **必须覆盖多语言**：英语、日语、葡萄牙语、西班牙语、法语、德语等。
@@ -116,6 +116,8 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 review |
 | EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review, EMEET PIXY Wireless レビュー, EMEET PIXY Wireless resenha |
 | EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K, EMEET S600L レビュー |
+| EMEET SmartCam C960 Ultra | EMEET SmartCam C960 Ultra, EMEET 960C, EMEET C960, EMEET 960C review, EMEET C960 Ultra |
+| EMEET C60E | EMEET C60E, EMEET C60E webcam, EMEET C60E review |
 | Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming, Yolocam S3 レビュー |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
@@ -145,7 +147,12 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ### 过滤4：低质量视频排除
 - 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
 
-### 过滤5：是否上评判断
+### 过滤5：赞助视频识别
+- 如果视频页面显示「包含付费宣传内容」（Contains paid promotion）标签，在 Content Type 后加 "/Sponsored"
+- 检测方法：`document.querySelector('a[href*="paid_promotion"]')` 或页面上出现 `包含付费宣传内容` 文字
+- 赞助视频的评论区可信度较低，但不影响是否上评判断
+
+### 过滤6：是否上评判断
 - 仅在以下情况标记"是"：
   - 评论区明确提到 obsbot/meet/tiny/tail 等关键词
   - 视频 hashtags 包含 obsbot 相关标签（如 `#streamwithobsbot`）
@@ -157,6 +164,95 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 - 「FORZA HORIZON 6 E WEBCAM EMEET PIXY 4K」→ ❌ 排除（纯游戏内容）
 - 「Hollyland FAQ」频道的所有视频 → ❌ 排除（官方账号）
 
+## 输出格式（2026-06-12 更新）
+
+### Word 文档格式（必须）
+
+报告必须包含以下结构：
+
+```
+# OBSBOT 上线资源报告
+
+日期：YYYY年M月D日（周X）
+搜索范围：M月D日（周X）~ M月D日（周X）
+
+## 全平台搜索结果
+
+### YouTube（N条）
+1. 视频标题
+   博主：频道名
+   链接：URL
+   产品：产品名
+   类型：Dedicated Video / Integration（榜单）/ Review
+   发布时间：YYYY-MM-DD
+   简介：简要描述
+
+### TikTok（N条，已验证日期）
+...
+
+### Instagram（N条）
+...
+
+### X/Twitter（N条）
+今日无新帖。
+
+## 符合 SOP 要求的视频（含质检）
+
+### YouTube
+1. 视频标题
+   博主：频道名
+   链接：URL
+   产品：产品名
+   类型：Dedicated Video
+   视频内容质检：
+   ☑️ 常规产品测评
+   ☑️ 原画直出：有
+   ☑️ 特殊主题：无
+   描述区质检：
+   ☒ 官网链接：无
+   ☑️ 亚马逊链接：有（联盟链接）
+   ☒ 折扣信息：无
+   ☒ 标签：无
+
+## 统计汇总
+
+### 产品覆盖情况（表格）
+| 产品 | 状态 |
+|------|------|
+| OBSBOT Tail Air | ✅ 有新视频（N条） |
+| OBSBOT Meet 2 | ✅ 有新视频（N条） |
+...
+
+### 过滤说明（表格）
+| 过滤项 | 原因 |
+|--------|------|
+| 多个东南亚游戏主播 | 仅设备列表提及OBSBOT，非产品测评 |
+...
+```
+
+### Excel 表格格式（同步上传）
+
+同时生成 Excel 表格上传到腾讯文档。
+
+### 文件命名规则
+
+`{当天日期}——视频上线监测——上午/下午`
+
+示例：`2026-06-12——视频上线监测——上午`
+
+### 保存位置
+
+腾讯文档：云盘 → OBSBOT → 竞品监测
+文件夹 ID：`DnNkcnCRIHGt`
+
+### 关键质量要求
+
+1. **必须覆盖全平台**：YouTube、TikTok、Instagram、X/Twitter
+2. **每个视频必须有质检**：视频内容质检 + 描述区质检
+3. **必须有统计汇总**：产品覆盖情况表 + 过滤说明表
+4. **必须说明过滤原因**：哪些内容被过滤了，为什么
+5. **链接必须真实有效**：不能用占位符
+
 ## 数据字段
 
 | 字段 | 说明 |
@@ -166,7 +262,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | 网红ID | 频道名 |
 | 视频链接 | YouTube URL |
 | 量级 | KOL/KOC/素人（按播放量：≥10k=KOL，≥1k=KOL，≥100=KOC，<100=素人） |
-| Content Type | Review/VS/Shorts/Tutorials/Unboxing/Roundup/Livestream |
+| Content Type | Review/VS/Shorts/Tutorials/Unboxing/Roundup/Livestream/Sponsored |
 | 是否上评 | 是/空（仅评论提到obsbot或舆论差时=是） |
 | 曝光量 | 播放量 |
 | 点赞量 | 点赞数 |
@@ -240,10 +336,10 @@ echo "文件名: ${TODAY}——竞品检测报告——时间范围（${START_DI
 3. **浏览器搜索**（最可靠但最慢，可能触发 bot 检测）
 4. **Exa MCP**（补充搜索，日期索引有延迟）
 
-**🎯 最佳组合策略（2026-06-08 验证）**：
-1. **Phase 1**：yt-dlp `ytsearch8` 搜索全部品牌（~75秒，242个视频），用 ThreadPoolExecutor 并行获取详情（~80秒）→ 过滤日期范围
-2. **Phase 2**：如果 Phase 1 结果为空或过少，用浏览器搜索（`sp=EgIIAw%3D%3D` 日期排序）补充 → 2 个 subagent 各搜索 9 个品牌
-3. **Phase 3**：对补充搜索到的视频用 yt-dlp 获取详情
+**🎯 最佳组合策略（2026-06-08 验证，2026-06-12 更新）**：
+1. **Phase 1**：yt-dlp `ytsearch8` 搜索全部品牌（~75秒，242个视频），用 ThreadPoolExecutor 并行获取详情（~80秒）→ 过滤日期范围。**预期命中率**：2天窗口约 0.4%（1-2个视频），3天窗口约 1-2%。
+2. **Phase 2**：如果 Phase 1 结果为空或过少，用浏览器搜索（`sp=EgIIAw%3D%3D` 日期排序）补充 → 2 个 subagent 各搜索 9 个品牌。**预期命中率**：2天窗口约 7-10 个视频。
+3. **Phase 3**：对补充搜索到的视频用 yt-dlp 获取详情。如果 yt-dlp 失败（新视频格式问题），用浏览器获取详情（见 Pitfall 17）。
 
 这种组合策略比纯浏览器搜索快 3x，比纯 yt-dlp 不会漏掉低播放量的新视频。
 
@@ -329,15 +425,21 @@ curl -s --proxy http://127.0.0.1:1082 \
   "https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=ID1,ID2,...&key=API_KEY"
 ```
 
-**方式 C: 浏览器（最慢，适合少量视频）**
+**方式 C: 浏览器（最慢，适合少量视频，yt-dlp 失败时的唯一选择）**
+
+⚠️ **何时使用**：当 yt-dlp 报 `Requested format is not available`（新视频 <48h）或 bot 检测错误时，必须用浏览器获取详情。用 `delegate_task` 批量处理，每个 subagent 最多 7 个视频。
 
 对每个视频，用 browser_navigate 访问视频页面，browser_console 提取：
 ```javascript
 const title = document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim();
 const channel = document.querySelector('#channel-name a')?.textContent?.trim();
 const views = document.querySelector('#info-container span:first-child')?.textContent?.trim();
-const likes = document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim();
+const likes = document.querySelector('like-button-view-model button')?.getAttribute('aria-label') || document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim();
+const date = document.querySelector('#info-container span:nth-child(3)')?.textContent?.trim();
+const duration = document.querySelector('.ytp-time-duration')?.textContent?.trim();
 ```
+
+⚠️ **注意**：YouTube 页面结构可能变化。如果上述选择器失效，用 `document.querySelectorAll('[class*="ytd-watch"]')` 探索可用元素。
 
 ### Step 3: 过滤
 - 删除播放量<50且时长<1分钟的视频
@@ -581,6 +683,45 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 - ✅ `2026-06-08——竞品检测报告——时间范围（06.06-06.08）`
 - ❌ `2026-06-08——竞品检测报告——时间范围（6.6-6.8）`
 计算时用 `date +%m.%d` 而非手动拼接。
+
+### Pitfall 17: yt-dlp 对新视频报 "Requested format is not available"（2026-06-12 验证）
+yt-dlp 对最近上传（<48小时）的视频可能报 `Requested format is not available` 错误，即使使用 `--skip-download` 和 `--cookies-from-browser chrome`。这与 Pitfall 1（bot 检测）不同——是格式解析问题。
+
+**触发条件**：视频上传不足 48 小时，YouTube 尚未完成所有格式的转码。
+**症状**：
+- `yt-dlp --skip-download --print ...` → `ERROR: Requested format is not available`
+- `yt-dlp --dump-json` → 同样错误
+- 不加 `--cookies-from-browser` 会先报 bot 检测错误
+
+**解决方案**：用浏览器获取视频详情（见 Step 2 方式 C）。
+```javascript
+// 在视频页面的 browser_console 中执行
+JSON.stringify({
+  title: document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim(),
+  channel: document.querySelector('#channel-name a')?.textContent?.trim(),
+  views: document.querySelector('#info-container span:first-child')?.textContent?.trim(),
+  likes: document.querySelector('like-button-view-model button')?.getAttribute('aria-label'),
+  date: document.querySelector('#info-container span:nth-child(3)')?.textContent?.trim(),
+  duration: document.querySelector('.ytp-time-duration')?.textContent?.trim()
+});
+```
+
+⚠️ 用 `delegate_task` 批量获取详情时，每个 subagent 最多处理 **7 个视频**（每次 ~30 秒），避免超时。
+
+### Pitfall 18: execute_code 沙箱中 yt-dlp 和代理均不可用（2026-06-12 验证）
+在 `execute_code` 沙箱中，`subprocess` 调用 yt-dlp 即使设置了 `https_proxy` 环境变量也会返回 0 结果。原因：
+1. 沙箱可能没有 yt-dlp 二进制文件
+2. 沙箱的网络环境不走系统代理
+
+**症状**：`execute_code` 中 yt-dlp 搜索/详情获取返回 0 个结果，但同样的命令在 `terminal` 中正常工作。
+
+**解决方案**：
+- Phase 1 搜索：用 `execute_code`（yt-dlp 搜索确实能在 execute_code 中工作——2026-06-08 验证）
+- Phase 1 详情获取：**必须用 `terminal`**（写 Python 脚本到 `/tmp/`，用 `terminal` 执行）
+- Phase 2 浏览器搜索：用 `delegate_task` + browser tools
+- Phase 2 详情获取：用 `delegate_task` + browser tools（当 yt-dlp 失败时）
+
+⚠️ 如果 Phase 1 的详情获取在 `execute_code` 中返回 0 结果，不要反复重试——立即切换到 `terminal` 执行。
 
 ### Pitfall 16: TikTok 数据源额度限制
 

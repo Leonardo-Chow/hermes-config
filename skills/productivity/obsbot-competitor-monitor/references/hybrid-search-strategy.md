@@ -120,6 +120,35 @@ JSON.stringify(vidList);
 
 对 Phase 2 发现的新视频 ID，用 yt-dlp 获取详情（与 Phase 1 相同的 get_video_date 函数）。
 
+⚠️ **2026-06-12 发现**：yt-dlp 对 <48 小时的新视频会报 `Requested format is not available` 错误（见 Pitfall 17）。此时必须用浏览器获取详情。
+
+### Phase 3b: 浏览器详情获取（当 yt-dlp 失败时）
+
+用 `delegate_task` + browser tools 批量获取视频详情：
+- 每个 subagent 处理 **7 个视频**（每次 ~30 秒）
+- 提取字段：title, channel, views, likes, date, duration
+
+```javascript
+// 在视频页面的 browser_console 中执行
+JSON.stringify({
+  title: document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim(),
+  channel: document.querySelector('#channel-name a')?.textContent?.trim(),
+  views: document.querySelector('#info-container span:first-child')?.textContent?.trim(),
+  likes: document.querySelector('like-button-view-model button')?.getAttribute('aria-label'),
+  date: document.querySelector('#info-container span:nth-child(3)')?.textContent?.trim(),
+  duration: document.querySelector('.ytp-time-duration')?.textContent?.trim()
+});
+```
+
+## 实际命中率数据（2026-06-12 周五，2天窗口）
+
+| 阶段 | 搜索范围 | 找到视频 | 在日期范围内 |
+|------|---------|---------|------------|
+| Phase 1 yt-dlp | 19品牌×3关键词=51查询 | 254 个唯一视频 | **1 个** |
+| Phase 2 浏览器 | 19品牌×1查询 | ~40 个视频 | **7 个**（含1个重复） |
+
+**结论**：对于 2 天窗口，yt-dlp 按相关性排序找到的视频中仅 ~0.4% 在日期范围内。浏览器按日期排序搜索是发现新视频的主要来源。
+
 ## 典型时间分布
 
 | 阶段 | 耗时 | 产出 |
@@ -127,5 +156,5 @@ JSON.stringify(vidList);
 | Phase 1 搜索 | ~75s | 242 个视频 |
 | Phase 1 详情获取 | ~80s | 0-N 个日期范围内视频 |
 | Phase 2 浏览器搜索 | ~400s | 5-15 个新视频 |
-| Phase 3 详情获取 | ~10s | 补充视频详情 |
-| **总计** | **~10 min** | **完整覆盖** |
+| Phase 3 详情获取 | ~10s 或 ~240s（浏览器） | 补充视频详情 |
+| **总计** | **~10-15 min** | **完整覆盖** |
