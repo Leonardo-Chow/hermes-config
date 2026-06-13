@@ -1,6 +1,6 @@
 ---
 name: obsbot-competitive-analysis
-description: 多平台竞品分析工作流 — 从 YouTube/Reddit/Amazon 等平台数据（docx/xlsx）中提取用户反馈，生成杂志风格 HTML 市场分析报告（含 Chart.js 图表）。当用户要求分析竞品数据、生成市场分析报告、或处理 OBSBOT/竞品的 YouTube 评论/Reddit 讨论/Amazon 评论时使用。也适用于 YouTube 全量视频搜索+KOL 调研（产品竞品分析场景）。
+description: 多平台竞品分析工作流 — 从 YouTube/Reddit/Amazon/TikTok 等平台数据（docx/xlsx）中提取用户反馈，生成杂志风格 HTML 市场分析报告（含 Chart.js 图表）。覆盖 OBSBOT Admin API 调用、TikTok 多源数据采集、KOL 视频解析、每日监测、竞品投放监测。当用户要求分析竞品数据、生成市场分析报告、或处理 OBSBOT/竞品的 YouTube 评论/Reddit 讨论/Amazon 评论/TikTok 数据时使用。
 version: 1.1.0
 ---
 
@@ -51,6 +51,9 @@ version: 1.1.0
 
 - OBSBOT 产品竞品分析
 - OBSBOT 每日多平台内容监测（YouTube/Instagram/TikTok/X）
+- OBSBOT Admin API 调用（网红数据、品牌大使、批量扫描）
+- TikTok 多源数据采集（oembed/ScrapeCreators/Omar API）
+- KOL 视频解析与文档生成
 - 任何产品的多平台用户反馈分析
 - 从 docx/xlsx 文件中提取数据生成可视化报告
 
@@ -160,7 +163,32 @@ for name in wb.sheetnames:
 - 统计提及频率
 - 对比维度：价格、功能、用户口碑
 
-### 参考文件索引
+### TikTok 数据采集
+
+多源采集 TikTok 数据的统一工具链。当每日监测或竞品监测需要 TikTok 数据时使用。
+
+**数据源优先级（按成本排序）**：
+
+| 优先级 | 方案 | 成本 | 适用场景 | 额度 |
+|:-------|:-----|:-----|:---------|:-----|
+| 1 | oembed API + 代理 | 免费 | 视频基本信息（标题、作者、封面） | 无限 |
+| 2 | ScraperAPI | 按量计费 | 通用网页抓取、代理池 | 5000/月 |
+| 3 | ScrapeCreators | 按量计费 | 用户资料、hashtag 搜索 | 95+ 积分 |
+| 4 | Omar API | 按量计费 | 视频详情（含 HD 下载链接） | 100/月 |
+
+**免费方案（oembed API）**：`curl -x http://127.0.0.1:1082 'https://www.tiktok.com/oembed?url=VIDEO_URL'` — 返回标题、作者、封面。需代理。
+
+**视频 ID 时间解码**：`int(video_id) >> 32` = Unix timestamp，免费获取发布时间。
+
+**ScrapeCreators**：hashtag 搜索比关键词搜索更可靠。API Key 在 `~/.config/last30days/.env`。
+
+**Omar API**：每月 100 次免费，提供 HD 无水印下载链接。额度宝贵，优先用免费方案。
+
+**⚠️ 额度管理**：Omar API 每月仅 100 次。竞品监测 40 次 + KOL 验证 30 次 + 应急 30 次。
+
+详见 `references/tiktok-omar-api.md` 和 `references/tiktok-scrapecreators-api.md`。
+
+## 参考文件索引
 
 本 skill 的 `references/` 目录包含：
 | 文件 | 内容 |
@@ -169,12 +197,25 @@ for name in wb.sheetnames:
 | `noxinfluencer-kol-discovery-cookbook.md` | NoxInfluencer CLI 搜索命令大全 |
 | `verified-kol-patterns-from-v3-session.md` | 2026-05 美洲市场V3已验证的KOL偏好模式 + 搜索参数 + GFW恢复策略 |
 | `kol-video-analysis-workflow.md` | KOL 单视频分析流程 |
+| `kol-doc-style-guide.md` | KOL 视频解析文档语言风格指南 |
 | `youtube-full-search.md` | YouTube 全量视频搜索 |
 | `daily-monitoring-workflow.md` | 每日监测工作流（多平台搜索+智能表格） |
 | `competitive-monitoring-sop.md` | OBSBOT 竞品投放监测 SOP（竞品清单、数据字段、用户评论5大维度、竞争洞察） |
 | `html-template-guide.md` | HTML 报告模板指南 |
-| `obsbot-admin-api.md` | OBSBOT 内部管理系统 API（网红数据、大使列表、批量扫描） |
+| `obsbot-admin-api.md` | OBSBOT 内部管理系统 API 完整参考（认证、端点、19条 pitfall、批量扫描） |
+| `admin-batch-scanning-workaround.md` | 列表接口 500 时的逐 ID 批量扫描方案 |
+| `admin-data-snapshot-2026-06.md` | Admin API 数据快照（2026-06） |
+| `admin-js-reverse-engineering.md` | Admin 前端 JS 逆向分析 |
+| `admin-email-verification-flow.md` | 邮箱验证码自动获取流程 |
+| `admin-api-calling-patterns.md` | API 调用模式和模板 |
 | `smartsheet-batch-ops.md` | 腾讯文档智能表格批量操作（分页、删除、上传） |
+| `tiktok-omar-api.md` | Omar TikTok API 详情和额度管理 |
+| `tiktok-scrapecreators-api.md` | ScrapeCreators API 端点和使用 |
+
+`templates/` 目录：
+| 文件 | 内容 |
+|:-----|:-----|
+| `doc_generator.py` | KOL 视频解析 Word 文档生成器 |
 
 ### Step 4: 报告生成
 - 使用 execute_code 一次性生成完整 HTML

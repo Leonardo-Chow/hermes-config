@@ -134,26 +134,26 @@
     "created_at": "2026-05-27T16:12:18.592948+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-05-30T16:07:02.191916+00:00",
-    "last_used_at": "2026-06-05T10:43:39.061400+00:00",
-    "last_viewed_at": "2026-06-05T10:43:39.059401+00:00",
+    "last_used_at": "2026-06-12T15:11:59.643162+00:00",
+    "last_viewed_at": "2026-06-12T15:11:59.638116+00:00",
     "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 15,
-    "view_count": 15
+    "use_count": 16,
+    "view_count": 16
   },
   "gfw-bypass": {
     "archived_at": null,
     "created_at": "2026-05-09T07:43:32.633986+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-08T03:49:21.809408+00:00",
-    "last_used_at": "2026-06-08T05:01:27.533947+00:00",
-    "last_viewed_at": "2026-06-08T05:01:27.533192+00:00",
+    "last_used_at": "2026-06-12T15:11:59.647487+00:00",
+    "last_viewed_at": "2026-06-12T15:11:59.640826+00:00",
     "patch_count": 20,
     "pinned": false,
     "state": "active",
-    "use_count": 29,
-    "view_count": 29
+    "use_count": 30,
+    "view_count": 30
   },
   "guizang-ppt-skill": {
     "archived_at": null,
@@ -199,12 +199,12 @@
     "created_at": "2026-05-08T06:21:14.854643+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-02T02:41:33.666403+00:00",
-    "last_used_at": "2026-06-12T03:00:18.119586+00:00",
+    "last_used_at": "2026-06-13T03:44:08.521476+00:00",
     "last_viewed_at": "2026-06-02T06:24:03.099590+00:00",
     "patch_count": 7,
     "pinned": false,
     "state": "active",
-    "use_count": 67,
+    "use_count": 68,
     "view_count": 9
   },
   "jina-reader": {
@@ -238,13 +238,13 @@
     "created_at": "2026-06-08T02:49:21.293286+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-08T02:50:04.768663+00:00",
-    "last_used_at": "2026-06-08T06:38:27.820766+00:00",
-    "last_viewed_at": "2026-06-08T06:38:27.819858+00:00",
+    "last_used_at": "2026-06-12T15:11:59.652571+00:00",
+    "last_viewed_at": "2026-06-12T15:11:59.648868+00:00",
     "patch_count": 2,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "last30days": {
     "archived_at": null,
@@ -342,26 +342,26 @@
     "created_at": "2026-06-01T05:30:08.381066+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-03T03:15:29.128960+00:00",
-    "last_used_at": "2026-06-05T10:43:52.476026+00:00",
-    "last_viewed_at": "2026-06-05T10:43:52.474226+00:00",
+    "last_used_at": "2026-06-12T15:12:03.121825+00:00",
+    "last_viewed_at": "2026-06-12T15:12:03.120273+00:00",
     "patch_count": 18,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 10,
+    "view_count": 10
   },
   "obsbot-competitive-analysis": {
     "archived_at": null,
     "created_at": "2026-05-19T04:45:36.755112+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-06-02T15:47:22.534041+00:00",
-    "last_used_at": "2026-06-08T06:17:04.699850+00:00",
-    "last_viewed_at": "2026-06-08T06:17:04.698910+00:00",
-    "patch_count": 42,
+    "last_patched_at": "2026-06-12T15:14:27.131481+00:00",
+    "last_used_at": "2026-06-12T15:11:59.651328+00:00",
+    "last_viewed_at": "2026-06-12T15:11:59.645627+00:00",
+    "patch_count": 45,
     "pinned": false,
     "state": "active",
-    "use_count": 35,
-    "view_count": 35
+    "use_count": 36,
+    "view_count": 36
   },
   "obsbot-competitor-monitor": {
     "archived_at": null,
@@ -427,6 +427,19 @@
     "state": "active",
     "use_count": 0,
     "view_count": 0
+  },
+  "productivity/obsbot-competitive-analysis": {
+    "archived_at": null,
+    "created_at": "2026-06-12T15:12:24.456712+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-12T15:12:24.460424+00:00",
+    "last_viewed_at": "2026-06-12T15:12:24.457986+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 2,
+    "view_count": 2
   },
   "repomix": {
     "archived_at": null,
@@ -511,13 +524,13 @@
     "created_at": "2026-06-08T05:52:53.612546+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-08T05:55:25.487863+00:00",
-    "last_used_at": "2026-06-08T06:19:03.767047+00:00",
-    "last_viewed_at": "2026-06-08T06:19:03.766180+00:00",
+    "last_used_at": "2026-06-12T15:11:59.653664+00:00",
+    "last_viewed_at": "2026-06-12T15:11:59.650210+00:00",
     "patch_count": 2,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "tokscale": {
     "archived_at": null,
