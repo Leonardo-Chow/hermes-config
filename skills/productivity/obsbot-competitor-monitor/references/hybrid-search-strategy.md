@@ -43,6 +43,7 @@ def get_video_date(vid_id):
     cmd = ['yt-dlp', '--no-warnings', '--no-download',
            '--print', '%(id)s|||%(upload_date)s|||%(view_count)s|||%(like_count)s|||%(comment_count)s|||%(duration)s|||%(channel)s|||%(title)s',
            f'https://www.youtube.com/watch?v={vid_id}']
+    # ⚠️ 不要添加 --skip-unavailable-formats（该选项不存在，会导致全部失败）
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, env={**os.environ})
     if result.returncode == 0 and '|||' in result.stdout:
         parts = result.stdout.strip().split('|||')
@@ -69,17 +70,21 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 
 ### Subagent 配置
 
-- **2 个 subagent**，各搜索 9 个品牌
+- **3 个 subagent**，各搜索 8 个品牌（受 max_concurrent_children=3 限制）
 - 每个品牌搜索 URL: `https://www.youtube.com/results?search_query=QUERY&sp=EgIIAw%3D%3D`
 - `sp=EgIIAw%3D%3D` = 按上传日期排序
+- ⚠️ 浏览器相对日期（"2天前"）与 yt-dlp 绝对日期可能有 1 天偏差（UTC+8 vs UTC），最终以 yt-dlp 为准
 
-### 品牌分配
+### 品牌分配（24 品牌，3 subagent × 8）
 
-**Subagent 1**（9 个品牌）:
-Logitech Series, Insta360 Link 2, Insta360 Link 2c, Insta360 Wave, Insta360 Link 2 Pro, Elgato Facecam 4K, Elgato Facecam mk2, Emeet Pixy, EMEET SmartCam S600
+**Subagent 1**（8 个品牌）:
+Hollyland Astra P1, Logitech Brio, Logitech C920, Logitech MX Brio, Logitech C922, Insta360 Link 2, Insta360 Link 2 Pro, Elgato Facecam 4K
 
-**Subagent 2**（9 个品牌）:
-EMEET SmartCam S800, EMEET PIXY Wireless, EMEET S600L, Yolocam S3, Yolocam S7, Hollyland VenusLiv Air, Hollyland Lyra 4K, Razer Kiyo, UGREEN 4K Webcam
+**Subagent 2**（8 个品牌）:
+Elgato Facecam mk2, Emeet Pixy, EMEET SmartCam S600, EMEET SmartCam S800, EMEET PIXY Wireless, EMEET S600L, EMEET SmartCam C960 Ultra, EMEET C60E
+
+**Subagent 3**（8 个品牌）:
+Yolocam S3, Yolocam S7, Hollyland VenusLiv Air, Hollyland Lyra 4K, Razer Kiyo, UGREEN 4K Webcam, Insta360 Link 2c, Insta360 Wave
 
 ### 提取 JS
 

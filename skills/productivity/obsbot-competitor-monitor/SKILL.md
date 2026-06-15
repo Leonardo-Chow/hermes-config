@@ -669,9 +669,13 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 ⚠️ **注意**：并行度不要超过 8，否则可能触发 YouTube 限流。每次调用需重新设置 `https_proxy` 环境变量。
 
 ### Pitfall 13: 浏览器搜索 subagent 品牌数量控制
-用 delegate_task 做浏览器搜索时，每个 subagent 最多搜索 **9 个品牌**（每次搜索 ~30-40 秒）。超过 9 个品牌会导致 subagent 在 600 秒超时前无法完成。
-- ✅ 推荐：2 个 subagent，各搜索 9 个品牌
-- ❌ 避免：1 个 subagent 搜索全部 18 个品牌（会超时）
+用 delegate_task 做浏览器搜索时，受 `max_concurrent_children=3` 限制，最多同时运行 3 个 subagent。
+- ✅ 推荐：3 个 subagent，各搜索 8 个品牌（24 品牌全覆盖，~220-325秒完成）
+- ⚠️ 可行：2 个 subagent，各搜索 9 个品牌（但并发利用率低）
+- ❌ 避免：4+ 个 subagent（超过 max_concurrent_children 限制会报错）
+- ❌ 避免：1 个 subagent 搜索全部 18+ 个品牌（会超时 600 秒）
+
+每次搜索 ~30-40 秒，8 个品牌 ~240-320 秒，在 600 秒超时内安全完成。
 
 ### Pitfall 14: Excel 生成必须用 terminal 而非 execute_code
 `openpyxl` 在 execute_code 的沙箱环境中不可用（`ModuleNotFoundError`）。必须：
@@ -707,6 +711,34 @@ JSON.stringify({
 ```
 
 ⚠️ 用 `delegate_task` 批量获取详情时，每个 subagent 最多处理 **7 个视频**（每次 ~30 秒），避免超时。
+
+### Pitfall 19: yt-dlp `--skip-unavailable-formats` 不存在（2026-06-15 验证）
+yt-dlp **没有** `--skip-unavailable-formats` 选项。如果在 yt-dlp 命令中添加此参数，所有调用都会失败：
+```
+yt-dlp: error: no such option: --skip-unavailable-formats
+```
+**症状**：333 个视频全部返回 `status=failed`，error 包含 "no such option"。
+**解决方案**：不要使用此参数。正确的 yt-dlp 详情获取命令为：
+```bash
+yt-dlp --no-warnings --no-download \
+  --print '%(id)s|||%(upload_date)s|||%(view_count)s|||%(like_count)s|||%(comment_count)s|||%(duration)s|||%(channel)s|||%(title)s' \
+  'https://www.youtube.com/watch?v=VIDEO_ID'
+```
+⚠️ 不要添加任何额外的格式相关参数（如 `--skip-unavailable-formats`、`-f best` 等），`--print` 模式不需要选择格式。
+
+### Pitfall 20: 浏览器相对日期 vs yt-dlp 绝对日期可能有 1 天偏差（2026-06-15 验证）
+浏览器显示的 "2天前" 是基于用户本地时区（UTC+8）的相对时间，而 yt-dlp 的 `upload_date` 是 UTC 日期。两者可能相差 1 天。
+
+**案例**：
+- 浏览器显示 "2天前"（用户在 UTC+8，今天 6月15日）→ 理解为 6月13日
+- yt-dlp 返回 `upload_date=20260612`（UTC）→ 实际是 6月12日 UTC
+
+**原因**：视频在 UTC+8 时区的"2天前"上传，但 UTC 时间可能是前一天。
+
+**解决方案**：
+- **以 yt-dlp 的 `upload_date`（UTC）为最终判断依据**
+- 浏览器相对日期仅用于初筛，最终必须用 yt-dlp 绝对日期确认
+- 如果浏览器显示"2天前"但 yt-dlp 日期超出范围，以 yt-dlp 为准
 
 ### Pitfall 18: execute_code 沙箱中 yt-dlp 和代理均不可用（2026-06-12 验证）
 在 `execute_code` 沙箱中，`subprocess` 调用 yt-dlp 即使设置了 `https_proxy` 环境变量也会返回 0 结果。原因：
