@@ -146,6 +146,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 
 ### 过滤4：低质量视频排除
 - 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
+- ⚠️ 巴西创作者常见模式：15-30秒 "直播" 片段，播放量 20-30（见 Pitfall 21）
 
 ### 过滤5：赞助视频识别
 - 如果视频页面显示「包含付费宣传内容」（Contains paid promotion）标签，在 Content Type 后加 "/Sponsored"
@@ -397,9 +398,11 @@ yt-dlp --flat-playlist --no-warnings \
    JSON.stringify(vidList, null, 2);
 
 3. 从搜索结果中筛选日期范围内的视频
-   - "X小时前" = 今天
-   - "1天前" = 昨天
+   - "X小时前" = 今天（可信）
+   - "1天前" = 可能是昨天或前天，**必须验证实际日期**（见 Pitfall 20）
+   - "2天前" = 基本确定超出 2 天范围，可排除
    - "X天前" = 需要计算是否在范围内
+   - ⚠️ **关键**：浏览器相对日期不可靠，必须通过 description 中的绝对日期或 yt-dlp 验证
 ```
 
 ### Step 2: 获取视频详情
@@ -706,11 +709,18 @@ JSON.stringify({
   views: document.querySelector('#info-container span:first-child')?.textContent?.trim(),
   likes: document.querySelector('like-button-view-model button')?.getAttribute('aria-label'),
   date: document.querySelector('#info-container span:nth-child(3)')?.textContent?.trim(),
-  duration: document.querySelector('.ytp-time-duration')?.textContent?.trim()
+  duration: document.querySelector('.ytp-time-duration')?.textContent?.trim(),
+  // ⚠️ 关键：从 description 提取实际发布日期（比相对日期可靠）
+  actualDate: (document.querySelector('#description-inner')?.textContent?.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/) || []).slice(1,4).join('-') || 'unknown',
+  paidPromotion: !!document.querySelector('a[href*="paid_promotion"]'),
+  hashtags: Array.from(document.querySelectorAll('a[href*="hashtag"]')).map(el => el.textContent.trim().toLowerCase()).join(','),
+  description: document.querySelector('#description-inner')?.textContent?.trim().substring(0, 500)
 });
 ```
 
 ⚠️ 用 `delegate_task` 批量获取详情时，每个 subagent 最多处理 **7 个视频**（每次 ~30 秒），避免超时。
+
+⚠️ **如果 delegate_task 返回 HTTP 429（模型 API 限流）**：不要重试子代理，改用直接浏览器操作（browser_navigate + browser_console 逐个访问），每个视频 ~10 秒。见 Pitfall 22。
 
 ### Pitfall 19: yt-dlp `--skip-unavailable-formats` 不存在（2026-06-15 验证）
 yt-dlp **没有** `--skip-unavailable-formats` 选项。如果在 yt-dlp 命令中添加此参数，所有调用都会失败：
@@ -726,19 +736,29 @@ yt-dlp --no-warnings --no-download \
 ```
 ⚠️ 不要添加任何额外的格式相关参数（如 `--skip-unavailable-formats`、`-f best` 等），`--print` 模式不需要选择格式。
 
-### Pitfall 20: 浏览器相对日期 vs yt-dlp 绝对日期可能有 1 天偏差（2026-06-15 验证）
-浏览器显示的 "2天前" 是基于用户本地时区（UTC+8）的相对时间，而 yt-dlp 的 `upload_date` 是 UTC 日期。两者可能相差 1 天。
+### Pitfall 20: 浏览器相对日期不可靠，必须验证实际日期（2026-06-15 验证，2026-06-17 强化）
+浏览器显示的 "X小时前"、"X天前" 是基于用户本地时区（UTC+8）的相对时间，**不能直接用于日期过滤**。
 
-**案例**：
-- 浏览器显示 "2天前"（用户在 UTC+8，今天 6月15日）→ 理解为 6月13日
-- yt-dlp 返回 `upload_date=20260612`（UTC）→ 实际是 6月12日 UTC
+**实测案例（2026-06-17）**：
+- 浏览器显示 "1天前"（今天 6月17日 UTC+8）→ 以为是 6月16日
+- 实际页面 description 显示 "2026年6月15日" → 超出搜索范围！
+- 原因：视频在 6月15日 UTC+8 晚间上传，从 6月17日看确实是"1天多前"
 
-**原因**：视频在 UTC+8 时区的"2天前"上传，但 UTC 时间可能是前一天。
+**可靠验证方法**（按优先级）：
+1. **浏览器 description 中的绝对日期**：`document.querySelector('#description-inner')` 通常包含 "YYYY年M月D日" 格式的发布日期
+2. **yt-dlp `upload_date`**：UTC 日期，最准确（但新视频 <48h 可能报错）
+3. **浏览器相对时间**：仅用于初筛（"X小时前"=今天，其他都需要验证）
 
-**解决方案**：
-- **以 yt-dlp 的 `upload_date`（UTC）为最终判断依据**
-- 浏览器相对日期仅用于初筛，最终必须用 yt-dlp 绝对日期确认
-- 如果浏览器显示"2天前"但 yt-dlp 日期超出范围，以 yt-dlp 为准
+**关键规则**：
+- ⚠️ "1天前" 可能是昨天也可能是前天，必须验证
+- ⚠️ "2天前" 基本确定超出 2 天搜索范围，可直接排除
+- ⚠️ "X小时前" 基本确定是今天，可保留
+- **从 description 提取日期的 JS**：
+```javascript
+const desc = document.querySelector('#description-inner')?.textContent || '';
+const dateMatch = desc.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+const actualDate = dateMatch ? `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}` : 'unknown';
+```
 
 ### Pitfall 18: execute_code 沙箱中 yt-dlp 和代理均不可用（2026-06-12 验证）
 在 `execute_code` 沙箱中，`subprocess` 调用 yt-dlp 即使设置了 `https_proxy` 环境变量也会返回 0 结果。原因：
@@ -754,6 +774,42 @@ yt-dlp --no-warnings --no-download \
 - Phase 2 详情获取：用 `delegate_task` + browser tools（当 yt-dlp 失败时）
 
 ⚠️ 如果 Phase 1 的详情获取在 `execute_code` 中返回 0 结果，不要反复重试——立即切换到 `terminal` 执行。
+
+### Pitfall 21: 巴西创作者超短视频模式（2026-06-17 发现）
+巴西 YouTube 创作者（尤其是 EMEET/Hollyland 相关搜索）经常发布**超短直播/短视频**（15-30秒），播放量 20-30 次。
+
+**典型特征**：
+- 时长 15-30 秒（远低于 1 分钟）
+- 播放量 20-30（低于 50）
+- 频道名为葡萄牙语（如 "Peterson Camilo"、"Oppa Lec"）
+- 标题含品牌名但无实质内容
+- 通常标记为 "直播时间：X小时前"
+
+**处理**：按过滤规则4（播放<50 且 时长<1分钟）直接排除。不需要逐个访问确认。
+
+### Pitfall 22: delegate_task 子代理 HTTP 429 限流（2026-06-17 验证）
+当模型 API 触发速率限制时，所有 delegate_task 子代理都会返回 "HTTP 429: Too many requests"。
+
+**症状**：
+- 3 个子代理全部在 50-60 秒内失败
+- 每个子代理只完成了 6-11 次 API 调用就终止
+- 错误信息：`API call failed after 3 retries: HTTP 429: Too many requests`
+
+**解决方案**：
+1. **不要重试 delegate_task** — 如果 3 个子代理都 429，重试也会 429
+2. **改用直接浏览器操作** — 用 browser_navigate + browser_console 逐个访问视频页面
+3. **批量处理策略** — 每个视频页面 ~10 秒，10 个视频 ~100 秒，在单个会话内完成
+4. **降级到最少数据** — 如果时间紧迫，只获取标题、频道、播放量、日期即可，跳过评论分析
+
+### Pitfall 23: yt-dlp bot 检测后再用 cookies 会触发格式错误（2026-06-17 验证）
+当 yt-dlp 不带 cookies 报 "Sign in to confirm you're not a bot" 错误后，加上 `--cookies-from-browser chrome` 会变成 "Requested format is not available" 错误。
+
+**原因链**：不带 cookies → bot 检测拦截 → 带 cookies → 绕过 bot 检测 → 但新视频 <48h 格式未转码 → 格式错误
+
+**正确处理**：
+1. yt-dlp 不带 cookies 报 bot 检测 → 不要加 cookies 重试
+2. 直接跳到浏览器获取详情（Pitfall 17 的解决方案）
+3. 对于新视频 <48h，浏览器是唯一可靠方案
 
 ### Pitfall 16: TikTok 数据源额度限制
 
