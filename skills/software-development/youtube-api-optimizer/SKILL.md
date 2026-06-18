@@ -457,16 +457,85 @@ details = batch_videos(all_ids)
 
 3 个 Key 轮换 = 30,000 单位/天，优化后剩余 29,000 单位可用于其他任务。
 
+## YouTube API Key Pool 文件格式
+
+`~/.hermes/config/youtube_api_pool.json` 使用嵌套格式，不是纯数组：
+
+```json
+{
+  "api_keys": ["AIzaSy...key1", "AIzaSy...key2", "AIzaSy...key3"],
+  "current_index": 0,
+  "updated_at": "2026-06-03"
+}
+```
+
+加载时必须处理两种格式（兼容数组和对象）：
+
+```python
+def load_keys():
+    data = json.loads(KEY_POOL_PATH.read_text())
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "api_keys" in data:
+        return data["api_keys"]
+    return []
+```
+
+## REST API Endpoint 映射
+
+Python SDK 方法名 ≠ REST API endpoint。调用 `api_call()` 时必须用 REST 路径：
+
+| Python SDK 方法 | REST Endpoint | 成本 |
+|----------------|---------------|------|
+| `videos().list()` | `videos` | 1 |
+| `channels().list()` | `channels` | 1 |
+| `playlistItems().list()` | `playlistItems` | 1 |
+| `search().list()` | `search` | 100 |
+
+⚠️ **常见 bug**：传入 `"videos.list"` 会拼出 `youtube/v3/videos.list?...`，返回 404。
+
+## SOCKS5 代理
+
+Python `urllib` 不原生支持 SOCKS5。用 `curl` 子进程代替：
+
+```python
+import subprocess
+from urllib.parse import urlencode
+
+params["key"] = key
+url = f"https://www.googleapis.com/youtube/v3/{endpoint}?{urlencode(params, safe=',')}"
+
+curl_cmd = ["curl", "-s", "-f", "--max-time", "30"]
+if PROXY:
+    curl_cmd += ["--proxy", PROXY]  # e.g. "socks5://127.0.0.1:1082"
+curl_cmd += ["-H", "Accept: application/json", url]
+
+result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=35)
+data = json.loads(result.stdout)
+```
+
+`-f` flag 让 curl 对 HTTP 错误返回非零 exit code，方便错误处理。
+
+## 参考文件
+
+- `references/twitchtracker-crawling.md` — TwitchTracker 主播数据爬取方法（HTML 结构、正则模板、频率限制）
+- `references/endpoint-fix.md` — REST API endpoint 映射 bug 修复记录
+- `references/key-recovery.md` — API Key 从 git 历史恢复方法
+
+## ⚠️ Pitfalls
+
 ## ⚠️ Pitfalls
 
 1. **50 ID 上限** — `videos.list` 的 `id` 参数最多 50 个，脚本自动分片
-2. **endpoint 是资源名** — YouTube API URL 用 `videos` 不是 `videos.list`，见 [references/endpoint-fix.md](references/endpoint-fix.md)
-3. **Key 恢复** — key 被替换为占位符后可从 git 历史恢复，见 [references/key-recovery.md](references/key-recovery.md)
 2. **缓存 TTL** — 默认 24h，视频元数据短期不变但播放量会变，如需实时播放量设短 TTL
 3. **search.list 无法完全避免** — 真正的关键词搜索仍需 search.list，但缓存结果后 24h 内复用
-4. **Key 池格式** — `~/.hermes/config/youtube_api_pool.json` 格式为 `{"api_keys": [...], "current_index": N, "updated_at": "..."}`，不是纯数组。脚本已兼容两种格式
+4. **Key 池文件** — 位于 `~/.hermes/config/youtube_api_pool.json`，格式为 `{"api_keys": [...], "current_index": 0, "updated_at": "YYYY-MM-DD"}`（不是纯数组）
 5. **配额重置** — 太平洋时间午夜重置，脚本按日期自动清理
 6. **HTTP 错误** — 403=配额耗尽，429=速率限制，脚本会自动换 Key
+7. **🔴 REST API endpoint 不含 `.list`** — Python SDK 的 `videos.list` 对应 REST API 的 `/videos`（不是 `/videos.list`）。同理 `channels.list` → `/channels`，`search.list` → `/search`，`playlistItems.list` → `/playlistItems`
+8. **🔴 Python 3.9 兼容** — `dict | None` 语法需要 Python 3.10+。脚本必须在文件头加 `from __future__ import annotations`
+9. **🔴 SOCKS5 代理** — Python urllib 不原生支持 SOCKS5。必须用 `curl` 子进程 + `--proxy socks5://127.0.0.1:1082`，或安装 `PySocks` 后用 `socks.set_default_proxy()`
+10. **URL 编码** — `urlencode(params, safe=',')` 保留逗号分隔的 ID 列表不被编码
 7. **GFW 代理** — Google API 在中国大陆被墙，脚本默认走 `socks5://127.0.0.1:1082`。可通过 `YT_PROXY` 环境变量覆盖，设为空则直连
 8. **Python 3.9 兼容** — 脚本使用 `from __future__ import annotations` 支持 3.9 的类型注解语法（`dict | None`）
 9. **urllib + SOCKS5 = IncompleteRead** — Python 标准库 `urllib` 搭配 SOCKS5 代理访问 YouTube API 时会报 `http.client.IncompleteRead` 错误（chunked transfer encoding 与 SOCKS5 不兼容）。**必须用 `requests` + `socks5h://` 代理**：

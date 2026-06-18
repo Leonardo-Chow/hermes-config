@@ -1,8 +1,10 @@
 ---
 name: obsbot-competitor-monitor
 description: |
-  OBSBOT竞品YouTube上线监测。搜索18款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Excel报告上传腾讯文档。
+  OBSBOT竞品YouTube上线监测。搜索19款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Word报告上传腾讯文档。
   定时任务：周一/三/五自动执行。
+  输出格式：Word文档（不要Excel）。
+  参考模板：/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx
 user-invocable: true
 ---
 
@@ -24,9 +26,8 @@ user-invocable: true
 
 | 品牌 | 必须搜索的关键词变体 |
 |------|---------------------|
-| Logitech Series | Logitech Brio webcam, Logitech C920, Logitech MX Brio, Logitech C922 |
-| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 4K, Insta360 Link 2 Pro |
-| Insta360 Link 2c | Insta360 Link 2c |
+| Logitech Brio 4K | Logitech Brio 4K webcam, Logitech Brio webcam, Logitech Brio review |
+| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 4K, Insta360 Link 2c, Insta360 Link 2 Pro |
 | Insta360 Wave | Insta360 Wave webcam |
 | Elgato Facecam 4K | Elgato Facecam 4K, Elgato Facecam review |
 | Elgato Facecam mk2 | Elgato Facecam mk2 |
@@ -35,13 +36,14 @@ user-invocable: true
 | EMEET SmartCam S800 | EMEET S800 webcam, EMEET SmartCam S800 |
 | EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY OBS, EMEET PIXY streaming |
 | EMEET S600L | EMEET S600L webcam |
+| EMEET SmartCam C960 Ultra | EMEET SmartCam C960 Ultra, EMEET 960C, EMEET C960 |
 | Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv webcam |
 | Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra webcam |
-| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 |
-| UGREEN 4K Webcam | UGREEN 4K webcam |
-
+| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 PTZ |
+| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review |
+| UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review |
 **核心原则**：标题可能不含 "webcam"，但含 "streaming"、"OBS"、"PTZ"、"review"、"camera" 等变体。每个品牌至少 2-3 个变体查询。
 
 ## 日期计算规则（严格执行）
@@ -96,19 +98,14 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ```
 
-## 核心竞品清单（21款）
+## 核心竞品清单（19款）
 
 ⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
 ⚠️ **必须覆盖多语言**：英语、日语、葡萄牙语、西班牙语、法语、德语等。
 
 | 品牌 | 搜索关键词（必须全部搜索） |
 |------|-----------|
-| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 PTZ |
-| Logitech Series | Logitech Brio webcam, Logitech C920 webcam, Logitech MX Brio, Logitech C922 webcam, Logitech Brio レビュー |
-| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming |
-| Insta360 Link 2c | Insta360 Link 2c webcam, Insta360 Link 2c review |
-| Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
-| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review |
+| Logitech Brio 4K | Logitech Brio 4K webcam, Logitech Brio webcam, Logitech Brio review, Logitech Brio レビュー |
 | Elgato Facecam 4K | Elgato Facecam 4K, Elgato Facecam 4K review, Elgato Facecam 4K streaming |
 | Elgato Facecam mk2 | Elgato Facecam mk2, Elgato Facecam mk2 review |
 | Emeet Pixy | Emeet Pixy webcam, EMEET Pixy review, EMEET Pixy PTZ, EMEET Pixy レビュー |
@@ -117,14 +114,16 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review, EMEET PIXY Wireless レビュー, EMEET PIXY Wireless resenha |
 | EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K, EMEET S600L レビュー |
 | EMEET SmartCam C960 Ultra | EMEET SmartCam C960 Ultra, EMEET 960C, EMEET C960, EMEET 960C review, EMEET C960 Ultra |
-| EMEET C60E | EMEET C60E, EMEET C60E webcam, EMEET C60E review |
 | Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming, Yolocam S3 レビュー |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
 | Hollyland Lyra 4K | Hollyland Lyra 4K webcam, Hollyland Lyra 4K review |
-| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review |
+| Hollyland Astra P1 | Hollyland Astra P1, Hollyland Astra P1 review, Hollyland Astra P1 PTZ |
+| Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review, Razer Kiyo V2 review |
 | UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review, UGREEN webcam レビュー, UGREEN webcam resenha |
-| UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review |
+| Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming, Insta360 Link 2c |
+| Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
+| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review |
 
 ## 过滤规则（必须严格执行）
 
@@ -167,73 +166,111 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 
 ## 输出格式（2026-06-12 更新）
 
-### Word 文档格式（必须）
+### 输出格式：Word 文档（必须，不要 Excel）
 
-报告必须包含以下结构：
+⚠️ **用户明确要求：不要用 Excel 生成，只用 Word**（2026-06-18 纠正）
+
+**参考模板**：`/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx`
+下载文件夹中有格式参考文档，首次执行时应读取学习格式。
+
+报告结构：
 
 ```
-# OBSBOT 上线资源报告
+竞品视频上线监测（标题，居中，Heading 0）
 
 日期：YYYY年M月D日（周X）
 搜索范围：M月D日（周X）~ M月D日（周X）
 
-## 全平台搜索结果
+全平台搜索结果（Heading 1）
 
-### YouTube（N条）
+YouTube（N条）（加粗）
 1. 视频标题
-   博主：频道名
-   链接：URL
-   产品：产品名
-   类型：Dedicated Video / Integration（榜单）/ Review
-   发布时间：YYYY-MM-DD
-   简介：简要描述
+博主：频道名
+链接：URL
+竞品：品牌名
+类型：Review / Unboxing / Roundup / VS / Tutorials
+发布时间：YYYY-MM-DD
+播放量：N | 点赞：N | 评论：N | 互动率：N%
 
-### TikTok（N条，已验证日期）
-...
+2. ...
 
-### Instagram（N条）
-...
-
-### X/Twitter（N条）
+TikTok（0条）（加粗）
 今日无新帖。
 
-## 符合 SOP 要求的视频（含质检）
+Instagram（0条）（加粗）
+今日无新帖。
 
-### YouTube
-1. 视频标题
-   博主：频道名
-   链接：URL
-   产品：产品名
-   类型：Dedicated Video
-   视频内容质检：
-   ☑️ 常规产品测评
-   ☑️ 原画直出：有
-   ☑️ 特殊主题：无
-   描述区质检：
-   ☒ 官网链接：无
-   ☑️ 亚马逊链接：有（联盟链接）
-   ☒ 折扣信息：无
-   ☒ 标签：无
+X/Twitter（0条）（加粗）
+今日无新帖。
 
-## 统计汇总
+统计汇总（Heading 1）
 
-### 产品覆盖情况（表格）
-| 产品 | 状态 |
-|------|------|
-| OBSBOT Tail Air | ✅ 有新视频（N条） |
-| OBSBOT Meet 2 | ✅ 有新视频（N条） |
+[平台数量表格]
+| 平台 | 数量 |
+| YouTube | N |
+| TikTok | 0 |
+| Instagram | 0 |
+| 合计 | N |
+
+竞品覆盖情况（加粗）
+| 竞品 | 状态 |
+| 品牌A | ✅ 有新视频（N条） |
+| 品牌B | 无新视频 |
 ...
 
-### 过滤说明（表格）
+过滤说明（加粗）
 | 过滤项 | 原因 |
 |--------|------|
-| 多个东南亚游戏主播 | 仅设备列表提及OBSBOT，非产品测评 |
+| 视频标题 | 过滤原因 |
 ...
 ```
 
-### Excel 表格格式（同步上传）
+**Word 生成代码模板**（python-docx）：
+```python
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-同时生成 Excel 表格上传到腾讯文档。
+doc = Document()
+style = doc.styles['Normal']
+style.font.name = '微软雅黑'
+style.font.size = Pt(10)
+
+# 标题
+title = doc.add_heading('竞品视频上线监测', 0)
+title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+# 日期信息
+doc.add_paragraph('日期：YYYY年M月D日（周X）')
+doc.add_paragraph('搜索范围：M月D日（周X）~ M月D日（周X）')
+
+# 全平台搜索结果
+doc.add_paragraph('')
+p = doc.add_paragraph('全平台搜索结果')
+for run in p.runs:
+    run.bold = True
+    run.font.size = Pt(12)
+
+# YouTube 部分 - 每个视频一段
+doc.add_paragraph('')
+p = doc.add_paragraph(f'YouTube（{count}条）')
+for run in p.runs:
+    run.bold = True
+
+for item in videos:
+    doc.add_paragraph(f'{idx}. {item["Title"]}')
+    doc.add_paragraph(f'博主：{item["网红ID"]}')
+    doc.add_paragraph(f'链接：{item["视频链接"]}')
+    doc.add_paragraph(f'竞品：{item["竞品"]}')
+    doc.add_paragraph(f'类型：{item["Content Type"]}')
+    doc.add_paragraph(f'发布时间：{item["Date"]}')
+    doc.add_paragraph(f'播放量：{item["曝光量"]:,} | 点赞：{item["点赞量"]:,} | 评论：{item["评论数"]:,} | 互动率：{item["互动率"]}%')
+    doc.add_paragraph('')
+
+# 统计汇总表格
+table = doc.add_table(rows=N, cols=2)
+table.style = 'Table Grid'
+```
 
 ### 文件命名规则
 
@@ -800,6 +837,34 @@ const actualDate = dateMatch ? `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-
 2. **改用直接浏览器操作** — 用 browser_navigate + browser_console 逐个访问视频页面
 3. **批量处理策略** — 每个视频页面 ~10 秒，10 个视频 ~100 秒，在单个会话内完成
 4. **降级到最少数据** — 如果时间紧迫，只获取标题、频道、播放量、日期即可，跳过评论分析
+
+### Pitfall 24: 浏览器子代理获取视频详情会超时，用 yt-dlp 替代（2026-06-18 验证）
+用 `delegate_task` + browser tools 批量获取视频详情（views/likes/comments/duration）时，子代理容易超时（600秒限制，44次API调用后仍未完成）。
+
+**症状**：子代理执行 600 秒后 timeout，返回 `Subagent timed out after 600.0s`
+
+**原因**：每个视频需要 browser_navigate + browser_console + 多次 browser_scroll，单个视频 ~30-60 秒，8 个视频 ~240-480 秒，加上 API 延迟容易超时。
+
+**解决方案**：用 yt-dlp 在 terminal 中批量获取详情，每个视频 ~5 秒，8 个视频 ~40 秒：
+```python
+import subprocess, json, os
+os.environ['https_proxy'] = 'http://127.0.0.1:1082'
+
+for vid in video_ids:
+    r = subprocess.run(
+        ['yt-dlp', '--no-warnings', '--no-download',
+         '--print', '%(id)s|||%(view_count)s|||%(like_count)s|||%(comment_count)s|||%(duration)s|||%(channel)s|||%(title)s',
+         f'https://www.youtube.com/watch?v={vid}'],
+        capture_output=True, text=True, timeout=30
+    )
+    # 解析 r.stdout
+```
+
+⚠️ **注意**：yt-dlp 对 <48小时的新视频可能报 "Requested format is not available"（见 Pitfall 17），此时必须用浏览器。但对于大多数视频，yt-dlp 是更快更可靠的方案。
+
+**最佳策略**：
+1. 先用 yt-dlp 批量获取所有视频详情（~40秒）
+2. 对 yt-dlp 失败的视频（新视频 <48h），再用浏览器单独获取
 
 ### Pitfall 23: yt-dlp bot 检测后再用 cookies 会触发格式错误（2026-06-17 验证）
 当 yt-dlp 不带 cookies 报 "Sign in to confirm you're not a bot" 错误后，加上 `--cookies-from-browser chrome` 会变成 "Requested format is not available" 错误。

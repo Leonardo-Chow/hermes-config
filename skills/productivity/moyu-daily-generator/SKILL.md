@@ -895,6 +895,35 @@ result = subprocess.run(
 
 ## 常见陷阱
 
+### ⚠️ execute_code 中 write_file 需要显式导入（2026-06-18 验证）
+**症状：** 在 `execute_code` 脚本中直接调用 `write_file('/tmp/file.md', content=report)` 报错 `NameError: name 'write_file' is not defined`。
+**原因：** `execute_code` 的内置工具（`terminal`, `read_file`, `write_file` 等）需要从 `hermes_tools` 显式导入。
+**解决方案：** 在脚本开头添加 `from hermes_tools import write_file`（或需要的其他工具）。
+```python
+# ✅ 正确
+from hermes_tools import write_file
+write_file('/tmp/moyu_daily.md', content=report)
+
+# ❌ 会报 NameError
+write_file('/tmp/moyu_daily.md', content=report)
+```
+
+### ⚠️ delegate_task 子任务返回的数据 key 名称可能不一致（2026-06-18 验证）
+子任务用 `terminal` + `curl` 采集数据后写入 JSON 文件，key 名称取决于子任务代码的实现。本次采集到的 key 为：
+- `a_share_indices`（非 `astock.indices`）
+- `sector_rankings`（非 `astock.sectors`）
+- `crypto_markets`（非 `crypto`）
+
+**解决方案：** 读取子任务输出的 JSON 文件后，先 `print(json.dumps(data, indent=2)[:2000])` 检查实际 key 结构，再按实际 key 取数据。不要假设 key 名称。
+
+### ⚠️ reddit.js 返回的 hotPosts 字段名（2026-06-18 验证）
+`reddit.js --json` 返回的 JSON 结构中，热门帖子的 key 是 `hotPosts`（驼峰），不是 `hot`。Trending 话题的 key 是 `trending`。读取时需注意：
+```python
+trending = data.get('trending', [])    # ✅
+hot_posts = data.get('hotPosts', [])   # ✅
+hot_posts = data.get('hot', [])        # ❌ 会返回空列表
+```
+
 ### ⚠️ Heredoc 中的 `&` 触发后台进程检测（2026-06-09 验证）
 **症状：** 在 `terminal` 中使用 `cat > file << 'EOF'` 写入包含 `&` 字符的内容时，Hermes 安全扫描器报错 `Foreground command uses '&' backgrounding. Use terminal(background=true)`。
 **原因：** `&` 是 shell 后台操作符，即使在 heredoc 内部也会被检测器拦截。
