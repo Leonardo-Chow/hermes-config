@@ -1,9 +1,9 @@
 {
-  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260612-151122",
-  "last_run_at": "2026-06-12T15:11:22.245397+00:00",
-  "last_run_duration_seconds": 240.105457,
-  "last_run_summary": "auto: no changes; llm: Consolidation complete. Here's the summary:\n\n---\n\n## Consolidation Pass Summary\n\n### OBSBOT Cluster (3 → 1 umbrella)\n\n**`obsbot-competitive-analysis`** was already a substantial umbrella with 10 references covering competitive analysis, KOL…\narchived 3 skill(s):\n  • kol-video-analysis → obsbot-competitive-analysis\n  • obsbot-admin-api → obsbot-competitive-analysis\n  • tiktok-data-collection → obsbot-competitive-analysis\nfull report: hermes curator status\nkeep an umbrella stable: hermes curator pin obsbot-competitive-analysis",
+  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260619-155224",
+  "last_run_at": "2026-06-19T15:52:24.529428+00:00",
+  "last_run_duration_seconds": 56.549887,
+  "last_run_summary": "auto: no changes; llm: After reviewing all three skills, here's my assessment:\n\n**Analysis of the 3 agent-created skills:**\n\n| Skill | Domain | Scope |\n|-------|--------|-------|\n| `flutter-aot-apk-patching` | Android APK reverse engineering | Class-level: binary…",
   "last_run_summary_shown_at": "2026-05-22T09:07:42.961617+00:00",
   "paused": false,
-  "run_count": 5
+  "run_count": 6
 }

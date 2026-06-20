@@ -21,18 +21,69 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 
 | 标准 | 要求 |
 |:-----|:-----|
+| **播放/粉丝比** | **优先找播放量高、粉丝少的 KOL（高性价比）** |
 | 博主量级 | 中腰部/nano，不要 Top 级大博主 |
 | 活跃度 | 3 个月内有更新，超过 3 个月直接筛掉 |
 | OBSBOT 合作 | 已合作过的直接筛掉 |
 | 竞品合作 | 重点关注竞品合作过但 OBSBOT 未合作的 |
 | 邮箱 | 暂不获取 |
 | **语言** | **只找英语类博主，欧洲/法语/西班牙语直接 pass，优先北美（US/CA）** |
+| **国家限制** | **默认只找 US 和 CA，除非用户明确指定其他市场** |
 | **Shorts** | **全是 Shorts 的频道直接过滤掉** |
 | **游戏** | **全是游戏内容的频道直接过滤掉** |
 | **官号** | **产品官号不要收录（Reolink、Sling Pilot Academy 等）** |
 | **安防** | **安防摄像头类不要收录** |
 | **偏离主题** | **野生动物/天气/航空/无人画面直播等偏离主题的不要** |
 | **视频数** | **视频数 < 10 的频道直接过滤** |
+| **播放/粉丝比** | **优先找播放量高、粉丝少的 KOL（高性价比）** |
+| **教会频道** | **教会频道本身不是目标，要找设备评测博主** |
+| **Talent 产品** | **找设备评测/教程博主，不是终端用户（教会/活动频道本身不要）** |
+
+## CPM 定价模型（2026-06-15 新增）
+
+用户提供了完整 CPM 参考表，按品类×产品×格式定价。**不再按粉丝量简单估算价格**。
+
+### CPM 基准参考（含产品成本）
+
+| 品类 | 专题 Webcam | 专题 Camera | 插播 Webcam | 插播 Camera | IG Webcam | IG Camera | TT Webcam | TT Camera |
+|:-----|:-----------|:-----------|:-----------|:-----------|:----------|:----------|:----------|:----------|
+| Tech | $60 | $110 | $50 | / | $20 | / | $20 | / |
+| Apple | $50 | / | $42 | / | $20 | / | $20 | / |
+| Gamer | $50 | / | $35 | / | $20 | / | $20 | / |
+| Desk Setup | $30 | / | $80 | / | $20 | / | / | / |
+| Livestream | $100 | $115 | $250 | / | / | / | / | / |
+| Game Recording | $30 | / | $17 | / | / | / | / | / |
+| Content Creator | $37 | $100 | $58 | / | / | $100 | / | $100 |
+| Camera | / | $125 | / | / | / | / | / | / |
+
+### 计算公式
+
+```
+合作价格 = 预估播放量 × CPM / 1000
+```
+
+- **低于基准值 20%** = 加分（性价比高）
+- **超过基准值 20%** = 上线价格（可接受但不加分）
+- **视频溢出率** = 实际播放/预期播放，用于评估是否值得续约
+
+### 使用方法
+
+1. 确定 KOL 的品类（Tech/Apple/Gamer 等）
+2. 确定合作形式（专题/插播/IG/TT）
+3. 确定产品类型（Webcam/Camera）
+4. 查表获取 CPM 基准值
+5. 用 KOL 的均播 × CPM / 1000 计算建议价格
+6. 与 KOL 报价对比，判断是否在合理范围
+
+### OBSBOT 产品分类
+
+| 产品 | 类型 |
+|:-----|:-----|
+| Tiny 3 / Tiny 3 Lite / Tiny 2 | Webcam |
+| Tail 2 / Tail Air | Camera |
+| Meet 2 / Meet SE | Webcam |
+| Talent 2 | Camera |
+| Tiny SE | Webcam |
 
 ## 执行风格（用户明确要求）
 
@@ -79,16 +130,25 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 scutil --nc start "Shadowrocket"
 noxinfluencer doctor  # 确认 ok
 
-# 搜索模板
+# 搜索模板（优先高播放/低粉丝比，仅北美）
 noxinfluencer creator search \
   --platform youtube \
   --keywords '[关键词1,关键词2]' \
-  --country '[US,CA,UK,AU]' \
-  --avg_view_min 2000 --avg_view_max 35000 \
-  --follower_min 3000 --follower_max 150000 \
+  --country '[US,CA]' \
+  --avg_view_min 10000 --avg_view_max 50000 \
+  --follower_min 3000 --follower_max 80000 \
   --published_within_days 90 \
   --page_size 15 --lang en
 ```
+
+**搜索参数说明：**
+- `--country '[US,CA]'` — **只找北美博主**（用户明确要求）
+- `avg_view_min 10000` — 均播 ≥ 10K，确保内容有足够曝光
+- `avg_view_max 50000` — 均播 ≤ 50K，避免头部 KOL（价格高）
+- `follower_min 3000` — 粉丝 ≥ 3K，确保是真正的 KOL
+- `follower_max 80000` — 粉丝 ≤ 80K，优先中腰部（高播放/粉丝比）
+
+**注意**：除非用户明确指定其他市场（如欧洲、北欧），否则默认只搜 US 和 CA。
 
 ### Step 2: 获取频道 URL
 
@@ -166,6 +226,8 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 
 ## 品类搜索关键词
 
+### Tiny 3 / Tiny 3 Lite 专属关键词
+
 | 品类 | NoxInfluencer keywords | 定位 |
 |:-----|:----------------------|:-----|
 | Tech 3C | `webcam review,4K webcam,PTZ camera` | 摄像头评测 |
@@ -179,18 +241,20 @@ mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_fol
 | Podcast/Audio | `podcast setup,home studio,microphone review` | 录音棚多机位 |
 | Streaming Gear | `streaming setup,stream gear,obs setup` | 直播设备 |
 
-### ⚠️ Talent 产品核心策略（2026-06-09 用户纠正）
+### Talent 2 专属关键词
 
-**不要找终端用户（教会频道、活动公司），要找做设备评测/教程的专业博主。**
-
-Talent 是直播制作设备，KOL 应该是**评测这类设备的人**，不是使用这类设备的机构。
-
-| ✅ 正确 | ❌ 错误 |
-|:--------|:--------|
-| PhotoJoseph（ATEM评测） | Paula White Ministries（教会频道） |
-| ProAV（专业视频设备评测） | The Brooklyn Tabernacle（教会频道） |
-| Aaron Parecki（直播技术教程） | Living Stream Church（教会频道） |
-| Stream Scheme（直播设备评测） | VISIONPLUS TV（法语频道） |
+| 品类 | NoxInfluencer keywords | 定位 |
+|:-----|:----------------------|:-----|
+| ATEM Review | `ATEM Mini review,ATEM switcher review,Blackmagic ATEM` | 视频切换设备评测 |
+| Live Equipment | `live streaming equipment review,streaming gear review` | 直播设备评测 |
+| Multicam Tutorial | `multicam setup tutorial,multi camera live,live switching` | 多机位教程 |
+| Church Tech | `church tech setup,church AV,live stream church equipment` | 教会技术（设备评测类，非终端用户） |
+| Event Video | `event videography,multi camera event,wedding videography` | 活动拍摄 |
+| PTZ Review | `PTZ camera review,PTZ camera tutorial,tracking camera` | PTZ 摄像头评测 |
+| Broadcast Tech | `broadcast equipment review,professional video gear` | 广播设备评测 |
+| Video Mixer | `video mixer review,video mixer tutorial,HDMI switcher` | 视频混合器评测 |
+| Camera Control | `camera control software,remote camera control,NDI camera` | 摄像机控制 |
+| Music Live | `live music production,concert live stream equipment` | 音乐直播设备 |
 
 **搜索关键词应聚焦设备评测，不是终端场景：**
 - ✅ `ATEM Mini review, video switcher review, multicam setup tutorial`
@@ -198,18 +262,25 @@ Talent 是直播制作设备，KOL 应该是**评测这类设备的人**，不�
 
 **语言要求：只找英语区博主（US/CA/UK/AU），欧洲/法语/西班牙语直接 pass。**
 
-## Talent 产品专属关键词
+### Talent 产品专属关键词
 
 | 品类 | NoxInfluencer keywords | 定位 |
 |:-----|:----------------------|:-----|
-| Church Stream | `church streaming,worship live stream,church live production,multicam church` | 教会直播 |
-| Event Production | `live event production,event streaming,multicam live,event camera` | 活动制作 |
-| ATEM Switch | `ATEM switcher,video switcher,live production switcher,multicam switching` | 视频切换 |
-| Sports Stream | `sports live streaming,sports camera,sports production,live sports` | 体育直播 |
-| Music Live | `live music stream,music production live,concert streaming,band live stream` | 音乐直播 |
-| Education | `classroom streaming,education live,teaching camera,lecture streaming` | 教育直播 |
-| PTZ Multicam | `PTZ camera,multicam setup,multi camera,live production camera` | 多机位 |
-| Live Production | `live production setup,broadcast equipment,studio production,live gear` | 直播制作 |
+| ATEM Review | `ATEM Mini review,ATEM switcher review,Blackmagic ATEM` | 视频切换设备评测 |
+| Live Equipment | `live streaming equipment review,streaming gear review` | 直播设备评测 |
+| Multicam Tutorial | `multicam setup tutorial,multi camera live,live switching` | 多机位教程 |
+| OBS Tutorial | `OBS tutorial,streaming software tutorial,live stream setup` | 直播软件教程 |
+| Event Video | `event videography,multi camera event,wedding videography` | 活动拍摄 |
+| PTZ Review | `PTZ camera review,PTZ camera tutorial,tracking camera` | PTZ摄像头评测 |
+| Broadcast Tech | `broadcast equipment review,professional video gear` | 广播设备评测 |
+| Video Mixer | `video mixer review,video mixer tutorial,HDMI switcher` | 视频混合器评测 |
+| Stream Encoder | `streaming encoder review,capture card review` | 推流设备评测 |
+| Camera Control | `camera control software,remote camera control,NDI camera` | 摄像机控制 |
+
+⚠️ **Talent 筛选关键教训**：
+- **不要找终端用户**（如教会频道本身）→ 要找**做设备评测/教程的专业博主**
+- **教会频道不是目标** → 教会技术志愿者分享 setup 知识的才是目标
+- **优先 ATEM/vMix 评测博主** → 他们最可能对 Talent 多机位切换功能感兴趣
 
 ## 量级筛选参数
 
@@ -220,14 +291,125 @@ Talent 是直播制作设备，KOL 应该是**评测这类设备的人**，不�
 | Lower Macro | 30k-50k | 100k-200k |
 | **推荐范围** | **2k-35k** | **3k-150k** |
 
-## 价格估算
+## 价格估算（基于 CPM 模型）
 
-| 粉丝量 | 建议价格 |
-|:-------|:---------|
-| <30K | $100-$200 |
-| 30K-80K | $200-$400 |
-| 80K-150K | $400-$700 |
-| >150K | $700-$1,200 |
+详细 CPM 分析模型见 `references/cpm-analysis-model.md`。
+
+### 产品价格
+
+| 产品 | 价格 | 类型 | 推荐优先级 |
+|:-----|:-----|:-----|:-----------|
+| Tiny 3 Lite | $199 | Webcam | ⭐⭐⭐ 优先推荐 |
+| Tiny 3 | $349 | Webcam | ⭐⭐ 次选 |
+| Tail 2 | $499 | Camera | ⭐⭐ |
+| Talent | $999 | Camera | ⭐ |
+
+### 合作决策规则
+
+| 条件 | 合作类型 | 说明 |
+|:-----|:---------|:-----|
+| 实际 CPM ≤ 加分 CPM | ✅ 付费合作 | 优秀 CPM，优先合作 |
+| 加分 CPM < 实际 CPM ≤ 基准 CPM | ✅ 付费合作 | 良好 CPM，建议合作 |
+| 基准 CPM < 实际 CPM ≤ 上线 CPM | ⚠️ 置换/付费 | CPM 偏高，可考虑置换 |
+| 实际 CPM > 上线 CPM | ❌ 仅置换 | CPM 过高，建议仅置换产品 |
+
+### CPM 基准表（专题视频 - Webcam）
+
+| 品类 | 基准 CPM | 加分 CPM | 上线 CPM |
+|:-----|:---------|:---------|:---------|
+| Desk Setup | $30 | $24 | $45 |
+| Game Recording | $30 | $24 | $55 |
+| Content Creator | $37 | $30 | $57 |
+| Apple | $50 | $40 | $76 |
+| Gamer | $50 | $40 | $52 |
+| Tech | $60 | $48 | $77 |
+| Livestream | $100 | $80 | $115 |
+
+### 产品选择策略
+
+- **默认**: Tiny 3 Lite ($199) — 产品成本最低，CPM 最优
+- **高均播 KOL (>30K)**: Tiny 3 ($349) — 均播高，产品成本占比低
+- **Camera 类 KOL**: Tail 2 ($499) — Camera 品类基准 CPM 更高
+- **直播类 KOL**: Talent ($999) — Livestream 基准 CPM $100-250
+
+## CPM 模型（2026-06-15 新增）
+
+### OBSBOT 产品价格
+
+| 产品 | 价格 | 类型 |
+|:-----|:-----|:-----|
+| Tiny 3 | $349 | Webcam |
+| Tiny 3 Lite | $199 | Webcam |
+| Tiny 2 | $299 | Webcam |
+| Meet 2 | $249 | Webcam |
+| Tail 2 | $499 | Camera |
+| Talent | $999 | Camera |
+
+### CPM 计算公式
+
+```
+CPM = (合作价格 / 均播) × 1000
+合作价格 = (基准CPM × 均播) / 1000
+总成本 = 合作价格 + 产品成本
+实际CPM = (总成本 / 均播) × 1000
+```
+
+### 基准 CPM 表（专题视频 - Webcam）
+
+| 品类 | 基准CPM | 加分CPM(-20%) | 上线CPM | 溢出率 |
+|:-----|:--------|:--------------|:--------|:-------|
+| Tech | $60 | $48 | $77 | 70% |
+| Apple | $50 | $40 | $76 | 70% |
+| Gamer | $50 | $40 | $52 | 90% |
+| Desk Setup | $30 | $24 | $45 | 70% |
+| Livestream | $100 | $80 | $115 | 70% |
+| Game Recording | $30 | $24 | $55 | 70% |
+| Content Creator | $37 | $30 | $57 | 70% |
+| Camera | $70 | $56 | $70 | 70% |
+
+### 基准 CPM 表（插播视频 - Webcam）
+
+| 品类 | 基准CPM | 加分CPM(-20%) | 上线CPM | 溢出率 |
+|:-----|:--------|:--------------|:--------|:-------|
+| Tech | $50 | $40 | $80 | 80% |
+| Apple | $42 | $34 | $50 | 70% |
+| Gamer | $35 | $28 | $50 | 90% |
+| Desk Setup | $80 | $64 | $80 | 80% |
+| Livestream | $250 | $200 | $250 | 70% |
+| Game Recording | $17 | $14 | $23 | 100% |
+| Content Creator | $58 | $46 | $58 | 70% |
+
+### 基准 CPM 表（Instagram - Webcam）
+
+| 品类 | 基准CPM | 加分CPM(-20%) | 上线CPM | 溢出率 |
+|:-----|:--------|:--------------|:--------|:-------|
+| Tech | $20 | $16 | $40 | 90% |
+| Desk Setup | $20 | $16 | $44 | - |
+| Gamer | $20 | $16 | $40 | 90% |
+
+### 基准 CPM 表（TikTok - Webcam）
+
+| 品类 | 基准CPM | 加分CPM(-20%) | 上线CPM | 溢出率 |
+|:-----|:--------|:--------------|:--------|:-------|
+| Tech | $20 | $16 | $40 | 90% |
+| Gamer | $20 | $16 | $30 | 90% |
+
+### Camera 类型 CPM（专题视频）
+
+| 品类 | 基准CPM | 加分CPM(-20%) | 上线CPM | 溢出率 |
+|:-----|:--------|:--------------|:--------|:-------|
+| Tech | $110 | $88 | $120 | 70% |
+| Livestream | $115 | $92 | $115 | 80% |
+| Content Creator | $100 | $80 | $110 | 70% |
+| Camera | $125 | $100 | $115 | 70% |
+
+### CPM 优化策略
+
+1. **优先 Desk Setup 品类** — 基准 CPM 最低（$30），性价比最高
+2. **优先高均播 KOL** — 均播越高，产品成本占比越低，实际 CPM 越接近基准
+3. **考虑 Tiny 3 Lite**（$199）— 产品成本低 43%，CPM 更容易达标
+4. **Livestream 品类需谨慎** — 基准 CPM 最高（$100），但溢出率低（70%）
+5. **Gamer 品类溢出率高**（90%）— 实际播放量可能超出预期
 
 ## 关键词列表
 
@@ -258,10 +440,11 @@ Talent 是直播制作设备，KOL 应该是**评测这类设备的人**，不�
 ## 排除关键词列表
 
 ```python
-brand_patterns = ["official", "inc.", "systems", "reolink", "nexigo", "hikvision", "nikon", "bose", "acasis", "tp-link", "obsbot", "sling pilot", "ege", "gesellschaft"]
+brand_patterns = ["official", "inc.", "systems", "reolink", "nexigo", "hikvision", "nikon", "bose", "acasis", "tp-link", "obsbot", "sling pilot", "ege", "gesellschaft", "visionplus", "ministries", "church", "tabernacle", "temple"]
 security_patterns = ["security", "surveillance", "cctv", "alarm", "reolink", "toolbox"]
 offtopic_patterns = ["wildlife", "weather", "aviation", "pilot", "eulen", "sugarloaf", "scotventure", "nepal live", "live cam", "webcam live", "bear live"]
 gaming_patterns = ["game", "gaming", "twitch", "fortnite", "minecraft", "valorant", "cod", "apex", "league of legends", "overwatch"]
+euro_patterns = ["deutsch", "français", "español", "italiano", "português", "nederlands", "polski", "türk", "العربية", "한국어", "日本語", "中文"]
 ```
 
 ## YouTube API 验证规则
@@ -602,7 +785,11 @@ wb.save(output_path)
 - 创意Brief模板
 
 ## 参考文件
+## 参考文件
 
+- `references/campaign-plan-2026.md` — OBSBOT KOL 营销作战计划（2026年6-8月），含 Talent 2 上市、Daily Running、欧洲/北欧市场、品牌大使完整计划
+- `references/cpm-analysis-model.md` — CPM 分析模型（产品价格、基准表、合作决策规则、品类优先级）
+- `references/2026-h2-campaign-plan.md` — 2026 H2 营销作战计划（Talent 2 上市 7.29、Daily Running、欧洲/北欧市场、BA 计划、Micro Center 渠道）
 - `references/creator-deep-research-workflow.md` — 创作者深度调研方法论（多平台搜索+分析+Word报告）
 - `references/leonardo-kol-writing-style.md` — Leonardo 的 KOL 评价风格指南
 - `references/youtube-channel-scraping.md` — YouTube 频道信息抓取技术方案

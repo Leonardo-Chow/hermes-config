@@ -1,7 +1,7 @@
 ---
 name: obsbot-competitive-analysis
 description: 多平台竞品分析工作流 — 从 YouTube/Reddit/Amazon/TikTok 等平台数据（docx/xlsx）中提取用户反馈，生成杂志风格 HTML 市场分析报告（含 Chart.js 图表）。覆盖 OBSBOT Admin API 调用、TikTok 多源数据采集、KOL 视频解析、每日监测、竞品投放监测。当用户要求分析竞品数据、生成市场分析报告、或处理 OBSBOT/竞品的 YouTube 评论/Reddit 讨论/Amazon 评论/TikTok 数据时使用。
-version: 1.1.0
+version: 1.2.0
 ---
 
 # 多平台竞品分析工作流
@@ -433,6 +433,9 @@ for table in doc.tables:
 ### ⚠️ YouTube Data API 直连可用（2026-06-02 更新）
 在中国大陆环境下，YouTube Data API 可直连访问（无需代理）。代理反而会返回 503/超时错误。如遇网络问题，先尝试移除代理设置。
 
+### ⚠️ Tavily API 配额限制（2026-06-19 验证）
+Tavily API 有月度配额限制，超额后返回 HTTP 432。影响：无法搜索 Instagram/TikTok/X 平台内容。降级方案：使用 `web_search` 替代或建议用户手动检查社交媒体主页。
+
 ### ⚠️ 多平台搜索的置信度差异
 YouTube Data API 返回 HIGH 置信度结果。但 Instagram/TikTok/X 的 web_search 结果置信度仅为 MEDIUM/LOW：
 - 搜索引擎对当天帖子索引延迟（几小时到几天）
@@ -506,6 +509,14 @@ mcporter auth tencent-docs
 
 ### ⚠️ 网红类型必须按实际内容分类
 用户明确要求：网红类型分为 Livestream/Camera/Review/Tutorial/Podcast/Church 等实际类型，**不要用 KOL 量级**（头部KOL/腰部KOL/素人）。
+
+### ⚠️ 视频过滤规则需持续更新
+用户在 2026-06-18 纠正了过滤规则：
+- 专业媒体/技术评测（如 GadgetDoc）应过滤，非 KOC 视角
+- Vlog/直播中的提及（如赛车直播中使用 OBSBOT）应过滤
+- 俄语 KOL 自发评测/开箱/对比等有价值内容应保留
+
+详细过滤规则见 `references/daily-monitoring-workflow.md` 的「视频过滤规则」章节。
 
 ### ⚠️ 受众地区必须带英文名
 格式：`English Name/中文名`。欧洲国家统一标注为 `Germany/欧洲`, `France/欧洲` 等。

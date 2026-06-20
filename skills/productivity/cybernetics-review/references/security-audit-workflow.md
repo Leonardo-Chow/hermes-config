@@ -2,7 +2,43 @@
 
 每日复盘时执行的安全审查标准流程。适用于 `~/.hermes` 及其他配置仓库。
 
+## 快速检查清单（每次复盘先跑这个）
+
+```bash
+# 1. 真实密钥严格扫描（低误报）
+cd ~/.hermes && git ls-files | xargs grep -nE 'AIzaSy[A-Za-z0-9_-]{33}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}' 2>/dev/null | head -20
+
+# 2. 仓库可见性（必须为 true）
+gh repo view Leonardo-Chow/hermes-config --json isPrivate -q '.isPrivate'
+
+# 3. config.yaml 密钥检查（应全为空字符串）
+cd ~/.hermes && grep -n 'api_key:\|token:' config.yaml | grep -v '""' | grep -v 'session_key'
+```
+
+如果全部通过 → ✅ 安全，继续复盘。
+如果任何一项失败 → 按下方流程处理。
+
+---
+
 ## 1. 敏感信息扫描
+
+### 两步扫描法（推荐）
+
+**第一步：严格正则（低误报，用于日常巡检）**
+
+```bash
+cd ~/.hermes && git ls-files | xargs grep -nE \
+  'AIzaSy[A-Za-z0-9_-]{33}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}' \
+  2>/dev/null | head -30
+```
+
+**第二步：宽泛扫描（高误报，仅在严格扫描发现问题时展开）**
+
+```bash
+cd ~/.hermes && git ls-files | xargs grep -l 'AIzaSy\|sk-\|ghp_\|gho_\|password\|secret' 2>/dev/null | wc -l
+```
+
+> ⚠️ 宽泛模式会匹配 90+ 文件（文档示例、正则模式、YAML narrative 等），仅用于确认"还有哪些文件需要逐个检查"，**不能直接作为泄露证据**。
 
 扫描 git 跟踪文件中的真实凭证（排除文档示例和二进制文件）：
 

@@ -127,6 +127,26 @@ web_search('twitter.com OBSBOT Tail 2 2026')
 - NoxInfluencer 不支持 X 平台
 - 在 GFW 环境下需要 VPN
 
+## 视频过滤规则
+
+**必须过滤的内容**：
+
+1. **设备列表/产品列表视频**：提到OBSBOT但无实质评测内容
+2. **游戏/直播/杂谈**：OBSBOT仅作为"设备之一"被提及
+3. **技术参数对比/规格表**：无实际使用体验
+4. **专业媒体/技术评测**：GadgetDoc等技术分析型频道，非KOC视角
+5. **Vlog/直播中的提及**：在其他内容（赛车、游戏）中顺便使用OBSBOT
+6. **俄语/日语/韩语/东南亚语言博主**：自动过滤（俄语KOL自发评测/开箱/对比等有价值内容应保留）
+7. **音频/灯光/非摄像头设备评测**：OBSBOT仅在设备列表中被提及（如播客设备推荐中的Tail 2）
+8. **整套设备推荐**：OBSBOT非主角，仅作为设备之一（如"20款科技好物"）
+
+**保留的内容**：
+- ✅ 专门评测OBSBOT产品的视频（Dedicated Video）
+- ✅ 品牌大使开箱/展示视频
+- ✅ 包含OBSBOT折扣码/购买链接的视频
+- ✅ 俄语KOL自发评测/开箱/对比（有价值内容）
+- ✅ OBSBOT作为主要设备的播客/直播设备推荐
+
 ## 置信度标注规范
 
 搜索结果必须标注置信度：
@@ -222,3 +242,33 @@ web_search('twitter.com OBSBOT Tail 2 2026')
 ## ⚠️ 检测限制说明
 （如有平台置信度为 LOW，必须说明原因）
 ```
+
+## 常见陷阱
+
+### ⚠️ YouTube API bash 命令语法
+当在 bash 中使用 `$(...)` 命令替换获取 API Key 时，如果命令包含 `&` 字符，会导致语法错误（被解释为后台运行）。解决方案：
+```bash
+# ❌ 错误：直接在 bash 中使用 $(...)
+API_KEY=*** ~/.hermes/scripts/youtube_api_pool.py current)
+curl "...&key=$API_KEY"  # & 会被解释为后台运行
+
+# ✅ 正确：写入 Python 脚本后执行
+cat > /tmp/get_videos.py << 'EOF'
+import subprocess
+result = subprocess.run(['python3', '/path/to/youtube_api_pool.py', 'current'], capture_output=True, text=True)
+API_KEY=*** ... 脚本内容
+EOF
+python3 /tmp/get_videos.py
+```
+
+### ⚠️ Tavily API 配额限制
+Tavily API 有月度配额限制，超额后返回 HTTP 432。解决方案：
+1. 检查配额：`mcp_tavily_tavily_search` 返回 432 错误
+2. 降级方案：使用 `web_search` 替代（但覆盖有限）
+3. 手动检查：建议用户手动查看 @obsbot 社交媒体主页
+
+### ⚠️ 系统 Python vs venv
+python-docx 和 openpyxl 安装在系统 Python 3.9 中（`~/Library/Python/3.9/lib/python/site-packages/`），不在 Hermes venv 中。必须用 `python3` 而非 venv 的 python。
+
+### ⚠️ Excel 中文编码
+openpyxl 读取中文内容时默认 UTF-8，一般不需要额外处理。但如果遇到乱码，检查文件编码。

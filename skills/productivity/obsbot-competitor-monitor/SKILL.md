@@ -130,6 +130,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ### 过滤1：官方账号排除
 - ❌ 排除竞品官方频道发布的视频（如 `Hollyland FAQ`、`Insta360`、`YoloLiv Tech` 等官号）
 - 判断方法：频道名包含品牌名 + "FAQ"/"Official"/"Tech"/"Tutorials" 等后缀
+- ⚠️ **Insta360India** 是官方频道 → 排除（2026-06-18 纠正）
 
 ### 过滤2：非 webcam 内容排除
 - 标题必须与 webcam 直接相关，排除以下：
@@ -137,6 +138,7 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
   - ❌ 麦克风、采集卡、NAS、Hub 等非摄像头产品
   - ❌ 纯品牌选购指南（如「Insta360 全系列選購指南」）
   - ❌ 游戏直播内容（如 FORZA HORIZON 6 + webcam 组合，但无产品测评）
+  - ❌ **YoloBox Extreme**（直播切换器）≠ Yolocam S3/S7（摄像头）→ 产品类型不同，排除（2026-06-18 纠正）
 - ✅ 保留：标题包含 webcam/facecam/camera + streaming/review/unboxing/comparison 等关键词
 
 ### 过滤3：游戏直播排除
@@ -146,13 +148,23 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ### 过滤4：低质量视频排除
 - 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
 - ⚠️ 巴西创作者常见模式：15-30秒 "直播" 片段，播放量 20-30（见 Pitfall 21）
+- ⚠️ **标题拼写错误 + 播放量 0** → 疑似垃圾内容，直接过滤（2026-06-18 纠正）
 
-### 过滤5：赞助视频识别
+### 过滤5：Roundup/合集视频过滤（2026-06-18 新增）
+- ❌ **小频道的 Top N 合集视频** → 排除（如 "Top 5 Best Webcams 2026" by 小频道）
+- ✅ **大频道的 Top N 合集视频** → 保留（如 Think Media、Linus Tech Tips 等知名频道）
+- 判断标准：
+  - 播放量 ≥ 1000 的 Roundup 视频 → 保留
+  - 播放量 < 1000 的 Roundup 视频 → 排除
+  - 知名频道（订阅 ≥ 100K）的 Roundup 视频 → 保留，无论播放量
+- ⚠️ Roundup 视频的 Content Type 标记为 "Roundup"
+
+### 过滤6：赞助视频识别
 - 如果视频页面显示「包含付费宣传内容」（Contains paid promotion）标签，在 Content Type 后加 "/Sponsored"
 - 检测方法：`document.querySelector('a[href*="paid_promotion"]')` 或页面上出现 `包含付费宣传内容` 文字
 - 赞助视频的评论区可信度较低，但不影响是否上评判断
 
-### 过滤6：是否上评判断
+### 过滤7：是否上评判断
 - 仅在以下情况标记"是"：
   - 评论区明确提到 obsbot/meet/tiny/tail 等关键词
   - 视频 hashtags 包含 obsbot 相关标签（如 `#streamwithobsbot`）
@@ -163,6 +175,15 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 - 「裝備魔 JBTVHK」的「Insta360 全系列選購指南」→ ❌ 排除（不是专门讲 webcam）
 - 「FORZA HORIZON 6 E WEBCAM EMEET PIXY 4K」→ ❌ 排除（纯游戏内容）
 - 「Hollyland FAQ」频道的所有视频 → ❌ 排除（官方账号）
+
+### 用户纠正案例（2026-06-18）
+- TechTrends「15 Smartest Innovations」→ ❌ 排除（小频道 Roundup，播放量 < 1000）
+- best picks today「Best Webcam for Content Creators」→ ❌ 排除（小频道 Roundup）
+- Tech Techify「Top 5 Best 4K Webcams 2026」→ ❌ 排除（小频道 Roundup）
+- WeShootFilms「Yolobox Extreme」→ ❌ 排除（YoloBox ≠ Yolocam，产品类型不同）
+- PhotoJoseph「YoloBox Extreme」→ ❌ 排除（YoloBox ≠ Yolocam）
+- Kay Tomas「Razer Kiyo wettings」→ ❌ 排除（标题拼写错误 + 播放量 0）
+- Immortals TRYN「Razer Kiyo combo」→ ❌ 排除（越南语，非目标市场）
 
 ## 输出格式（2026-06-12 更新）
 
@@ -527,21 +548,21 @@ const obsbotMentions = comments.filter(c => {
 - 有 OBSBOT 提及：记录具体评论内容 + 正面/负面判断
 - 无 OBSBOT 提及：留空或写"无"
 
-### Step 5: 生成 Excel
+### Step 5: 生成 Word 文档（不要用 Excel）
 ```python
-import openpyxl
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 # 按日期+品牌排序
-# 表头：Date, 竞品, 网红ID, 视频链接, 量级, Content Type, 是否上评, 曝光量, 点赞量, 点赞率, 评论数, 评论率, 互动率, Title, Comment
+# 结构：标题 → 日期信息 → 全平台搜索结果（YouTube/TikTok/Instagram/X）→ 统计汇总（表格）
+# 参考模板：/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx
 ```
 
 ### Step 6: 上传腾讯文档
 ```bash
-# 先尝试直连
-cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
-
-# 如果失败，加代理重试
-https_proxy=http://127.0.0.1:1082 http_proxy=http://127.0.0.1:1082 \
-  cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/excel.xlsx
+# 上传 Word 文档（不要用 Excel）
+cd ~/.hermes/skills/tencent-docs && bash import_file.sh /path/to/report.docx
 
 # 触发导入
 mcporter call "tencent-docs" "manage.async_import" --args '{...}'
@@ -594,6 +615,11 @@ mcporter call "tencent-docs" "sheet.set_range_value" --args '{"file_id": "FILE_I
 
 腾讯文档：云盘 → OBSBOT → 竞品监测
 文件夹 ID：`DnNkcnCRIHGt`
+
+## 参考模板
+
+Word 文档格式参考：`/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx`
+首次执行时应读取学习格式结构。
 
 ## 评论区深度分析（YouTube API）
 
@@ -865,6 +891,41 @@ for vid in video_ids:
 **最佳策略**：
 1. 先用 yt-dlp 批量获取所有视频详情（~40秒）
 2. 对 yt-dlp 失败的视频（新视频 <48h），再用浏览器单独获取
+
+### Pitfall 25: YoloBox Extreme ≠ Yolocam S3/S7（2026-06-18 纠正）
+**问题**：搜索 "Yolocam S3/S7" 时，YouTube 返回大量关于 "YoloBox Extreme" 的视频。
+**原因**：YoloBox 和 Yolocam 都是 YoloLiv 品牌，但产品类型完全不同：
+- **YoloBox Extreme** = 直播切换器（live streaming switcher）
+- **Yolocam S3/S7** = 摄像头（webcam）
+
+**解决方案**：
+- 搜索结果中标题包含 "YoloBox" 但不含 "Yolocam" → 排除
+- 标题同时包含 "YoloBox" 和 "Yolocam" → 保留（可能是对比视频）
+- 标题只包含 "Yolocam" → 保留
+
+**判断代码**：
+```python
+title_lower = title.lower()
+if 'yolobox' in title_lower and 'yolocam' not in title_lower:
+    return False  # 排除
+```
+
+### Pitfall 26: 小频道 Roundup 视频过滤（2026-06-18 新增）
+**问题**：小频道（播放量低）的 "Top 5/10 Best Webcams" 合集视频，竞品只是列表中的一个，不是专门讲该竞品。
+**用户反馈**：这类视频不被视为 "竞品投放"，不应纳入报告。
+
+**解决方案**：
+- 播放量 < 1000 的 Roundup/Top N 视频 → 排除
+- 播放量 ≥ 1000 的 Roundup 视频 → 保留
+- 知名频道（订阅 ≥ 100K）的 Roundup 视频 → 保留
+
+**判断代码**：
+```python
+title_lower = title.lower()
+is_roundup = any(kw in title_lower for kw in ['top 5', 'top 10', 'top n', 'best of', 'roundup'])
+if is_roundup and views < 1000:
+    return False  # 排除小频道 Roundup
+```
 
 ### Pitfall 23: yt-dlp bot 检测后再用 cookies 会触发格式错误（2026-06-17 验证）
 当 yt-dlp 不带 cookies 报 "Sign in to confirm you're not a bot" 错误后，加上 `--cookies-from-browser chrome` 会变成 "Requested format is not available" 错误。

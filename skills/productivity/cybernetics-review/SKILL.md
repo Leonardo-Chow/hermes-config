@@ -199,6 +199,16 @@ skill patch: autocli — 更新可用站点列表
 
 详见 `references/memory-cleanup-methodology.md`
 
+## 持续性安全发现（每次复盘必检）
+
+以下问题在多次复盘中反复出现，修复前每次必须标记：
+
+| 发现 | 首次发现 | 风险 | 状态 | 修复命令 |
+|:-----|:---------|:----:|:-----|:---------|
+| GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
+
+> 当问题修复后，从本表移除并记录到 memory。
+
 ## 注意事项
 1. **闭环优先**：每次复盘必须形成闭环，不能只分析不修正
 2. **底层优先**：先提取底层逻辑存 memory，再存操作细节到 skill

@@ -233,6 +233,38 @@ def create_excel(all_data, output_path):
     print(f'Excel 已保存: {output_path}')
 ```
 
+## Twitch GQL API 获取粉丝量
+
+TwitchTracker 页面的粉丝量通过 JavaScript 动态加载，curl 无法直接获取。解决方案：使用 Twitch 官方 GraphQL API。
+
+```python
+import json, subprocess
+
+def get_followers(username):
+    """通过 Twitch GQL API 获取粉丝量"""
+    query = {"query": f'query {{ user(login: "{username}") {{ followers {{ totalCount }} }} }}'}
+    with open('/tmp/twitch_query.json', 'w') as f:
+        json.dump(query, f)
+    
+    cmd = '''curl -s -X POST 'https://gql.twitch.tv/gql' \
+      -H 'Client-ID: kimne78kx3ncx6brgo4mv6wki5h1ko' \
+      -H 'Content-Type: application/json' \
+      -d @/tmp/twitch_query.json 2>/dev/null'''
+    
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+    try:
+        data = json.loads(result.stdout)
+        return data.get('data', {}).get('user', {}).get('followers', {}).get('totalCount')
+    except:
+        return None
+```
+
+**关键点**：
+- Client-ID `kimne78kx3ncx6brgo4mv6wki5h1ko` 是 Twitch 网页端公开的 Client-ID
+- 查询必须写入文件再用 `-d @file` 传递，不能直接在命令行中拼接 JSON（会因转义问题报错）
+- 限流：连续请求约 50 次后会返回 N/A，需等待几秒后重试
+- 成功率：138 个主播中约 70% 首次成功，重试后可达 95%+
+
 ## ⚠️ Pitfalls
 
 1. **TwitchTracker 限流** — 连续请求过多会返回空页面，需加 1-2 秒延迟
