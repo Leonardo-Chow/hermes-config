@@ -1,7 +1,7 @@
 ---
 name: obsbot-competitor-monitor
 description: |
-  OBSBOT竞品YouTube上线监测。搜索19款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Word报告上传腾讯文档。
+  OBSBOT竞品YouTube上线监测。搜索20款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Word报告上传腾讯文档。
   定时任务：周一/三/五自动执行。
   输出格式：Word文档（不要Excel）。
   参考模板：/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx
@@ -123,7 +123,9 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review, UGREEN webcam レビュー, UGREEN webcam resenha |
 | Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming, Insta360 Link 2c |
 | Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
-| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review |
+| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review, Insta360 Link 2 Pro vs, Insta360 Link 2 Pro unboxing |
+| EMEET SmartCam C60E 4K | EMEET C60E, EMEET C60E webcam, EMEET C60E review, EMEET SmartCam C60E |
+| EMEET SmartCam C60E 4K | EMEET C60E, EMEET C60E webcam, EMEET C60E review, EMEET SmartCam C60E |
 
 ## 过滤规则（必须严格执行）
 
@@ -144,6 +146,12 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ### 过滤3：游戏直播排除
 - ❌ 排除纯游戏直播内容，没有讲解 webcam 产品
 - 判断：标题含游戏名（FORZA、VALORANT、COD 等）且无 webcam 测评内容
+
+### 过滤3b：非评测内容排除（2026-06-22 新增）
+- ❌ **Studio Tour** → 排除（设备展示非摄像头评测）
+- ❌ **How-to/Tutorial** → 排除（连接教程、设置教程等非评测内容）
+- ❌ **Livestream without webcam review** → 排除（纯直播无摄像头产品讲解）
+- ❌ **Spam/Irrelevant** → 排除（标题与摄像头完全无关的内容）
 
 ### 过滤4：低质量视频排除
 - 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
@@ -171,6 +179,12 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
   - 整体舆论明显负面（差评集中）
 - ⚠️ 注意：用户取消 OBSBOT 订单转选竞品 = 负面信号，需标记上评
 
+### 过滤8：标题提到 OBSBOT 但不是竞品专门评测（2026-06-22 新增）
+- ❌ 标题提到 OBSBOT 产品（如 "OBSBOT Tiny 3 Lite vs Insta360 Link 2 Pro"）但视频不是专门讲竞品 → 排除
+- ❌ 标题提到 OBSBOT 产品（如 "This is the SMALLEST Webcam: OBSBOT Tiny 3"）但视频是讲 OBSBOT 而非竞品 → 排除
+- ✅ 标题提到 OBSBOT 但视频是竞品评测（如 "Is Insta360 Link 2 Pro Better Than OBSBOT?"）→ 保留
+- 判断标准：视频主要讲的是竞品还是 OBSBOT？如果 OBSBOT 只是对比对象，保留；如果 OBSBOT 是主角，排除
+
 ### 用户纠正案例（2026-06-03）
 - 「裝備魔 JBTVHK」的「Insta360 全系列選購指南」→ ❌ 排除（不是专门讲 webcam）
 - 「FORZA HORIZON 6 E WEBCAM EMEET PIXY 4K」→ ❌ 排除（纯游戏内容）
@@ -184,6 +198,13 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 - PhotoJoseph「YoloBox Extreme」→ ❌ 排除（YoloBox ≠ Yolocam）
 - Kay Tomas「Razer Kiyo wettings」→ ❌ 排除（标题拼写错误 + 播放量 0）
 - Immortals TRYN「Razer Kiyo combo」→ ❌ 排除（越南语，非目标市场）
+
+### 用户纠正案例（2026-06-22）
+- Santiago Santiago「NEW Apartment Studio Tour 2026」→ ❌ 排除（Studio Tour 非摄像头评测）
+- Sean Simz Tech「How to connect Logitech Brio 100 to PC」→ ❌ 排除（How-to 教程非评测）
+- WeShootFilms「WeShootFilms is live!」→ ❌ 排除（纯直播无摄像头评测内容）
+- Atius Dade Studio「Hollyland Venusliv Air - Crippling Software」→ ❌ 排除（垃圾内容）
+- Charmain Hilliard「Razer Kiyo Pro Webcam」→ ❌ 排除（0播放，垃圾内容）
 
 ## 输出格式（2026-06-12 更新）
 
@@ -395,10 +416,10 @@ echo "文件名: ${TODAY}——竞品检测报告——时间范围（${START_DI
 3. **浏览器搜索**（最可靠但最慢，可能触发 bot 检测）
 4. **Exa MCP**（补充搜索，日期索引有延迟）
 
-**🎯 最佳组合策略（2026-06-08 验证，2026-06-12 更新）**：
-1. **Phase 1**：yt-dlp `ytsearch8` 搜索全部品牌（~75秒，242个视频），用 ThreadPoolExecutor 并行获取详情（~80秒）→ 过滤日期范围。**预期命中率**：2天窗口约 0.4%（1-2个视频），3天窗口约 1-2%。
-2. **Phase 2**：如果 Phase 1 结果为空或过少，用浏览器搜索（`sp=EgIIAw%3D%3D` 日期排序）补充 → 2 个 subagent 各搜索 9 个品牌。**预期命中率**：2天窗口约 7-10 个视频。
-3. **Phase 3**：对补充搜索到的视频用 yt-dlp 获取详情。如果 yt-dlp 失败（新视频格式问题），用浏览器获取详情（见 Pitfall 17）。
+**🎯 最佳组合策略（2026-06-08 验证，2026-06-22 更新）**：
+1. **Phase 1**：yt-dlp `ytsearch8` 搜索全部品牌（~60秒，300+个视频），用 ThreadPoolExecutor 并行获取详情（~160秒）→ 过滤日期范围。**预期命中率**：2天窗口约 0.4%（1-2个视频），3天窗口约 1-2%。⚠️ **风险**：批量并行详情获取可能触发 YouTube 全局 bot 检测（Pitfall 27），导致全部失败。
+2. **Phase 2**：如果 Phase 1 结果为空、过少、**或详情获取因 bot 检测全部失败**，用浏览器搜索（`sp=EgIIAw%3D%3D` 日期排序）补充 → 3 个 subagent 各搜索 6-7 个品牌（~540秒）。**预期命中率**：2天窗口约 7-10 个视频，3天窗口约 6-15 个视频。
+3. **Phase 3**：对补充搜索到的视频用浏览器获取详情（yt-dlp 可能仍被封锁）。每个 subagent 处理 7 个视频（~200秒）。
 
 这种组合策略比纯浏览器搜索快 3x，比纯 yt-dlp 不会漏掉低播放量的新视频。
 
@@ -498,6 +519,11 @@ const views = document.querySelector('#info-container span:first-child')?.textCo
 const likes = document.querySelector('like-button-view-model button')?.getAttribute('aria-label') || document.querySelector('#top-level-buttons-computed button:first-child')?.textContent?.trim();
 const date = document.querySelector('#info-container span:nth-child(3)')?.textContent?.trim();
 const duration = document.querySelector('.ytp-time-duration')?.textContent?.trim();
+// 以下字段用于过滤6（赞助视频）和过滤7（OBSBOT提及）判定
+const paidPromotion = !!document.querySelector('a[href*="paid_promotion"]');
+const hashtags = Array.from(document.querySelectorAll('a[href*="hashtag"]')).map(el => el.textContent.trim().toLowerCase()).join(',');
+const actualDate = (document.querySelector('#description-inner')?.textContent?.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/) || []).slice(1,4).join('-') || 'unknown';
+const description = document.querySelector('#description-inner')?.textContent?.trim().substring(0, 500);
 ```
 
 ⚠️ **注意**：YouTube 页面结构可能变化。如果上述选择器失效，用 `document.querySelectorAll('[class*="ytd-watch"]')` 探索可用元素。
@@ -910,6 +936,29 @@ if 'yolobox' in title_lower and 'yolocam' not in title_lower:
     return False  # 排除
 ```
 
+### Pitfall 27: yt-dlp 批量并行请求触发 YouTube 全局 bot 检测（2026-06-22 验证）
+
+**问题**：yt-dlp 在批量并行请求（300+视频）时，YouTube 会检测到异常模式并**全局封锁后续所有请求**，包括单个请求也会失败。
+
+**症状**：
+- Phase 1 搜索成功获取 300+ 视频 ID（yt-dlp `ytsearch` 仍可用）
+- Phase 2 详情获取阶段：所有 307 个视频全部返回 `Sign in to confirm you're not a bot`
+- 单独测试单个视频（如 dQw4w9WgXcQ）用 `--dump-json` 仍可工作，但批量请求全部被拦截
+- 加 `--cookies-from-browser chrome` 后变成 `No video formats found`（Pitfall 23）
+
+**原因**：YouTube 对同一 IP 的短时间大量请求触发反爬封锁。封锁是临时的（可能持续 10-30 分钟），但在任务执行窗口内无法恢复。
+
+**解决方案**：不要重试 yt-dlp，立即切换到浏览器搜索（Phase 2）：
+1. 用 `delegate_task` 3 路并行浏览器搜索（每路 6-7 个品牌）
+2. 浏览器搜索用 `sp=EgIIAw%3D%3D` 按日期排序，~540 秒完成全部 19 品牌
+3. 对搜索到的视频用浏览器获取详情（而非 yt-dlp）
+
+**与 Pitfall 23 的区别**：
+- Pitfall 23：bot 检测 → 加 cookies → 格式错误（单个视频的连锁反应）
+- Pitfall 27：批量并行 → 全局封锁 → 所有后续请求失败（整个会话级影响）
+
+**预防**：如果 Phase 1 搜索阶段完成后发现详情获取全部失败，不要尝试 `--dump-json`、加 cookies、减少并行度等重试——直接跳到浏览器方案。
+
 ### Pitfall 26: 小频道 Roundup 视频过滤（2026-06-18 新增）
 **问题**：小频道（播放量低）的 "Top 5/10 Best Webcams" 合集视频，竞品只是列表中的一个，不是专门讲该竞品。
 **用户反馈**：这类视频不被视为 "竞品投放"，不应纳入报告。
@@ -925,6 +974,37 @@ title_lower = title.lower()
 is_roundup = any(kw in title_lower for kw in ['top 5', 'top 10', 'top n', 'best of', 'roundup'])
 if is_roundup and views < 1000:
     return False  # 排除小频道 Roundup
+```
+
+### Pitfall 27: 标题提到 OBSBOT 但不是竞品评测（2026-06-22 新增）
+**问题**：搜索竞品时，YouTube 返回的视频标题可能提到 OBSBOT 产品，但视频本身不是讲竞品。
+**案例**：
+- "OBSBOT Tiny 3 Lite vs Insta360 Link 2 Pro" by Tech4Dads → 视频主要讲 OBSBOT，不是专门讲 Insta360
+- "This is the SMALLEST Webcam: OBSBOT Tiny 3" by Paula Mads → 视频讲 OBSBOT，不是讲 Insta360 Link 2 Pro
+- "Webcam OBSBOT MEET SE a melhor webcam para Streaming?" by The Computer FOOL → 视频讲 OBSBOT，不是讲 EMEET S800
+
+**解决方案**：
+- 标题以 OBSBOT 产品为主角 → 排除（不是竞品评测）
+- 标题以竞品为主角，OBSBOT 只是对比对象 → 保留
+- 判断标准：标题中竞品品牌名出现在前面，OBSBOT 出现在后面 → 通常是竞品评测
+
+**判断代码**：
+```python
+title_lower = title.lower()
+obsbot_products = ['obsbot', 'tiny 2', 'tiny 3', 'meet 2', 'meet se', 'tail air', 'tail 2']
+competitor_brands = ['insta360', 'elgato', 'emeet', 'logitech', 'hollyland', 'razer', 'ugreen', 'yolocam']
+
+# 检查标题是否以 OBSBOT 产品为主角
+has_obsbot = any(p in title_lower for p in obsbot_products)
+has_competitor = any(b in title_lower for b in competitor_brands)
+
+if has_obsbot and has_competitor:
+    # 两者都有，判断谁是主角
+    # 如果 OBSBOT 出现在标题前面，可能是 OBSBOT 评测
+    obsbot_pos = min([title_lower.find(p) for p in obsbot_products if p in title_lower])
+    competitor_pos = min([title_lower.find(b) for b in competitor_brands if b in title_lower])
+    if obsbot_pos < competitor_pos:
+        return False  # OBSBOT 是主角，排除
 ```
 
 ### Pitfall 23: yt-dlp bot 检测后再用 cookies 会触发格式错误（2026-06-17 验证）

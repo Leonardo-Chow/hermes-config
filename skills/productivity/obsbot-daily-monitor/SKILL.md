@@ -349,8 +349,11 @@ mcporter call 'tencent-docs' 'smartsheet.list_tables' --args '{"file_id":"FILE_I
 # 添加字段
 mcporter call 'tencent-docs' 'smartsheet.add_fields' --args '{"file_id":"FID","sheet_id":"SID","fields":[...]}'
 
-# 添加记录
-mcporter call 'tencent-docs' 'smartsheet.add_records' --args '{"file_id":"FID","sheet_id":"SID","records":[...]}'
+# 添加记录（⚠️ 必须逐条，批量 >10 条会超时）
+# 每次只添加 1 条记录，间隔 0.5s
+for rec in records:
+    mcporter call 'tencent-docs' 'smartsheet.add_records' --args '{"file_id":"FID","sheet_id":"SID","records":['"$rec"']}'
+    sleep 0.5
 
 # 移动到目标文件夹
 mcporter call 'tencent-docs' 'manage.move_file' --args '{"file_id":"FID","target_folder_id":"DumZsGZJrwsf"}'
@@ -573,9 +576,24 @@ YouTube Data API 每日配额限制 100 次搜索。当返回 `429 Quota exceede
 
 - **OBSBOT**: DjbGtzenXmbX
 
+## ⚠️ VPN 开关规则
+
+| 操作 | VPN | 原因 |
+|:-----|:----|:-----|
+| YouTube API 搜索 | 可选OFF（直连更快） | 直连 youtube.googleapis.com 不被墙 |
+| TikTok 搜索/Scrapling | **ON** | 需要代理 |
+| Instagram Scrapling | **ON** | 需要代理 |
+| X/Twitter | **ON** | 需要代理 |
+| **mcporter 写入腾讯文档** | **OFF** | VPN 会导致 TLS 断开：`Client network socket disconnected before secure TLS connection was established` |
+| NoxInfluencer 搜索 | **ON** | API 在 GFW 外 |
+
+**NoxInfluencer + mcporter 冲突**：搜 KOL 时开 VPN → 搜完关 VPN → 写腾讯文档。不能同时。
+
+**mcporter auth 过期**：smartsheet.list_tables 返回 `RPC invalid` 时执行 `mcporter auth tencent-docs` 重新授权。
+
 ## ⚠️ 关键约束
 
-**VPN 稳定性是首要约束。** Shadowrocket 长时间任务会断开，需要定期检查连接状态。YouTube API 和 TikTok Scrapling 都依赖 VPN。遇到 VPN 断开时先重连再继续。
+**VPN 稳定性是首要约束。** Shadowrocket 长时间任务会断开，需要定期检查连接状态。TikTok Scrapling 依赖 VPN。遇到 VPN 断开时先重连再继续。
 
 详见 `references/platform-constraints.md` 获取每个平台的详细状态和工具矩阵。
 详见 `references/tiktok-api-matrix.md` 获取 TikTok 多 API 对比、端点速查、额度分配策略。

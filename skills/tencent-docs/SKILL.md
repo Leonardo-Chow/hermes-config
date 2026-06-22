@@ -409,6 +409,92 @@ mcporter call tencent-docs manage.create_file --args '{"title": "xxx"}'
 mcporter auth tencent-docs
 ```
 
+### mcporter 配置文件工作目录依赖（重要坑）
+
+mcporter 的 `config add` 命令会把配置写到**当前工作目录**下的 `config/mcporter.json`，不是固定路径：
+
+```bash
+# ❌ 在 / 目录运行 → 尝试创建 /config/mcporter.json → ENOENT 错误
+cd / && mcporter config add tencent-docs https://docs.qq.com/openapi/mcp
+
+# ❌ 在 ~/.hermes 运行 → 写到 ~/.hermes/config/mcporter.json（非标准位置）
+cd ~/.hermes && mcporter config add tencent-docs https://docs.qq.com/openapi/mcp
+
+# ✅ 标准位置：~/.mcporter/mcporter.json
+cd ~ && mcporter config add tencent-docs https://docs.qq.com/openapi/mcp
+```
+
+**排查步骤**：如果 mcporter 调用报 `tools unavailable` 或 `ENOENT`，先检查配置文件位置：
+```bash
+mcporter config list   # 查看 source 路径
+```
+
+如果发现配置散落在非标准位置，手动合并到 `~/.mcporter/mcporter.json`：
+```bash
+cat ~/.mcporter/mcporter.json | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+d['mcpServers']['tencent-docs'] = {'baseUrl': 'https://docs.qq.com/openapi/mcp'}
+print(json.dumps(d, indent=2, ensure_ascii=False))
+" > /tmp/mcporter_fixed.json && mv /tmp/mcporter_fixed.json ~/.mcporter/mcporter.json
+```
+
+### mcporter HTTP 405 错误诊断
+
+mcporter 调用返回 `HTTP 405 (SSE error)` 时，有两种可能原因：
+
+1. **Token 过期**（最常见）：执行 `mcporter auth tencent-docs` 重新授权，然后重试调用
+2. **配置文件错位**：mcporter 从错误的 config 文件读取了旧/无效的 server URL
+
+**诊断顺序**：
+1. 先 `mcporter config list` 确认 server URL 正确
+2. 再 `mcporter auth tencent-docs` 重新授权
+3. 最后重试调用
+
+**注意**：docs.qq.com 是国内站点，VPN 连接时 curl 可以正常访问（HTTP 200）。mcporter 的 405 错误通常是 token 问题而非网络问题。
+
+### mcporter 连接故障排查（2026-06-22）
+
+当 mcporter 报错时，按以下顺序排查：
+
+**1. Config 文件散射问题**
+
+mcporter 的 config 文件位置取决于**运行时的当前工作目录**（cwd）。从不同目录运行 `mcporter config add` 会把配置写到不同位置：
+- `~/` → `~/config/mcporter.json`
+- `~/.hermes/` → `~/.hermes/config/mcporter.json`
+- 标准位置：`~/.mcporter/mcporter.json`
+
+这会导致从某些目录运行 `mcporter call tencent-docs ...` 时找不到服务器配置，报 `tools unavailable` 或 `fetch failed`。
+
+**修复**：确保 tencent-docs 配置只存在于 `~/.mcporter/mcporter.json`，删除其他散落的 config 文件：
+```bash
+# 检查标准配置是否存在
+cat ~/.mcporter/mcporter.json | python3 -c "import json,sys; d=json.load(sys.stdin); print('tencent-docs' in d.get('mcpServers',{}))"
+# 删除散落配置
+rm -f ~/config/mcporter.json ~/.hermes/config/mcporter.json
+```
+
+**2. Auth 过期 → HTTP 405 / 401**
+
+mcporter 的 SSE 传输有时不返回标准 401，而是返回 HTTP 405。两种错误码都可能表示 token 过期：
+```bash
+# 无论看到 401 还是 405，先重新授权
+mcporter auth tencent-docs
+```
+Auth 成功时静默返回（exit 0，无输出）。
+
+**3. VPN on-demand 自动重连**
+
+Shadowrocket 的 on-demand 模式下，`scutil --nc stop` 断开后几秒内会自动重连。docs.qq.com 是国内站点，通常在 VPN 的排除路由中，直连即可。如果 curl 测试 docs.qq.com 返回 200 但 mcporter 失败，问题不在 VPN，走 auth 修复即可。
+
+**快速连通性验证**：
+```bash
+# 先确认 HTTP 层可达
+curl -sI --connect-timeout 5 https://docs.qq.com/openapi/mcp | head -1
+# 应返回 HTTP/2 401（未认证但端点可达）或 HTTP/2 200
+# 如果返回 SSL_ERROR 或 Connection refused，才是网络/VPN 问题
+```
+
 ### Sheet 操作参数格式（重要）
 
 `sheet.set_cell_value` 的正确参数格式：

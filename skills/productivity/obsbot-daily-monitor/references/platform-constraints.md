@@ -6,6 +6,7 @@
 - **Tool:** YouTube Data API (`curl` + API Key)
 - **API Key:** `YOUR_YOUTUBE_API_KEY`
 - **Capabilities:** Search by keyword, date filter (`publishedAfter`/`publishedBefore`), full snippet (title, description, tags), video statistics, channel info
+- **VPN:** NOT required (直连 youtube.googleapis.com 更快更稳定，代理反而可能 503/超时)
 - **Reliability:** HIGH — direct API, no scraping needed
 - **Rate limits:** 10,000 quota units/day (sufficient for daily monitoring)
 
@@ -48,6 +49,11 @@
 | Shadowrocket (primary) | `127.0.0.1:1082` | HTTP + SOCKS5 | macOS system tunnel (utun4) |
 | v2rayN | `127.0.0.1:10808` / `10809` | HTTP / SOCKS5 | Backup |
 | ClashX Pro | `127.0.0.1:7890` | HTTP | Unstable, avoid |
+
+**⚠️ VPN by operation:**
+- **NEED VPN:** TikTok (Scrapling/oembed), Instagram (Scrapling), X/Twitter, NoxInfluencer
+- **NO VPN (直连):** YouTube API, mcporter (腾讯文档)
+- **⚠️ mcporter + VPN = TLS disconnect** — `Client network socket disconnected before secure TLS connection was established`. Always turn VPN OFF before writing to Tencent Docs.
 
 ## NoxInfluencer Brand Monitor
 

@@ -13,9 +13,11 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 
 ## ⚠️ 执行纪律（用户明确要求）
 
-1. **不要一步一停** — 用户多次强调"继续执行走，不要做一半的任务"。整个流程必须一口气跑完（搜索→验证→创建表格→写入），中间不要等用户指令。
+1. **不要一步一停** — 用户多次强调"继续执行走，不要做一半的任务"。整个流程必须一口气跑完（搜索→验证→创建表格→写入），中间不要等用户指令。用户说"继续"是因为你停了——下次别停。
 2. **开始前检查日期** — `date '+%Y-%m-%d %A'`，用当天日期命名文件。
 3. **想尽办法去找** — 搜索不够就换关键词再来一轮，直到数量达标。
+4. **用户市场** — 用户负责**北美市场（US/CA）**，除非明确指定其他地区。
+5. **Daily Running 品类** — 用户明确指定的品类：YouTube（直播垂类、Apple类、桌搭类、科技类）+ Instagram（桌搭类）。
 
 ## 核心筛选标准
 
@@ -207,22 +209,49 @@ for file in ['kol_verified_final.json', 'kol_final_40.json', 'kol_round3_verifie
     except: pass
 ```
 
-### Step 5: 写入腾讯文档
+### Step 5: 写入腾讯文档（严格去重）
+
+**⚠️ 只写全新 KOL，不写入已存在的。必须在写入前检查去重。**
 
 ```python
-# 创建 smartsheet
-mcporter call tencent-docs manage.create_file --args '{"title":"KOL筛选M月D日 vN","file_type":"smartsheet"}'
+# 1. 读取已存在的 KOL
+existing = set()
+r = subprocess.run(['mcporter','call','tencent-docs','smartsheet.list_records','--args',
+    json.dumps({"file_id":file_id,"sheet_id":sheet_id})], capture_output=True, text=True, timeout=30)
+for rec in json.loads(r.stdout).get('records',[]):
+    for fv in rec.get('field_values',[]):
+        if fv.get('field') == 'KOL ID':
+            existing.add(fv.get('text_value',{}).get('items',[{}])[0].get('text','').strip().lower())
 
-# 添加 14 列字段（产品/KOL ID/频道链接/受众国家/粉丝量K/量级/互动率/一级类目/二级类目/视频形式/平台/建议价格/建议理由/筛选时间）
+# 2. 只添加不存在的 KOL
+for c in kols:
+    nick = c.get('nickname','').lower()
+    if nick in existing: continue  # ← 跳过已存在的
+    # ... 添加记录 ...
 
-# 逐条添加记录（不要批量，mcporter 会超时）
-for rec in records:
-    mcporter call tencent-docs smartsheet.add_records --args '{"file_id":"FID","sheet_id":"SID","records":[rec]}'
-    time.sleep(0.3)
-
-# 移动到 OBSBOT → 每日监测 文件夹
-mcporter call tencent-docs manage.move_file --args '{"file_id":"FID","target_folder_id":"DumZsGZJrwsf"}'
+# 3. 写入完成后去重
+recs = json.loads(r.stdout).get('records',[])
+seen = {}
+dupes = []
+for rec in recs:
+    nick = ''
+    for fv in rec.get('field_values',[]):
+        if fv.get('field') == 'KOL ID':
+            nick = fv.get('text_value',{}).get('items',[{}])[0].get('text','').strip()
+    if nick in seen: dupes.append(rec['record_id'])
+    else: seen[nick] = nick
+if dupes:
+    mcporter call tencent-docs smartsheet.delete_records --args '{"file_id":"FID","sheet_id":"SID","record_ids":DUPES}'
 ```
+
+### VPN 开关规则
+
+| 操作 | VPN | 原因 |
+|:-----|:----|:-----|
+| NoxInfluencer 搜索 | **ON** | API 在 GFW 外 |
+| mcporter 写入腾讯文档 | **OFF** | VPN 会导致 TLS 断开 |
+| YouTube API 验证 | **OFF** | 直连更快 |
+| 获取 NoxInfluencer profile | **ON** | 同上 |
 
 ## 品类搜索关键词
 
@@ -421,21 +450,54 @@ CPM = (合作价格 / 均播) × 1000
 
 **不要一步一停** — 用户明确要求连续执行，不要每步都等确认。用 todo 跟踪进度，一个 execute_code 块完成搜索→验证→写入全流程。只在真正需要用户输入时才停下。
 
-## KOL 黑名单（用户反馈 2026-06-05）
+### 官号过滤（自动排除）
 
-以下类型 KOL 直接排除，不要收录：
+**所有搜索结果在入库前必须过官号检测**。以下类型直接过滤：
 
-| 类型 | 示例 | 原因 |
-|:-----|:-----|:-----|
-| 产品官号 | Reolink, Sling Pilot Academy, NexiGo | 品牌官方频道，无法合作 |
-| 安防摄像头 | ToolBox BD, CCTV Camera Pros | 不是 OBSBOT 赛道 |
-| 纯游戏 | HASIBxBRO, Eddie's DL | 受众不对齐 |
-| 纯 Shorts | DaizeDreams, Milktea Emma | 无深度内容 |
-| 偏离主题 | Big Bear Live Stream, PTZtv | 内容不合格，无人出镜 |
-| 野生动物/天气 | Scottish Wildlife Trust, DWDderWetterdienst | 严重偏离主题 |
-| 航空/飞行 | Sling Pilot Academy | 不相关 |
-| 定位不清 | Nightfury | 视频少且无明确定位 |
-| 画像偏差 | Sugarloaf, Alex Explorer | 受众严重不对齐 |
+```python
+brand_patterns = [
+    # 品牌/官方标识
+    "official", "inc.", "systems", "corp", "ltd", "co.,",
+    # 已知品牌官号
+    "reolink", "nexigo", "hikvision", "nikon", "bose",  "acasis",
+    "tp-link", "obsbot", "sling pilot", "anvil", "cable matters",
+    # 教会/组织频道（非个人创作者）
+    "ministries", "church", "tabernacle", "temple", "dwelling",
+    "gesellschaft", "ege",
+    # 机构/学校
+    "sling pilot academy", "scottish wildlife trust",
+    # 家具/仓储（非科技频道）
+    "warehouse", "furniture",
+    # 媒体/新闻
+    "visionplus", "officiel", "inbroadcast",
+    # 厂商频道
+    "hoto", "sony | professional",
+]
+```
+
+**检测规则**：
+1. 检查 KOL 名称是否包含 brand_patterns 中任何关键词
+2. 检查频道 URL 是否来自已知品牌域名
+3. 检查频道描述是否包含 "official channel" / "brand page" 等标识
+4. 检查视频内容是否主要为产品宣传（非独立评测）
+
+### 活跃度过滤（自动排除 3 个月未更新）
+
+**入库前必须验证最近更新日期**。超过 3 个月未更新的频道直接排除。
+
+```python
+from datetime import datetime, timedelta
+cutoff = datetime.now() - timedelta(days=90)
+
+# YouTube API search.list 检查最新视频日期
+curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=CH_ID&type=video&maxResults=1&order=date&key=API_KEY"
+# 检查 items[0].snippet.publishedAt 是否在 90 天内
+```
+
+**检测规则**：
+1. YouTube 频道：通过 API 检查最新视频的 `publishedAt`
+2. NoxInfluencer 已过滤 `published_within_days 90`
+3. 如 API 调用失败（VPN 断开），跳过验证但标注 "⚠️ 未验证活跃度"
 
 ## 排除关键词列表
 
@@ -479,6 +541,9 @@ c['_is_vlog'] = vlog_count >= 3
 | creator profile 命令失败 | 用 `shell_quote(cid)` 包裹 creator_id |
 | 搜索结果无 channel_url | 必须单独调 `creator profile` 获取 |
 | 重复 KOL 跨批次 | 维护全局 excluded_names set |
+| mcporter auth 失败 (VPN 冲突) | VPN 连接时 mcporter auth 会失败（"fetch failed"/"SSE error"）。**必须先断开 VPN**：`scutil --nc stop "Shadowrocket"`，认证成功后再重连 VPN。mcporter 走腾讯文档直连，不经过代理。 |
+| mcporter HTTP 405 / 连接错误 | mcporter 服务可能挂了或需要重新认证。先 `scutil --nc stop "Shadowrocket"` 断 VPN，再 `mcporter auth tencent-docs` 重新认证。 |
+| NoxInfluencer content 命令失败 | `noxinfluencer creator content` 偶尔报 "Unexpected token '<'"（Cloudflare 拦截）。改用 YouTube API `search.list` 搜索频道内的 OBSBOT 相关视频。 |
 | VPN 长任务断连 | 每 10 个 profile 查询后重连 VPN：`scutil --nc start "Shadowrocket"` + `sleep 5` |
 | YouTube API 验证失败 | VPN 断了导致 curl 返回空。重连后重试。或跳过验证直接用 NoxInfluencer 数据 |
 | mcporter move_file 超时 | timeout 设 60s，不要用默认 30s |
@@ -790,6 +855,7 @@ wb.save(output_path)
 - `references/campaign-plan-2026.md` — OBSBOT KOL 营销作战计划（2026年6-8月），含 Talent 2 上市、Daily Running、欧洲/北欧市场、品牌大使完整计划
 - `references/cpm-analysis-model.md` — CPM 分析模型（产品价格、基准表、合作决策规则、品类优先级）
 - `references/2026-h2-campaign-plan.md` — 2026 H2 营销作战计划（Talent 2 上市 7.29、Daily Running、欧洲/北欧市场、BA 计划、Micro Center 渠道）
+- `references/daily-running-campaign-plan.md` — Daily Running 营销计划（2026年6-8月），含品类结构、预算、CPM基准、决策矩阵
 - `references/creator-deep-research-workflow.md` — 创作者深度调研方法论（多平台搜索+分析+Word报告）
 - `references/leonardo-kol-writing-style.md` — Leonardo 的 KOL 评价风格指南
 - `references/youtube-channel-scraping.md` — YouTube 频道信息抓取技术方案

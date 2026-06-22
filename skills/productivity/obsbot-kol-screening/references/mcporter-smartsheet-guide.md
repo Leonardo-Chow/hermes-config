@@ -55,8 +55,9 @@ for rec in records:
 | **list_tables 返回空** | 直接用 `sheet_id="t00i2h"`，新 smartsheet 默认都是这个 |
 | **字段用 field_name** | 不用 field_id，直接用字段名（如 "KOL ID"） |
 | **特殊字符** | creator_id 必须用 `shell_quote()` 包裹 |
+| **VPN 冲突（关键！）** | VPN 连接时 mcporter auth 会失败（"fetch failed"/"SSE error"/"HTTP 405"）。**必须先断开 VPN**：`scutil --nc stop "Shadowrocket"`，认证/操作成功后再重连。mcporter 走腾讯文档直连，不经过代理。 |
 | **VPN 断连** | mcporter 调用返回空 → 重连 VPN + re-auth |
-| **re-auth** | `mcporter auth tencent-docs` 解决大部分连接问题 |
+| **re-auth** | `mcporter auth tencent-docs` 解决大部分连接问题。但**必须先断 VPN 再 auth**。 |
 | **record_id 获取** | 从 list_records 返回的 records[].record_id |
 | **去重** | list_records → 按 KOL ID 去重 → delete_records 多余的 |
 
