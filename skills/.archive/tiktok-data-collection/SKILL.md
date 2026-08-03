@@ -76,7 +76,7 @@ print(dt.strftime('%Y-%m-%d'))  # 发布日期
 ### 认证
 
 ```
-Header: x-api-key: YOUR_SCRAPERCREATORS_API_KEY
+Header: x-api-key: YOUR_SCRAPECREATORS_API_KEY
 配置文件: ~/.config/last30days/.env
 ```
 
@@ -95,7 +95,7 @@ Header: x-api-key: YOUR_SCRAPERCREATORS_API_KEY
 ```python
 import requests
 
-API_KEY = "YOUR_SCRAPERCREATORS_API_KEY"
+API_KEY = "YOUR_SCRAPECREATORS_API_KEY"
 BASE = "https://api.scrapecreators.com"
 
 def get_profile(handle):

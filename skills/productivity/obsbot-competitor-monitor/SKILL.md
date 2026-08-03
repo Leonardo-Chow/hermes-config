@@ -1,7 +1,7 @@
 ---
 name: obsbot-competitor-monitor
 description: |
-  OBSBOT竞品YouTube上线监测。搜索20款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Word报告上传腾讯文档。
+  OBSBOT竞品YouTube上线监测。搜索21款核心竞品在YouTube的上线视频，抓取数据，分析评论区，生成Word报告上传腾讯文档。
   定时任务：周一/三/五自动执行。
   输出格式：Word文档（不要Excel）。
   参考模板：/Users/zhoulong/Downloads/2026-06-12——视频上线监测——上午.docx
@@ -98,7 +98,7 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ```
 
-## 核心竞品清单（19款）
+## 核心竞品清单（21款）
 
 ⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
 ⚠️ **必须覆盖多语言**：英语、日语、葡萄牙语、西班牙语、法语、德语等。
@@ -114,6 +114,8 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | EMEET PIXY Wireless | EMEET PIXY Wireless, EMEET PIXY Wireless OBS, EMEET PIXY Wireless streaming, EMEET PIXY Wireless review, EMEET PIXY Wireless レビュー, EMEET PIXY Wireless resenha |
 | EMEET S600L | EMEET S600L webcam, EMEET S600L review, EMEET S600L 4K, EMEET S600L レビュー |
 | EMEET SmartCam C960 Ultra | EMEET SmartCam C960 Ultra, EMEET 960C, EMEET C960, EMEET 960C review, EMEET C960 Ultra |
+| EMEET SmartCam C60E 4K | EMEET C60E, EMEET C60E webcam, EMEET C60E review, EMEET SmartCam C60E |
+| Emeet Nova 4K | Emeet Nova 4K, Emeet Nova webcam, Emeet Nova review |
 | Yolocam S3 | Yolocam S3 webcam, YoloLiv YoloCam S3 review, Yolocam S3 streaming, Yolocam S3 レビュー |
 | Yolocam S7 | Yolocam S7 webcam, YoloLiv YoloCam S7 review, Yolocam S7 streaming |
 | Hollyland VenusLiv Air | Hollyland VenusLiv Air, Hollyland VenusLiv Air review, Hollyland VenusLiv Air streaming |
@@ -122,12 +124,28 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 | Razer Kiyo | Razer Kiyo webcam, Razer Kiyo V2 webcam, Razer Kiyo review, Razer Kiyo V2 review |
 | UGREEN 4K Webcam | UGREEN 4K webcam, UGREEN webcam review, UGREEN webcam レビュー, UGREEN webcam resenha |
 | Insta360 Link 2 | Insta360 Link 2 webcam, Insta360 Link 2 review, Insta360 Link 2 streaming, Insta360 Link 2c |
-| Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker |
-| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review, Insta360 Link 2 Pro vs, Insta360 Link 2 Pro unboxing |
-| EMEET SmartCam C60E 4K | EMEET C60E, EMEET C60E webcam, EMEET C60E review, EMEET SmartCam C60E |
+| Insta360 Wave | Insta360 Wave webcam, Insta360 Wave speaker, Insta360 Wave review, Insta360 WaveLink, This AI Speaker |
+| Insta360 Link 2 Pro | Insta360 Link 2 Pro webcam, Insta360 Link 2 Pro review, Insta360 Link 2 Pro vs, Insta360 Link 2 Pro unboxing, Insta360 Link 2 Pro first look, Insta360 Link 2C Pro |
 | EMEET SmartCam C60E 4K | EMEET C60E, EMEET C60E webcam, EMEET C60E review, EMEET SmartCam C60E |
 
 ## 过滤规则（必须严格执行）
+
+### 📋 质量判断标准（2026-06-30 用户确认）
+
+⚠️ **量级/采纳的核心标准是视频内容质量，不是播放量或订阅量**
+
+**✅ 高质量视频特征（KOL/KOC 保留）：**
+- 视频画面中出现产品实物，有实际使用/测试/演示场景
+- 标题和内容围绕具体产品型号展开（非泛泛说 "webcam"）
+- 有实质内容：评测、开箱、对比、教程、设置指南等
+- 画面/剪辑有一定制作质量
+
+**❌ 低质量视频特征（素人，或直接过滤）：**
+- 无产品实拍画面（仅文字/AI配音/截图轮播）
+- 标题/内容泛泛（只说 "best webcam" 不具体提及型号）
+- 简略随手拍，无实质内容（< 30 秒无讲解）
+- 产品仅作为背景元素出现，非视频主角
+- 自动生成的商品列表视频
 
 ### 过滤1：官方账号排除
 - ❌ 排除竞品官方频道发布的视频（如 `Hollyland FAQ`、`Insta360`、`YoloLiv Tech` 等官号）
@@ -154,17 +172,22 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 - ❌ **Spam/Irrelevant** → 排除（标题与摄像头完全无关的内容）
 
 ### 过滤4：低质量视频排除
-- 播放量 < 50 **且** 时长 < 1分钟 → 直接过滤
-- ⚠️ 巴西创作者常见模式：15-30秒 "直播" 片段，播放量 20-30（见 Pitfall 21）
+- ❌ 播放量 = 0 **且** 时长 < 30秒 → 直接过滤（垃圾内容）
+- ❌ 标题拼写错误 + 播放量 0 → 疑似垃圾内容，直接过滤（2026-06-18 纠正）
+- ⚠️ 新发布视频初始播放量低（<50）→ **不要自动过滤**（2026-06-29 纠正）
+  - 案例：Tre Rashad (16v)、Tommy Doan (24v) 均被用户采纳为 KOC/KOL
+  - YouTube 新视频发布后需要时间积累播放量，初始值低是正常现象
+- ⚠️ 巴西创作者常见模式：15-30秒 "直播" 片段，播放量 20-30 → 按过滤规则4处理
 - ⚠️ **标题拼写错误 + 播放量 0** → 疑似垃圾内容，直接过滤（2026-06-18 纠正）
 
-### 过滤5：Roundup/合集视频过滤（2026-06-18 新增）
+### 过滤5：Roundup/合集视频过滤（2026-06-18 新增，2026-06-26 调整）
 - ❌ **小频道的 Top N 合集视频** → 排除（如 "Top 5 Best Webcams 2026" by 小频道）
 - ✅ **大频道的 Top N 合集视频** → 保留（如 Think Media、Linus Tech Tips 等知名频道）
+- ✅ **知名创作者的 Prime Day/Deal 合集** → 保留（如 WeShootFilms、Freaky Tech Reviews 等）
 - 判断标准：
-  - 播放量 ≥ 1000 的 Roundup 视频 → 保留
-  - 播放量 < 1000 的 Roundup 视频 → 排除
-  - 知名频道（订阅 ≥ 100K）的 Roundup 视频 → 保留，无论播放量
+  - 播放量 ≥ 100 的 Roundup 视频 → 保留
+  - 播放量 < 100 的 Roundup 视频 → 排除
+  - 知名频道（订阅 ≥ 50K）的 Roundup 视频 → 保留，无论播放量
 - ⚠️ Roundup 视频的 Content Type 标记为 "Roundup"
 
 ### 过滤6：赞助视频识别
@@ -341,7 +364,7 @@ table.style = 'Table Grid'
 | 竞品 | 品牌名 |
 | 网红ID | 频道名 |
 | 视频链接 | YouTube URL |
-| 量级 | KOL/KOC/素人（按播放量：≥10k=KOL，≥1k=KOL，≥100=KOC，<100=素人） |
+| 量级 | KOL/KOC/素人（按视频质量：有产品实拍+制作精良=KOL，有实拍但简单=KOC，无实拍/无实质=素人） |
 | Content Type | Review/VS/Shorts/Tutorials/Unboxing/Roundup/Livestream/Sponsored |
 | 是否上评 | 是/空（仅评论提到obsbot或舆论差时=是） |
 | 曝光量 | 播放量 |
@@ -959,7 +982,59 @@ if 'yolobox' in title_lower and 'yolocam' not in title_lower:
 
 **预防**：如果 Phase 1 搜索阶段完成后发现详情获取全部失败，不要尝试 `--dump-json`、加 cookies、减少并行度等重试——直接跳到浏览器方案。
 
-### Pitfall 26: 小频道 Roundup 视频过滤（2026-06-18 新增）
+### Pitfall 28: API Key 文件会被删除（2026-06-25 验证）
+`/tmp/yt_api_key.txt` 文件在会话间会被系统清理。每次执行竞品监测时需要重新创建。
+
+**解决方案**：在搜索脚本中直接写入 API key，不要依赖文件：
+```bash
+#!/bin/bash
+API_KEY=YOUR_YOUTUBE_API_KEY
+# 直接在脚本中使用 API key
+```
+
+### Pitfall 29: mcporter 代理不一致（2026-06-25 验证）
+mcporter 调用 docs.qq.com 时，有时需要代理，有时不需要。错误表现：
+- 带代理：`ECONNRESET` (TLS 连接被重置)
+- 不带代理：正常工作
+
+**解决方案**：先尝试不带代理，失败后加代理重试：
+```bash
+# 先试直连
+mcporter call "tencent-docs" "manage.async_import" --args '{...}'
+# 失败则加代理
+export https_proxy=http://127.0.0.1:1082
+mcporter call "tencent-docs" "manage.async_import" --args '{...}'
+```
+
+### Pitfall 30: YouTube API 搜索脚本模板（2026-06-25 验证）
+最可靠的搜索方式是写一个 bash 脚本到 `/tmp/search_brands.sh`，直接在脚本中嵌入 API key：
+```bash
+#!/bin/bash
+export https_proxy=http://127.0.0.1:1082
+API_KEY=YOUR_YOUTUBE_API_KEY
+
+for brand in "Brand1+webcam" "Brand2+webcam"; do
+    curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${brand}&type=video&publishedAfter=YYYY-MM-DDT00:00:00Z&maxResults=5&key=${API_KEY}" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for item in d.get('items', []):
+    print(f'{item[\"id\"][\"videoId\"]}|||{item[\"snippet\"][\"channelTitle\"]}|||{item[\"snippet\"][\"title\"]}|||{item[\"snippet\"][\"publishedAt\"]}')
+"
+done
+```
+
+⚠️ **注意**：API key 在 heredoc 中会被截断为 `***`，必须直接写在脚本中。
+
+### Pitfall 31: yt-dlp 搜索按相关性排序，不按日期（2026-06-25 验证）
+yt-dlp `ytsearch` 返回的结果按相关性排序，不是按日期。这意味着：
+- 搜索结果中大部分是旧的热门视频
+- 新视频（<48小时）可能不在搜索结果中
+- 必须用 `upload_date` 字段过滤日期范围
+
+**最佳策略**：
+1. YouTube Data API 搜索（带 `publishedAfter` 参数）→ 获取新视频
+2. yt-dlp 作为补充（获取详情：views/likes/comments/duration）
+3. 浏览器搜索作为最后手段
 **问题**：小频道（播放量低）的 "Top 5/10 Best Webcams" 合集视频，竞品只是列表中的一个，不是专门讲该竞品。
 **用户反馈**：这类视频不被视为 "竞品投放"，不应纳入报告。
 
@@ -976,36 +1051,60 @@ if is_roundup and views < 1000:
     return False  # 排除小频道 Roundup
 ```
 
-### Pitfall 27: 标题提到 OBSBOT 但不是竞品评测（2026-06-22 新增）
-**问题**：搜索竞品时，YouTube 返回的视频标题可能提到 OBSBOT 产品，但视频本身不是讲竞品。
-**案例**：
-- "OBSBOT Tiny 3 Lite vs Insta360 Link 2 Pro" by Tech4Dads → 视频主要讲 OBSBOT，不是专门讲 Insta360
-- "This is the SMALLEST Webcam: OBSBOT Tiny 3" by Paula Mads → 视频讲 OBSBOT，不是讲 Insta360 Link 2 Pro
-- "Webcam OBSBOT MEET SE a melhor webcam para Streaming?" by The Computer FOOL → 视频讲 OBSBOT，不是讲 EMEET S800
+### Pitfall 28: 浏览器工具不可用时的降级方案（2026-06-23 验证）
+**问题**：浏览器工具可能在某些会话中完全不可用（`_hermes_read_browser_output` 未定义错误）。
+**症状**：所有 `browser_navigate`、`browser_console`、`browser_snapshot` 调用返回 `name '_hermes_read_browser_output' is not defined`。
 
 **解决方案**：
-- 标题以 OBSBOT 产品为主角 → 排除（不是竞品评测）
-- 标题以竞品为主角，OBSBOT 只是对比对象 → 保留
-- 判断标准：标题中竞品品牌名出现在前面，OBSBOT 出现在后面 → 通常是竞品评测
+1. **降级到 YouTube Data API**：用 curl 直接调用 YouTube Data API 搜索
+2. **API Key 处理**：API key 必须先写入文件（`write_file`），再用 `cat` 读取，不能在脚本中直接写入（会被系统截断）
+3. **Shell 脚本**：用 `write_file` 工具创建 `.sh` 文件，再用 `bash /tmp/script.sh` 执行，不能用 heredoc（`$(cat file)` 语法会被截断）
+
+**降级流程**：
+```bash
+# 1. 写入 API key 到文件
+echo "AIzaSy...aA1Q" > /tmp/yt_api_key.txt
+
+# 2. 写入搜索脚本到文件
+write_file(path='/tmp/search_brands.sh', content='''#!/bin/bash
+API_KEY=*** /tmp/yt_api_key.txt)
+curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${brand}&type=video&publishedAfter=2026-06-22T00:00:00Z&maxResults=5&key=${API_KEY}"
+''')
+
+# 3. 执行脚本
+bash /tmp/search_brands.sh
+```
+
+**⚠️ 关键**：不要在 `terminal` 的 heredoc 中使用 `$(cat file)` 语法，会被系统截断为 `***`。必须用 `write_file` 创建脚本文件。
+
+### Pitfall 29: Shorts 视频过滤（2026-06-23 新增）
+**问题**：EMEET C60E 等品牌的搜索结果中，大量印尼语/越南语创作者发布 Shorts 视频（17-59秒），不是正式评测。
+**案例**：
+- Creator Tools Indo「webcam Emeet c60e 4K bukan gimic」→ 42秒 Shorts
+- Creator Tools Indo「tahun 2026 masi pake webcam buram」→ 59秒 Shorts
+- Omega「Webcam Emeet C60E 4K lấy nét tự động」→ 17秒 Shorts
+
+**解决方案**：
+- 所有时长 < 60 秒的视频 → 直接过滤为 Shorts
+- 不需要检查播放量，直接排除
+- 这比"播放<50 且 时长<1分钟"的规则更严格
 
 **判断代码**：
 ```python
-title_lower = title.lower()
-obsbot_products = ['obsbot', 'tiny 2', 'tiny 3', 'meet 2', 'meet se', 'tail air', 'tail 2']
-competitor_brands = ['insta360', 'elgato', 'emeet', 'logitech', 'hollyland', 'razer', 'ugreen', 'yolocam']
-
-# 检查标题是否以 OBSBOT 产品为主角
-has_obsbot = any(p in title_lower for p in obsbot_products)
-has_competitor = any(b in title_lower for b in competitor_brands)
-
-if has_obsbot and has_competitor:
-    # 两者都有，判断谁是主角
-    # 如果 OBSBOT 出现在标题前面，可能是 OBSBOT 评测
-    obsbot_pos = min([title_lower.find(p) for p in obsbot_products if p in title_lower])
-    competitor_pos = min([title_lower.find(b) for b in competitor_brands if b in title_lower])
-    if obsbot_pos < competitor_pos:
-        return False  # OBSBOT 是主角，排除
+if duration < 60:
+    return False  # Shorts，直接排除
 ```
+
+### Pitfall 30: YouTube Data API 搜索结果相关性低（2026-06-23 发现）
+**问题**：YouTube Data API 的 `publishedAfter` 搜索返回的结果相关性很低，大量非摄像头内容。
+**案例**：搜索 "Elgato Facecam 4K webcam" 返回游戏直播、音乐视频等无关内容。
+
+**原因**：YouTube API 搜索是全文匹配，标题中包含 "webcam" 的游戏视频也会被返回。
+
+**解决方案**：
+1. **后过滤**：搜索结果必须经过内容相关性过滤（标题必须包含品牌名 + webcam/review 等关键词）
+2. **多搜索词**：每个品牌用 2-3 个搜索词覆盖，提高召回率
+3. **yt-dlp 补充**：用 yt-dlp `ytsearch` 获取更多结果，再用 API 获取详情
 
 ### Pitfall 23: yt-dlp bot 检测后再用 cookies 会触发格式错误（2026-06-17 验证）
 当 yt-dlp 不带 cookies 报 "Sign in to confirm you're not a bot" 错误后，加上 `--cookies-from-browser chrome` 会变成 "Requested format is not available" 错误。

@@ -1,9 +1,9 @@
 {
-  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260619-155224",
-  "last_run_at": "2026-06-19T15:52:24.529428+00:00",
-  "last_run_duration_seconds": 56.549887,
-  "last_run_summary": "auto: no changes; llm: After reviewing all three skills, here's my assessment:\n\n**Analysis of the 3 agent-created skills:**\n\n| Skill | Domain | Scope |\n|-------|--------|-------|\n| `flutter-aot-apk-patching` | Android APK reverse engineering | Class-level: binary…",
+  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260802-033206",
+  "last_run_at": "2026-08-02T03:32:06.537671+00:00",
+  "last_run_duration_seconds": 13.22911,
+  "last_run_summary": "auto: 89 marked stale, 1 reactivated; llm: skipped (consolidation off)",
   "last_run_summary_shown_at": "2026-05-22T09:07:42.961617+00:00",
   "paused": false,
-  "run_count": 6
+  "run_count": 11
 }

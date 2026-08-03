@@ -150,7 +150,7 @@ python3 ~/.hermes/scripts/yt_optimizer.py quota  # 查看配额报告
 ```python
 import requests
 
-API_KEY = "YOUR_SCRAPERCREATORS_API_KEY"
+API_KEY = "YOUR_SCRAPECREATORS_API_KEY"
 BASE = "https://api.scrapecreators.com"
 
 def search_tiktok_hashtag(hashtag, count=20):

@@ -10,9 +10,18 @@ version: 1.2.0
 
 ## KOL 视频分析工作流
 
-当用户要求分析某个 YouTube KOL 视频（获取字幕 → 上传腾讯文档 → 生成解析到 IMA），详见 `references/kol-video-analysis-workflow.md`。
+当用户要求分析某个 YouTube KOL 视频，详见 `references/kol-video-analysis-workflow.md`。
 
-核心流程：TranscriptAPI 获取字幕 → `create_smartcanvas_by_mdx` 上传到腾讯文档红人视频文件夹 → 按工作流程格式生成解析 → `import_doc` + `add_knowledge` 上传到 IMA OBSBOT 知识库。
+**完整流程**：获取字幕 → 上传腾讯文档 → 生成解析 → 上传 IMA OBSBOT 知识库
+
+**简化流程**（用户说"生成视频解析"/"分析这个视频"时常用）：
+1. `youtube-transcript-api` 获取字幕（需代理 + PySocks）
+2. `curl` 从页面源码提取视频元数据（标题、频道、上传日期、时长）
+3. 读取 `~/Downloads/KOL & 产品营销视频对接 (1).docx` 学习语言风格（⚠️必须是(1)版本，243MB）
+4. 分析字幕，提取 OBSBOT 产品亮点
+5. 用 `templates/doc_generator.py` 生成 Word 到 `~/Downloads/`
+
+语言风格指南详见 `references/kol-doc-style-guide.md`。
 
 关键 ID：
 - OBSBOT 知识库：`mmYXYA4QIUsKj6PikZYHx1HtEhrPFvmysbEUrO4UfvQ=`
@@ -23,12 +32,16 @@ version: 1.2.0
 
 当用户要求「每日监测」「今天更新的 OBSBOT 视频」「daily monitor」时，执行每日监测流程。
 
-核心流程：YouTube Data API + web_search 多平台搜索 → 腾讯文档智能表格（7列：更新时间/KOL ID/产品关键词/平台/视频类型/视频简介/视频链接）。
+**核心流程**：YouTube Data API 搜索 → 按 SOP 筛选（只留美欧博主 + 完整产品评测）→ 生成 Word 文档（.docx）→ COS import 上传腾讯文档。
 
 **关键要求**：
-- 简介必须完整（含所有链接、折扣码、hashtags、免责声明），不能摘要
-- 搜索结果标注置信度（HIGH/MEDIUM/LOW）
-- 未检测到的平台必须说明是「确认无内容」还是「检测能力不足」
+- ⚠️ 报告用 **Word 文档**，不要用智能表格（用户明确纠正）
+- ⚠️ 只筛选美欧博主（亚洲语言博主自动过滤）
+- ⚠️ 视频必须包含完整的产品测评内容
+- ⚠️ 不要添加 @KOL 负责人员（用户自己填写）
+- ⚠️ 周末视频在周一补齐
+- 简介必须包含搜索关键词和过滤条件
+- 输出保存到 ~/Downloads/YYYY-MM-DD-视频上线监测.docx
 
 详见 `references/daily-monitoring-workflow.md`。
 
@@ -199,7 +212,9 @@ for name in wb.sheetnames:
 | `kol-video-analysis-workflow.md` | KOL 单视频分析流程 |
 | `kol-doc-style-guide.md` | KOL 视频解析文档语言风格指南 |
 | `youtube-full-search.md` | YouTube 全量视频搜索 |
-| `daily-monitoring-workflow.md` | 每日监测工作流（多平台搜索+智能表格） |
+| `daily-monitoring-workflow.md` | 每日监测工作流（多平台搜索+Word报告格式+过滤规则） |
+| `daily-report-word-template.md` | 每日视频上线监测 Word 文档模板（参照6月12日格式） |
+| `report-template.md` | 每日监测报告 markdown 模板 |
 | `competitive-monitoring-sop.md` | OBSBOT 竞品投放监测 SOP（竞品清单、数据字段、用户评论5大维度、竞争洞察） |
 | `html-template-guide.md` | HTML 报告模板指南 |
 | `obsbot-admin-api.md` | OBSBOT 内部管理系统 API 完整参考（认证、端点、19条 pitfall、批量扫描） |
@@ -209,6 +224,8 @@ for name in wb.sheetnames:
 | `admin-email-verification-flow.md` | 邮箱验证码自动获取流程 |
 | `admin-api-calling-patterns.md` | API 调用模式和模板 |
 | `smartsheet-batch-ops.md` | 腾讯文档智能表格批量操作（分页、删除、上传） |
+| `tavily-api-pool.md` | Tavily API 池管理 + Shell 脚本中 API Key redact 问题 |
+| `youtube-batch-video-fetch.md` | YouTube Data API 批量视频详情获取模板 |
 | `tiktok-omar-api.md` | Omar TikTok API 详情和额度管理 |
 | `tiktok-scrapecreators-api.md` | ScrapeCreators API 端点和使用 |
 
@@ -443,6 +460,15 @@ YouTube Data API 返回 HIGH 置信度结果。但 Instagram/TikTok/X 的 web_se
 - NoxInfluencer 可查 tagged 创作者但无法确认当天是否发了相关内容
 - 第一次搜索可能遗漏 Instagram 内容（已验证），必须用多种查询变体重试
 - 搜索结果为「未检测到」≠「确认无内容」，必须向用户说明检测能力限制
+- **⚠️ Instagram 搜索是必选项**（用户多次反馈漏掉 Instagram 帖子）
+
+### ⚠️ Shell 脚本中 API Key 被 Redact
+Hermes terminal 工具会自动 redact API key 模式。`$(command)` 获取 key 时输出变 `***`，导致 bash 语法错误。
+**解决方案**：写 Python 脚本到文件再执行。详见 `references/tavily-api-pool.md`。
+
+### ⚠️ Tavily API 配额管理
+Tavily API 有月度配额限制，耗尽时返回 HTTP 432。使用 `tavily_api_pool.py` 管理多个 key。
+详见 `references/tavily-api-pool.md`。
 
 ### ⚠️ 用户期望持续推进
 不要中途停下汇报「X/Y 完成」然后等待指令。遇到失败应尝试其他方法继续，直到所有数据获取完毕。生成文档前必须自检：文字覆盖率≥95%、关键板块全部存在。

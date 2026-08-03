@@ -103,6 +103,7 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 | Reolink | 官号 |
 | DaizeDreams | 全是 Shorts |
 | Milktea Emma | 全是 Shorts |
+| Newtralstudy | 只有 Shorts |
 | ToolBox BD | 安防摄像头 |
 | Nightfury | 视频少，定位不明确 |
 | Eddie's DL | 偏游戏 |
@@ -117,11 +118,130 @@ tags: [obsbot, kol, influencer, noxinfluencer, youtube, screening]
 | Sugarloaf | 画像严重偏差 |
 | Alex Explorer - Scotventure | 画像严重偏差 |
 | VISIONPLUS TV RDC | 法语频道 |
-| 安防摄像头 | **不要收录**（security、surveillance、cctv、alarm） |
-| 纯 Shorts | **过滤掉**（频道只发短视频的） |
-| 纯游戏 | **过滤掉**（4/5 视频为游戏内容的） |
-| Vlog 类型 | **谨慎选择**（标记但不排除，审核时注意） |
-| 邮箱 | 暂不获取 |
+| American Furniture Warehouse | 不可以 |
+| HOTO | 官号 |
+| Sony Professional US & Canada | 官号 |
+| Nimaso-Worldwide | 官号 |
+| Baseus | 官号 |
+| LUMIX USA | 官号 |
+| **KOL 方向错误（2026-06-18 审核）** | |
+| Macoodles | KOL 方向错误 |
+| Yonderwobble | KOL 方向错误 |
+| MoreArky | KOL 方向错误 |
+| RAYS GT | KOL 方向错误 |
+| Abhi Studios | KOL 方向错误 |
+| Bargain Barons | KOL 方向错误 |
+| Six Missing | KOL 方向错误 |
+| Flight Streamer | KOL 方向错误 |
+| GAURABYT | KOL 方向错误 |
+| GlowStarry | KOL 方向错误 |
+| freckledbookwyrm | KOL 方向错误 |
+| Dreader | KOL 方向错误 |
+| Dlonem | KOL 方向错误 |
+| WNY Over The Air | KOL 方向错误 |
+| Frame Forge | KOL 方向错误 |
+| Renly | KOL 方向错误 |
+| West on Willow | KOL 方向错误 |
+| Goldsteinburg | KOL 方向错误 |
+| HeadShotChick | KOL 方向错误 |
+| Mulberry Films | KOL 方向错误 |
+| 15Sec DIY | KOL 方向错误 |
+| Tiaota | KOL 方向错误 |
+| Breezey | KOL 方向错误 |
+| Bored Newb Gaming | KOL 方向错误 |
+| POSHYPOP | KOL 方向错误 |
+| Sk0l | KOL 方向错误 |
+| ed theoldtechguy | KOL 方向错误 |
+| FrodanTV | KOL 方向错误 |
+| Dity | KOL 方向错误 |
+| Thelabellalife | KOL 方向错误 |
+| Jaclyn Bentmore | 没有视频 |
+| Landed Style | KOL 方向错误 |
+| cozytealeaf | KOL 方向错误 |
+| Taylor Jackzen | KOL 方向错误 |
+| State Of Decay | KOL 方向错误 |
+| Champ Picks | KOL 方向错误 |
+| yuyuyuly | KOL 方向错误 |
+| Shnasse Vlog | KOL 方向错误 |
+| **KOL 方向错误（2026-06-23 审核）** | |
+| Macorner | KOL 方向错误 |
+| SheWittyTV | KOL 方向错误 |
+| Todd Arnold | KOL 方向错误 |
+| Mr.Naveed | KOL 方向错误且只发 Shorts |
+| The Hippie Hacker | 长时间不更新 |
+| Cover Craze USA | 只发 Shorts |
+| Technologically Curious | 只发汽车/特斯拉内容，不符合 OBSBOT |
+| Vincent Do | 超过 3 个月未更新 |
+| Ogeh Ezeonu | 超过 3 个月未更新 |
+| Stationery At 4 | 内容方向不符合 |
+
+## KOL 审核特征分析（2026-06-23）
+
+### ✅ 通过审核的 KOL 特征
+
+| 特征 | 说明 |
+|:-----|:-----|
+| 品类对齐 | Tech、Apple、Desk Setup、Livestream（与 OBSBOT 产品使用场景匹配） |
+| 内容深度 | 有完整评测/推荐/对比视频，非纯 Shorts |
+| 更新频率 | 3 个月内有更新 |
+| 粉丝量级 | 7.5K-50K（中腰部为主） |
+| 播放比 | 0.56x-0.99x（稳定播放，非刷量） |
+| 内容方向 | 科技产品、Apple 生态、桌搭、直播设备 |
+
+**典型通过 KOL：**
+- Grant Likes Tech（Tech, 50.8K/50.2K, 0.99x）— 科技评测，内容深度好
+- Jon Adams（Apple, 21.9K/17.9K, 0.82x）— Apple 生态，桌搭推荐
+- Sam.Alexander.Reviews（Apple, 42.3K/24.9K, 0.59x）— Apple 产品评测
+
+### ❌ 被过滤的 KOL 特征
+
+| 过滤原因 | 特征 | 示例 |
+|:---------|:-----|:-----|
+| **KOL 方向错误** | 内容与 OBSBOT 使用场景不匹配（游戏、汽车、非科技） | Macorner、SheWittyTV、Todd Arnold |
+| **只发 Shorts** | 无深度内容，不适合产品评测 | Cover Craze USA、Mr.Naveed |
+| **长时间不更新** | 超过 3 个月无新视频 | The Hippie Hacker、Vincent Do、Ogeh Ezeonu |
+| **内容方向偏离** | 专注汽车/特斯拉等非科技领域 | Technologically Curious |
+
+### 🔍 筛选决策树（必须严格执行）
+
+```
+1. 是否官号？ → 排除
+2. 是否在黑名单？ → 排除
+3. 是否已通过审核（出现在之前的"可以"列表中）？ → 排除，不再重复
+4. 是否只发 Shorts？ → 排除
+5. 是否超过 3 个月未更新？ → 排除
+6. 最近 5 条视频标题是否真的在做科技/Apple/桌搭/直播设备内容？
+   - ✅ 摄像头评测、Apple 生态、桌搭、直播设备、摄像头评测
+   - ❌ 游戏、汽车、生活方式、娱乐、非科技内容
+   → 不匹配则排除（"KOL 方向错误"）
+7. 视频质量是否足够？ → 低质量则排除
+8. 更新频率是否足够？ → 30 天内无更新则排除
+9. 粉丝量级是否合适？ → 头部博主排除
+```
+
+### ⚠️ 自检清单（每次筛选后必须执行）
+
+在展示结果给用户之前，必须对每个 KOL 执行以下检查：
+
+1. **检查最近 5 条视频标题**：是否真的在做科技/Apple/桌搭/直播设备内容？
+   - 用 YouTube API 获取最新 5 条视频标题
+   - 如果 3/5 以上视频标题与 OBSBOT 使用场景无关 → 排除
+2. **检查是否只发 Shorts**：如果频道只发短视频 → 排除
+3. **检查更新频率**：如果 30 天内无更新 → 排除
+4. **检查是否已通过审核**：如果出现在之前的"可以"列表中 → 排除
+5. **检查是否官号**：如果频道名称包含品牌名 → 排除
+
+### 🚫 为什么"KOL 方向错误"会被过滤？
+
+| 错误类型 | 原因 | 示例 |
+|:---------|:-----|:-----|
+| 游戏频道 | 内容与 OBSBOT 使用场景不匹配 | MetaGamesGX、CommonDrops |
+| 娱乐/反应频道 | 非科技评测内容 | Skull Editzz、ZettaSlow |
+| 汽车频道 | 非科技产品评测 | BadHemi 300S、Zoom Drives |
+| 杂项频道 | 内容方向不明确 | TitaN ShoaiB、M-BOLT |
+| 非科技内容频道 | 内容与 OBSBOT 产品无关 | emilie.studygram |
+
+**核心原则**：OBSBOT 的目标用户是需要摄像头/直播设备的科技用户、Apple 用户、桌搭爱好者、直播设备评测者。KOL 的内容必须与这些用户群体对齐。
 
 ## 完整流程（5 步）
 

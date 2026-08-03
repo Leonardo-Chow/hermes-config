@@ -85,5 +85,14 @@ skills/.curator_backups/
 kanban.db-shm
 kanban.db-wal
 config/youtube_api_pool.json
+config/omkar_usage.txt
+config/tavily_api_pool.json
 cookies/
 state-snapshots/
+state/
+desktop-compat/
+verification_evidence.db
+workspace/ig_kol_bios.json
+workspace/ig_kol_data.json
+workspace/*.csv
+workspace/ig_jasy_kol.json
