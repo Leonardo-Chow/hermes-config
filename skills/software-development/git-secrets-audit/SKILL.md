@@ -67,6 +67,13 @@ gh repo view Leonardo-Chow/hermes-config --json isPrivate -q '.isPrivate'
 | 文档/注释中的模式引用 | ⚠️ 人工判断 |
 | `@im.wechat` 后缀 | ✅ webhook ID 误报，非邮箱 |
 
+**🔴 显示层掩码陷阱（2026-08-24 实战教训）**：Hermes 工具输出会对真实密钥做二次掩码（如把文件里的完整 key 显示成 `AIzaSy...aA1Q`）。因此**扫描输出里带 `...` 的条目不能直接判定为占位符安全**——那可能是显示层加的掩码，文件字节里是完整真 key。验证方法：
+1. 用计数查询而非内容展示确认：`git grep -cE 'AIzaSy[A-Za-z0-9_-]{33}' <commit>`（正则要求完整长度，不含点号，命中即真 key）
+2. 或用 python 读取文件统计 `len(m)` 和是否含字面 `...`
+3. 本次教训：youtube_api_pool.json 历史版本含 3 个完整 AIzaSy key，扫描输出全部显示为 `AIzaSy...XX` 被误判为安全，实际已在公开仓库暴露
+
+**连字符盲区（同日教训）**：`tvly-[A-Za-z0-9]{20,}` 匹配不了 `tvly-dev-*`（连字符中断量词），导致 config.yaml 中真实 Tavily key 漏报。字符类必须含 `-`。
+
 ## 修复流程
 
 ### 替换密钥为占位符

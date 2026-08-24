@@ -25,12 +25,14 @@ import subprocess
 import sys
 
 KEY_PATTERNS = [
+    # 注意：字符类必须含连字符，否则 tvly-dev-*/sk-proj-* 直接漏报（2026-08-24 实战教训）
     (r'AIzaSy[A-Za-z0-9_-]{20,}', 'YouTube API Key'),
-    (r'sk-[A-Za-z0-9]{20,}', 'OpenAI-style key'),
-    (r'gh[po]_[A-Za-z0-9]{30,}', 'GitHub token'),
-    (r'tvly-[A-Za-z0-9]{20,}', 'Tavily API Key'),
+    (r'sk-[A-Za-z0-9_-]{20,}', 'OpenAI-style key'),
+    (r'gh[pousr]_[A-Za-z0-9]{30,}', 'GitHub token'),
+    (r'github_pat_[A-Za-z0-9_]{60,}', 'GitHub fine-grained token'),
+    (r'tvly-[A-Za-z0-9-]{20,}', 'Tavily API Key'),
     (r'ok_[A-Za-z0-9]{20,}', 'Omar API Key'),
-    (r'IL6v[A-Za-z0-9]{20,}', 'ScrapeCreators Key'),
+    (r'IL6v[A-Za-z0-9-]{20,}', 'ScrapeCreators Key'),
     (r'8oBP7[A-Za-z0-9]{10,}', 'known account password'),
 ]
 PII_PATTERNS = [
