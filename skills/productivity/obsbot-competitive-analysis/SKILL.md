@@ -28,6 +28,19 @@ version: 1.2.0
 - 红人视频文件夹（腾讯文档）：`DNmTBhbgCAky`
 - TranscriptAPI Key：存储在 `~/.zshenv`
 
+## 博主合作内容分析报告工作流
+
+当用户给一份「品牌×博主合作数据表」（xlsx）+ 一份模板《内容分析报告》，要求**按模板格式补全分析**时，使用此流程。
+
+**⚠️ 用户明确要求（2026-08-04 两次纠正）**：
+1. **不要改变表格内容顺序、不要改变表格结构** — 在用户上传的原始表（15 列）上只填空缺列（占位符 `1` 和无值单元格），不要重排成模板的 14 列合并样式
+2. **整体insights/合作建议 整列合并成一条**（如 O2:O22）— 写一条覆盖全表的整体合作建议（平台策略/红人选择/品牌差异化/风险执行），不要每行单独写
+3. 分析必须基于真实抓取的 caption + 评论区数据，不能编造用户关注点
+
+详见 `references/content-analysis-report-workflow.md`（15 列填空缺流程、整体建议四段式写法、openpyxl 合并 off-by-one 坑、脏数据核对清单）。早期 14 列重排版方法（品牌列合并+N列总洞察）见 `references/content-analysis-report-template.md`，仅当用户明确要求复刻模板样式时使用。
+
+**写整体建议列时**：用户明确要求按**博主类型画像**组织（✅️四段式：特点→受众→用户关注点→YTB/IG合作方式），每类博主一段、数据必须真实有据（不要 T1-T4 分层或空泛总结）。范式模板见 `references/blogger-type-portrait-format.md`。
+
 ## 每日监测工作流
 
 当用户要求「每日监测」「今天更新的 OBSBOT 视频」「daily monitor」时，执行每日监测流程。
@@ -217,6 +230,9 @@ for name in wb.sheetnames:
 | `report-template.md` | 每日监测报告 markdown 模板 |
 | `competitive-monitoring-sop.md` | OBSBOT 竞品投放监测 SOP（竞品清单、数据字段、用户评论5大维度、竞争洞察） |
 | `html-template-guide.md` | HTML 报告模板指南 |
+| `content-analysis-report-template.md` | 博主合作内容分析报告 Excel 模板（14列结构/合并约定/写作要求/生成脚本坑） |
+| `content-analysis-report-workflow.md` | 内容分析报告补全流程（15列填空缺、整体建议合并一条、用户格式要求、脏数据核对） |
+| `blogger-type-portrait-format.md` | 博主类型画像式整体建议格式（✅️四段式：特点→受众→关注点→YTB/IG合作方式，用户明确范式） |
 | `obsbot-admin-api.md` | OBSBOT 内部管理系统 API 完整参考（认证、端点、19条 pitfall、批量扫描） |
 | `admin-batch-scanning-workaround.md` | 列表接口 500 时的逐 ID 批量扫描方案 |
 | `admin-data-snapshot-2026-06.md` | Admin API 数据快照（2026-06） |

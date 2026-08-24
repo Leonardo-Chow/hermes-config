@@ -96,3 +96,10 @@ workspace/ig_kol_bios.json
 workspace/ig_kol_data.json
 workspace/*.csv
 workspace/ig_jasy_kol.json
+
+# Live config with credentials (2026-08-24 security audit)
+config.yaml
+config.yaml.bak
+bin/
+config/youtube_api_pool.json
+config/tavily_api_pool.json

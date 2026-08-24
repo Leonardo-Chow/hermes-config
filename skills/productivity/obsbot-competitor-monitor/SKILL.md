@@ -365,7 +365,23 @@ table.style = 'Table Grid'
 | 网红ID | 频道名 |
 | 视频链接 | YouTube URL |
 | 量级 | KOL/KOC/素人（按视频质量：有产品实拍+制作精良=KOL，有实拍但简单=KOC，无实拍/无实质=素人） |
-| Content Type | Review/VS/Shorts/Tutorials/Unboxing/Roundup/Livestream/Sponsored |
+| Content Type | 按新分类标准：YTB Dedicated Video / YTB Comparison / YTB Round-up / YTB Tutorials / YTB Integration / YTB Shorts / TT Video / IG Reels / IG Post / Tweet |
+| ⚠️ YouTube 时长规则 | **时长 < 3分钟（180秒）一律标记为 YTB Shorts**，不论内容形式 |
+
+## Content Type 分类标准（2026-08-14 用户确认）
+
+| 类别 | 平台 | 细项 | 定义 |
+|------|------|------|------|
+| 长视频 | YouTube | **YTB Dedicated Video** | 仅聚焦1个产品，偶尔提及同类产品但不展开对比，核心是"深度解析单品"；KOL内部要求 YouTube 平台至少 5min 关于产品的详细介绍和讲解 |
+| 长视频 | YouTube | **YTB Comparison** | 至少包含1个竞品，以对比框架贯穿全视频（仅含对比元素不属于严格意义上的"对比视频"），对比对象平等且有密切关联，核心目标是"呈现差异/优劣势"；如果没有项目要求，不主张博主对比OBSBOT旗下自家产品 |
+| 长视频 | YouTube | **YTB Round-up** | 罗列多个产品但无结构化对比，无维度拆解，仅"并列展示"，不分析差异与优劣势，仅简单介绍特性（如"5款好用的Webcam盘点"） |
+| 长视频 | YouTube | **YTB Tutorials** | 以传递方法/知识为核心，如功能/场景搭建/多机搭建/直播平台&软件&设备教学，简单提及产品视为普通测评 |
+| 长视频 | YouTube | **YTB Integration** | 至少90s-120s的产品植入 Integration/Pre-roll/Mid-roll |
+| 短视频 | YouTube/IG/TikTok | **YTB Shorts** | ⚠️ 限制 3min 以内（一律标记 Shorts，不论内容形式） |
+| 短视频 | TikTok | **TT Video** | App内部拍摄限制60s，外部视频导入限制3min以内 |
+| 短视频 | Instagram | **IG Reels** | App内部拍摄限制90s，外部视频导入限制15min以内 |
+| 图文 | Instagram | **IG Post** | 单张/限制20张内 |
+| 图文 | Twitter | **Tweet** | 限制280字符 |
 | 是否上评 | 是/空（仅评论提到obsbot或舆论差时=是） |
 | 曝光量 | 播放量 |
 | 点赞量 | 点赞数 |

@@ -166,6 +166,110 @@ web_profile_info API 批量查询（匿名 curl + X-IG-App-ID，~6 分钟/200+ �
 输出去重后 CSV（ID/主页链接/粉丝数量/Views/帖子数/一级类目/二级类目/分类依据）
 ```
 
+## 帖子级内容获取（单帖 caption + 评论区，2026-08-04 实战验证）
+
+做**内容分析报告**（分析博主合作帖的具体内容/用户反馈）时，主页级数据不够，需要拿到**单帖的 caption 和评论区**。
+
+### 1. 单帖 og:description（匿名可调）
+
+对帖子 URL `https://www.instagram.com/p/{shortcode}/` 或 `/reel/{shortcode}/` 直接 curl（短 UA + X-IG-App-ID，无需 cookie）：
+
+```python
+# og:description 格式："{likes} likes, {comments} comments - {username} on {date}: {caption}"
+# 例如：222 likes, 21 comments - skavstheworld on August 1, 2026: "A quick tour of the stream room..."
+```
+
+**与主页 og:description 的区别**：主页返回 `X Followers, Y Following, Z Posts - See Instagram photos and videos from USER`；单帖返回点赞/评论数 + caption。解析函数要能区分两者。
+
+```python
+import re
+def parse_post_og(desc):
+    m = re.search(r'([\d,]+)\s+likes?,\s*([\d,]+)\s+comments?\s*-\s*(\w+)\s+on\s+([^:]+):\s*&quot;(.*?)&quot;', desc)
+    return {'likes': m.group(1), 'comments': m.group(2), 'user': m.group(3), 'date': m.group(4), 'caption': m.group(5)} if m else None
+```
+
+**主页链接陷阱**：数据表里"内容链接"有时是博主主页而不是单帖（如 `https://www.instagram.com/audreycaprianni/`），此时 og:description 是粉丝数格式，无 caption——必须标注"需人工确认"，不要硬编。
+
+### 2. 评论 API（需 cookie）
+
+评论是"用户关注点/用户反馈"分析的唯一真实来源（不能编造用户关心什么）。
+
+```python
+# shortcode → media_id：Instagram 短码是自定义 base64 字母表
+ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+def shortcode_to_id(code):
+    n = 0
+    for c in code:
+        n = n * 64 + ALPHABET.index(c)
+    return n
+
+# 拉评论（cookie 从 ~/.hermes/cookies/platform_cookies.json 取 instagram 字段）
+# GET https://www.instagram.com/api/v1/media/{media_id}/comments/?can_support_threading=true
+# 返回 data.comments[].text，取前 ~12 条
+```
+
+要点：
+- **必须带登录 cookie**（匿名会 403/空），UA 用短 UA + X-IG-App-ID
+- 1s 间隔防限流；评论数多时每帖取前 8-12 条即可满足分析
+- 评论提取后用于写"用户关注点"列（如"评论区出现 Win11 兼容性吐槽→投放前需确认固件"）
+
+### 3. 单帖指标获取（点赞/评论/互动率，2026-08-04 实战验证）
+
+**场景**：数据表需补"曝光/点赞/评论/互动率"列时。og:description 的 likes/comments 是**旧缓存**，需用 instaloader 拿最新实时值。
+
+**instaloader（GitHub 工具，推荐）**：
+```bash
+pip3 install --user instaloader   # Python 3.9 环境
+```
+```python
+import instaloader, re, json
+L = instaloader.Instaloader(quiet=True,
+    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    request_timeout=20)
+# 注入登录 cookie（从 ~/.hermes/cookies/platform_cookies.json instagram 字段）
+ig_cookie = json.load(open('/Users/zhoulong/.hermes/cookies/platform_cookies.json'))['instagram']
+for name in ['sessionid','mid','csrftoken','ds_user_id']:
+    m = re.search(name + r'=([^;]+)', ig_cookie)
+    if m: L.context._session.cookies.set(name, m.group(1), domain='.instagram.com')
+L.context._session.headers.update({'X-IG-App-ID': '936619743392459'})
+
+post = instaloader.Post.from_shortcode(L.context, 'DPB1--3CMlj')
+likes, comments = post.likes, post.comments   # 实时最新值，比 og 缓存更新
+views = post.video_view_count                # 大部分 Reels 返回 None，见下方限制
+```
+- 每帖间隔 0.8-1s 防限流
+- 点赞/评论对大多数帖子都能拿到（哪怕视频 views 缺失）
+
+**⚠️ Reels 曝光（play_count）：instaloader 拿不到，但移动端 Feed API 能拿到（2026-08-04 重大突破）**：
+- instaloader 对 Reels（`product_type=clips`）返回 `video_view_count=None`——这是 **instaloader 的限制，不是平台拿不到**
+- **移动端 API `https://www.instagram.com/api/v1/feed/user/{user_id}/?count=33`（带 Cookie）返回 `play_count`（Reels 播放量=曝光）**，实测 8 帖中 6 帖拿到（50,497 / 10,788 / 203,427 等），支持 `max_id` 分页且**不走 web_profile_info 的限流池**
+- user_id 获取：instaloader `Profile.from_username(...).userid`；限流时用**页面 HTML 正则** `"user_id":(\d+)` 或 `"pk":(\d+)`（`curl https://www.instagram.com/{user}/` 匿名+短UA+X-IG-App-ID）
+- 分页：响应 `more_available` + `next_max_id` 游标；实际每页返回 12 条（count=33 被忽略）；时间乱序需全量翻页
+- **博主主动隐藏统计的帖子拿不到**：帖子 HTML 含 `view_counts":"false"`（如 thedesignely DTc_ASSjRTJ、feryfer_gg DSG91N3jFs-），instaloader/移动端/页面三路确认全为 None——此时诚实告知"博主隐藏"，互动率回退 followers 口径
+- 完整脚本见 `references/ig-mobile-feed-play-count.md`
+
+**⚠️ web_profile_info schema 错误是间歇性的**：
+`Asset asset://laser.provider/ig_business_category_subvertical has been deleted` 报错**重试 2-3 次（间隔 2s）可恢复**，不是永久失败也不是限流。之前 skill 写"跳过即可"，实战证明重试更优。
+
+**互动率口径统一（重要）**：
+- 表格"账户平均互动率"列是 `(点赞+评论)/粉丝数` 口径
+- 帖子级互动率**必须同口径**：`(likes+comments)/followers`，不要在有 views 时混用 views 口径（会导致 jatara 15.69% vs 0.4% 这种不可比数据）
+- followers 获取优先级：instaloader Profile.from_username → og:description → web_profile_info
+
+**⚠️ 用户名脏数据核对**：
+- 原表 `tudywithemmane_` 实际是 `studywithemmane_`（少个 s），Profile.from_username 报 "does not exist" 时不要放弃——**从单帖 og:description 的 "username on date" 提取真实用户名**，再查 followers
+- 大账号互动率低是常态（794K 粉 0.05%），不是数据错误，要在 insights 里解释
+
+### 4. 数据表脏数据核对清单（分析前必查）
+
+| 问题 | 处理 |
+|:-----|:-----|
+| 产品列与 caption 不符（如标 Facecam 实为 Prompter） | 以实际 caption 为准并修正 |
+| 内容是官方号转发 KOC（caption 作者 ≠ 博主 ID） | 标注"官方转发"，互动数据参考价值低 |
+| 内容链接是主页而非单帖 | 无法分析，标注"需人工确认" |
+| 同一链接重复出现多行 | 去重或合并 |
+| 原始表分析列是占位符 "1" | 用真实分析替换（模板补全场景常见） |
+
 ## 腾讯文档智能表写入（mcporter 实战要点）
 
 记录格式**按字段标题**（非 field_id），`field_values` 数组：
