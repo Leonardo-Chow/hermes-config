@@ -156,6 +156,18 @@ git config --unset http.proxy && git config --unset https.proxy
 - **原因:** 订阅服务器 `47.242.55.240` 宕机
 - **解决:** 等待恢复，或使用其他订阅源
 
+### npm 源替代 curl|bash 安装脚本（2026-08-24 验证）
+
+GFW 会掐断 `curl -fsSL https://xxx/install | bash` 类官方安装脚本（对 github.com 直接 `SSL_ERROR_SYSCALL`），且当时本机所有代理端口（7890/10808）均不通。但 **registry.npmjs.org 在国内通常直连可达** —— 若工具有 npm 发行版，跳过安装脚本直接用 npm：
+
+```bash
+# 例：OpenCode CLI 官方 curl|bash 安装失败后
+npm view opencode-ai version        # 先确认 npm 可达 + 拿版本号
+npm install -g opencode-ai@latest   # ✅ 成功，约 1m 装完
+```
+
+**注意区分桌面版与 CLI 版**：`OpenCode.app` 桌面应用（/Applications）不含独立 CLI 二进制，CLI 必须单独 `npm i -g opencode-ai`。装完用 `which -a <cmd>` 确认可执行文件位置。
+
 ### Homebrew 镜像加速（已验证可用）
 
 当 `brew install` 卡在下载环节（GFW 阻断），用中科大镜像：
