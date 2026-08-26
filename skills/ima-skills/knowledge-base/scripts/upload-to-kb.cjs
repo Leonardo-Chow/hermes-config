@@ -74,6 +74,7 @@ async function main() {
     pdf: 1, doc: 3, docx: 3, ppt: 4, pptx: 4,
     xls: 5, xlsx: 5, png: 7, jpg: 7, jpeg: 7,
     gif: 7, webp: 7, mp3: 9, wav: 9, ogg: 9,
+    html: 20, htm: 20, epub: 21,
     mp4: 13, mov: 13, avi: 13, zip: 14, rar: 14,
     '7z': 14, txt: 15, md: 15, csv: 5,
   };
@@ -92,6 +93,7 @@ async function main() {
     zip: 'application/zip', rar: 'application/x-rar-compressed',
     '7z': 'application/x-7z-compressed',
     txt: 'text/plain', md: 'text/markdown', csv: 'text/csv',
+    html: 'text/html', htm: 'text/html', epub: 'application/epub+zip',
   };
 
   const mediaType = MEDIA_TYPES[ext] || 1;

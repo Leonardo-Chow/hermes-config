@@ -37,6 +37,48 @@ description: 生成摸鱼日报 v3.0（19板块：信息差+A股+微博热搜+�
 | reddit.js | `~/.hermes/skills/ima-skills/scripts/reddit.js` | Reddit热搜获取（通过Tavily Extract解析） |
 | bbc_scraper.py | `~/.hermes/skills/ima-skills/scripts/bbc_scraper.py` | BBC新闻抓取（Scrapling动态模式，需VPN） |
 
+## HTML 网页版日报（v4.2，2026-08-25 深度观察版定稿）
+
+生成 Claude 暖色单文件 dashboard，可直传 IMA 知识库（官方 1.1.9 HTML media_type=20）。
+
+### 板块结构（用户 2026-08-25 明确要求，勿改）
+1. **指数与全球财经**（合并指数卡+财经新闻）：A股4指数+美股3指数（`qt.gtimg.cn/q=usDJI,usIXIC,usINX`，GBK）；财经新闻必须**全球覆盖、多来源**（CNBC直连XML `search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114` + FT + WSJ + Business Insider 经 rss2json），≥3家来源
+2. **国内热搜·三平台**（微博/百度/抖音，每条中文简析）
+3. **科技热点**：多来源（TechCrunch/Ars Technica/The Verge），**中英双语，英文在上中文翻译在下**，附英文摘要
+4. **AI 动态**：同上双语要求（源：TechCrunch AI + 科技源中AI相关条目并入，去重）
+5. **国际视野**：同上双语要求，≥5家媒体（BBC/NPR/Al Jazeera/France 24/CNN/NYT），轮转配额防单源垄断
+6. **娱乐圈**：分**国内/海外**两栏；海外英文条目做双语
+7. **开源 & 技术社区**：GitHub 总趋势 + **GitHub AI Agent 专区**（search q=ai agent created:>7天前 sort=stars）；**每个仓库必须中文介绍是做什么的**（描述为空时抓 README）；HN 每条也要中文说明
+8. **每日精选·编辑部深度观察**：**双核模式**，每期两条，**每条 500-1000 字**，四段式结构：
+   - **01 地缘/科技/社会大事件**：事件是什么 → 前因后果 → 可能影响 → 未来发展推演
+   - **02 财经宏观深度**：结合国内外股市/汇率/大宗/货币政策，**必须有深远影响**（当日无重大财经则换其他类别）
+   - ⛔ 禁止敷衍罗列、禁止泛泛而谈，必须有具体数据、因果链条、可验证的前瞻判断
+   - 模板见生成脚本 `obs_templates.py`（OBS_01_GEO / OBS_02_FIN）
+
+### 硬性规则
+- ⛔ **只收录当日内容**：所有英文源条目按北京时间过滤（rss2json 的 pubDate 是 UTC 的 `YYYY-MM-DD HH:MM:SS` 格式，+8h 后比对今天；CNBC XML 是 RFC822）。昨日内容一律剔除
+- ⛔ **删除 Reddit 板块**（2026-08-25 用户要求）
+- ⛔ 不做 TTS 语音晨报
+- 双语排版：`.t-en` 英文标题（衬线加粗）→ `.zh` 中文翻译 → `.desc-en` 英文摘要（斜体小字）
+- 中文翻译用「英文标题前缀→中文」映射表人工写（AI 翻译质量更高时可直接翻译，但专有名词要准确）
+- ⚠️ **匹配前必须归一化引号**：RSS 标题常含 `’ ‘ “ ”`（U+2018/2019/201C/201D），映射表 key 用 ASCII `'` 时会静默漏翻（2026-08-26 实测 41 条双语漏 16 条）。zh_for 里先做 norm 替换再 startswith 匹配；每期生成后必须统计 `class="zh"` 缺失数=0 才算过
+
+### 采集与解析坑（实测）
+- 百度 `top.baidu.com/api/board?tab=realtime`：url 字段即搜索落地页；hotScore 原始值 /10000 显示万
+- 抖音 `douyin.com/aweme/v1/web/hot/search/list/`（带 Referer）
+- weibo.js/reddit.js 输出带文字横幅且可能多段 JSON → `json.JSONDecoder().raw_decode` 取首个文档
+- ⛔ 剔除 HTML 标签时**必须替换为空格**（`re.sub(r"<[^>]+>", " ", s)`），替换成空串会导致英文单词粘连（"CEOand co-founderofReplit"）
+- ⛔ rss2json 部分源返回陈年缓存（CNN world 实测返回3月旧文），入库前必须抽查日期；CNBC/Reuters 经 rss2json 会报错，CNBC 用直连 XML
+- FT/BI 等源 UTC 23:xx 发布的内容属于北京次日，当日过滤时注意归属
+- 混源排序用时间戳（`ts`），不能用日期字符串（RFC822 与数字格式混排会排错）
+- GitHub search API 匿名限额 60次/h，限流时改抓 `raw.githubusercontent.com/<repo>/main/README.md`
+
+### 生成/上传/验证
+- 生成：单文件零依赖 HTML；Claude 暖色 token 见 html-data-report skill；浮动热度数字的 li 要 `display:flow-root` 防重叠；封面用 IMA `get_media_info` 签名 URL（**签名会过期，每次生成前重新获取**）
+- 上传：`node ~/.hermes/skills/ima-skills/knowledge-base/scripts/upload-to-kb.cjs <file.html> <kb_id> "<标题>"`；IMA 无删除接口，重做时用标题带版本后缀区分（如「双语版v4.1」）
+- 验证：browser_navigate 打开 file:// 快照核对结构 → **重新 navigate 后**再 browser_vision 截图（patch 后不刷新会截到旧缓存）→ 修生成脚本重建（不直接 patch HTML）
+- 文本太长可分多次生成修正，不强求一次到位（用户明确允许）
+
 ## 质量评分机制（MANDATORY）
 
 **每次生成日报后、上传前必须执行质量评估。低于70分立即返工。**

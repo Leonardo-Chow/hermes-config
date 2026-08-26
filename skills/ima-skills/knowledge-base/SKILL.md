@@ -1,11 +1,13 @@
 ---
 name: knowledge-base
 description: "IMA 知识库操作 — 上传文件、添加笔记/网页、搜索浏览。文件上传流程含 5 道安全门，需特别注意 COS token 被 shell 截断的问题。"
-version: 2.0.0
+version: 2.1.0 (官方包 1.1.9 + 本地增强)
 tags: [ima, knowledge-base, cos, upload, file-management]
 ---
 
 # Knowledge Base (知识库)
+
+> 🆕 官方包 1.1.9 更新：支持 **HTML (media_type=20)** 和 **EPUB (media_type=21)** 直接文件上传（此前 HTML 只能通过 add_url_knowledge 添加）。preflight-check.cjs 已同步识别 .html/.epub。
 
 API base path: `openapi/wiki/v1` — 完整数据结构和接口参数详见 `references/api.md`。
 
@@ -121,7 +123,7 @@ MEDIA_TYPE=$(echo "$PREFLIGHT" | node -e "const d=JSON.parse(require('fs').readF
 CONTENT_TYPE=$(echo "$PREFLIGHT" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(d.content_type)")
 
 # ── Step 3: check_repeated_names ← ⛔ GATE 3 ──
-# MANDATORY for ALL file uploads (media_type 1/3/4/5/7/9/13/14/15).
+# MANDATORY for ALL file uploads (media_type 1/3/4/5/7/9/13/14/15/20/21).
 # is_repeated=true → ask user: keep both (append _YYYYMMDDHHmmss) or cancel.
 ima_api "openapi/wiki/v1/check_repeated_names" "{
   \"params\": [{\"name\": \"$FILE_NAME\", \"media_type\": $MEDIA_TYPE}],
