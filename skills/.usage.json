@@ -368,13 +368,13 @@
     "created_at": "2026-05-09T11:05:04.361493+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-18T03:17:27.147211+00:00",
-    "last_used_at": "2026-08-25T03:06:14.850754+00:00",
-    "last_viewed_at": "2026-08-25T03:06:14.849597+00:00",
+    "last_used_at": "2026-08-29T03:16:27.074836+00:00",
+    "last_viewed_at": "2026-08-29T03:16:27.072378+00:00",
     "patch_count": 22,
     "pinned": false,
     "state": "active",
-    "use_count": 30,
-    "view_count": 30
+    "use_count": 31,
+    "view_count": 31
   },
   "daily-digest": {
     "archived_at": null,
@@ -562,14 +562,14 @@
     "archived_at": null,
     "created_at": "2026-08-03T03:14:26.714523+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-08-03T03:14:54.177922+00:00",
-    "last_used_at": "2026-08-25T03:14:09.465220+00:00",
-    "last_viewed_at": "2026-08-25T03:14:09.463949+00:00",
-    "patch_count": 2,
+    "last_patched_at": "2026-08-28T03:15:53.795090+00:00",
+    "last_used_at": "2026-08-29T03:16:27.076020+00:00",
+    "last_viewed_at": "2026-08-29T03:16:27.073790+00:00",
+    "patch_count": 3,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 6,
+    "view_count": 6
   },
   "github-auth": {
     "archived_at": null,
@@ -836,12 +836,12 @@
     "created_at": "2026-05-08T06:21:14.854643+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-02T02:41:33.666403+00:00",
-    "last_used_at": "2026-08-28T03:13:21.436306+00:00",
+    "last_used_at": "2026-08-29T03:16:21.118772+00:00",
     "last_viewed_at": "2026-06-22T10:22:21.415430+00:00",
     "patch_count": 7,
     "pinned": false,
     "state": "active",
-    "use_count": 139,
+    "use_count": 140,
     "view_count": 10
   },
   "imessage": {

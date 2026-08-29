@@ -58,6 +58,25 @@ gh repo view Leonardo-Chow/hermes-config --json isPrivate -q '.isPrivate'
 
 **403 处理**：`gh auth refresh -s repo`（交互式，需浏览器）；非交互环境无法刷新，提示用户手动。
 
+**🔴 2026-08-28 再次确认**：每日复盘 cron 跑 `gh repo edit --visibility private` 仍 403 — 当前 gh PAT 长期缺 `repo` scope，**无法通过 CLI 修复**。每日复盘报告必须明确告诉用户「去网页改」，不要假设已修。验证步骤固定为：`gh repo view ... --json isPrivate` 必须返回 `true` 才算闭环。
+
+**快速判断 PAT 是否够用**：
+```bash
+gh auth status 2>&1 | grep -q 'admin:org\|repo,' && echo "✅ 够用" || echo "🔴 缺权限，需手动"
+```
+
+## 日常复盘 cron 任务的标准流程
+
+每日复盘/安全审查/GitHub 同步是 cron 任务，没有用户在场。完整闭环顺序：
+
+1. **严苛真凭据扫描**（用本 skill 第三节的 Python 正则，过滤占位符 `xxx/XXXX/.../your_/placeholder`）
+2. **PII 分类**：假阳性（PII 邮箱 145+ 处是文档示例）单独列出，不算泄露
+3. **gh repo view 验证 isPrivate** — false 则进入「🔴 需用户手动」分支
+4. **git status → 审查变更 → 安全确认 → add → commit → push**（先配 socks5 代理）
+5. **报告末尾固定 5 段**：🔐 安全审查 / 📋 任务总览 / 🔄 控制论复盘 / 📦 GitHub 同步 / ⚡ 待办
+
+**🔴 弱正则陷阱**：cron 任务里如果用 `AIzaSy\|sk-\|ghp_\|gho_\|password\|secret` 这种粗粒度 grep，会扫出上千个文件全是假阳性（文档示例、`xxx...xxxx` 占位符、`@im.wechat` webhook ID 等），报告会被噪声淹没。**必须用第三节的严格正则 + 占位符过滤**。
+
 ## 判断标准（真实 Key vs 占位符）
 
 | 匹配 | 处理 |
