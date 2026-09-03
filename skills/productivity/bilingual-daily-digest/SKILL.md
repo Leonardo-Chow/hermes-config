@@ -145,6 +145,8 @@ node ~/.hermes/skills/ima-skills/knowledge-base/scripts/upload-to-kb.cjs \
 
 - `html-data-report` — Claude暖色HTML生成规范（零依赖图表、Phase 1-5验证）
 - `references/deep-observation-templates.md` — 深度观察双核模板（OBS_01_GEO/OBS_02_FIN）
+- `references/zh-for-three-layer-fallback.md` — 双语 zh_for 三层 fallback 完整代码 + 验证脚本
+- `templates/aggregate.py` — 验证稳定的 moyu_data.json 聚合脚本（A股+美股字段 parts[3/31/32]，可 copy & modify）
 - `ima-skills` — IMA知识库操作（官方1.1.9+本地增强，见 `references/ima-local-enhancements.md`）
 - `leonardo-brand` — 统一品牌设计系统（深蓝为主，暖色仅用于日报/报告类）
 
@@ -155,3 +157,120 @@ node ~/.hermes/skills/ima-skills/knowledge-base/scripts/upload-to-kb.cjs \
 - v4.0 (2026-08-25)：首个HTML版，双语雏形
 - v4.1 (2026-08-25)：用户9条反馈落地（全球财经、删Reddit、双语板块、GitHub介绍、娱乐分栏）
 - v4.2 (2026-08-25)：深度观察升级为双核模式（各500-1000字四段式），财经观察强制A股映射
+- v4.2+ (2026-08-26)：**双语 zh_for 三层 fallback**（norm 归一化 + lstrip 剥前缀标点 + ZH_norm 二次匹配）— 修复 RSS 弯引号静默漏翻（41→0 缺译）
+- v4.2+ (2026-08-28)：**编辑器深度观察"原文照录"模式** — 娱乐/社会瓜类需要把 X 原文、律师声明、明星工作室声明**逐字贴出**（带双引号或斜体），并附时间线、相关方表态、吃瓜指北。2026-08-28 用户明确要求「孙宇晨的原文贴上」即此模式
+- v4.2+ (2026-09-01)：**封面图强制 onerror 兜底** — 上一期签名 URL 过期用户反馈图片不显示；每期必重新 `get_media_info` 拿新签名，HTML `<img onerror="placehold.co">` 防裸奔
+- v4.2+ (2026-09-01)：**ZH 字典 value 字符串陷阱** — value 内含 ASCII `"` 会切断 Python 字符串并报 SyntaxError。批量替换为「」或单引号后 `ast.parse` 通过
+
+## 已知踩坑（v4.2 实测沉淀）
+
+### 1. zh_for 匹配三层 fallback（关键，必读）
+
+```python
+def zh_for(en_title):
+    def norm(s):
+        for a, b in [("\u2019","'"), ("\u2018","'"), ("\u201c",'"'), ("\u201d",'"'), ("&#x27;","'"), ("&apos;","'")]:
+            s = s.replace(a, b)
+        return s
+    t_norm = norm(en_title)
+    k = norm(en_title[:30])
+    if k in ZH: return ZH[k]
+    # 第一层：归一化后前缀匹配
+    for pref, tr in ZH.items():
+        p = norm(pref).lstrip("'\"")[:25]
+        t = t_norm.lstrip("'\"")
+        if t.startswith(p): return tr
+    # 第二层：ZH 表 key 也归一化查
+    ZH_norm = {norm(k).lstrip("'\""): v for k, v in ZH.items()}
+    if k in ZH_norm: return ZH_norm[k]
+    return ""
+```
+
+**验证脚本**（生成后必跑）：
+```python
+import re
+lis = re.findall(r"<li>.*?</li>", html_txt, re.S)
+total_bi = sum(1 for li in lis if "t-en" in li)
+miss_zh  = sum(1 for li in lis if "t-en" in li and 'class="zh"' not in li)
+assert miss_zh == 0, f"双语缺译 {miss_zh} 条，需补 ZH 字典"
+```
+
+### 2. ZH 字典 value 不能含 ASCII 双引号
+
+写翻译时若想引用术语（如 `"AI 原生"`），直接用 ASCII `"` 会让 Python 把字符串切断。两种解法：
+- 改成中文「」：`「AI 原生」`
+- 改成单引号：`'AI 原生'`
+
+如果文件已经因为这个问题 SyntaxError，用脚本批量修复：
+```python
+import re
+src = open('gen_html.py', encoding='utf-8').read()
+lines = src.split('\n')
+for i, line in enumerate(lines):
+    m = re.match(r'^(\s*"[^"]+":\s*")(.*)("\,?\s*)$', line)
+    if m and '"' in m.group(2):
+        prefix, value, suffix = m.groups()
+        new_value = ''
+        in_quote = False
+        for ch in value:
+            if ch == '"':
+                new_value += '「' if not in_quote else '」'
+                in_quote = not in_quote
+            else:
+                new_value += ch
+        lines[i] = prefix + new_value + suffix
+open('gen_html.py','w', encoding='utf-8').write('\n'.join(lines))
+```
+
+### 3. 娱乐/瓜类深度观察的「原文照录」模板
+
+当用户在当周明确说「要某瓜」「想看 XX 原文」「照录出来」时，按此模式做：
+
+```html
+<details class="obs-card" open style="grid-column:1/-1">
+  <summary>...03 [人物A] × [人物B]：[一句话定性]</summary>
+  <div class="obs-body">
+
+  <div class="quote-box">
+    <div class="qhead">一、人物A 原文摘录（标注「XX」）</div>
+    <p><em>关键金句 1</em><br>关键金句 2</p>
+    <p><em>——「免责标注」/法律意义解读</em></p>
+  </div>
+
+  <div class="quote-box">
+    <div class="qhead">二、代理律师/工作室官方声明</div>
+    <p>声明正文（逐字）</p>
+    <p style="color:var(--sub)">（注：律师/明星代表背景）</p>
+  </div>
+
+  <div class="quote-box">
+    <div class="qhead">三、人物B 工作室声明</div>
+    <p><em>"硬核金句"</em></p>
+  </div>
+
+  <div class="quote-box" style="background:#FAF6F0;border-left-color:#5E718A">
+    <div class="qhead">四、时间线（综合 N 家媒体）</div>
+    <p>• 2026-XX-XX：节点 1<br>• 2026-XX-XX：节点 2</p>
+  </div>
+  </div>
+</details>
+```
+
+配合 CSS `.quote-box`（白话+粗标题+左边框+斜体金句）。这条卡片**用 `grid-column:1/-1` 占满整行**作为第三条观察，避免和双核模式冲突。
+
+### 4. 微博热搜必须用 weibo.js
+
+直接 `curl 'weibo.com/ajax/statuses/hot_band'` 99% 概率只返回 21 字节的 stub JSON。**强制**走 `node ~/.hermes/skills/ima-skills/scripts/weibo.js --json` + `raw_decode` 取首文档。
+
+### 5. 9:30 前 A 股指数涨跌幅显示 0 是腾讯 API 正常行为
+
+`qt.gtimg.cn` 集合竞价阶段（09:15-09:30）和刚开盘（09:30:00-09:30:30）字段 4 (pct) 显示 `0.00`，不是解析 bug。等 9:35 后或当日 10:00 触发时再采集。`gen_html.py` 的 0.00% 显示是预期行为，不需要修。
+
+### 6. 字段位置：A 股和美股**完全相同**
+
+`v_xxx="...~price~prev_close~...~chg~pct~..."` 都是：
+- `parts[3]` = 当前价
+- `parts[31]` = 涨跌额
+- `parts[32]` = 涨跌幅（%）
+
+8 月 30 日曾误把美股字段写成 `parts[12]/[13]`，是 bug，已修。`aggregate.py` 统一用这三个 index。

@@ -124,12 +124,13 @@ for label, url in intl_links:
 ```
 排除通用域名（s.weibo.com, www.baidu.com 等）后计数。
 
-**③ 封面图片（10分）**
+3. **封面图片（10分）**
 - 日报最顶部**必须有封面图片**，不可跳过
 - 封面图片位于 IMA 摸鱼日报知识库中
 - 获取方式：调用 IMA API `openapi/wiki/v1/get_media_info` 获取签名 URL
-- 签名 URL 会过期，每次生成日报时需重新获取
-- 获取后以 `![摸鱼日报](签名URL)` 格式置于日报最顶部
+- **签名 URL 会过期（每期生成时必重新获取）**——2026-09-01 用户反馈图片不显示，原因是上一期签名 URL 过期；必须在每期聚合脚本里**重新调用 ima_api.cjs 拿最新签名**写入 cover_url.txt
+- HTML 里务必加 `onerror` 兜底（用 placehold.co 占位图），避免签名 URL 失效时整页裸奔
+- 获取后以 `<img class="cover" src="签名URL" onerror="...">` 格式置于日报最顶部
 
 **封面图片获取流程：**
 ```python
