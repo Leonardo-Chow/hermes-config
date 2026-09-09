@@ -76,3 +76,16 @@ export http_proxy=http://127.0.0.1:1082
 |--------|-----|
 | OBSBOT/竞品监测 | DnNkcnCRIHGt |
 | OBSBOT 根目录 | DjbGtzenXmbX |
+
+## 常见故障（2026-09-08 实测）
+
+### HTTP 405 on async_import = mcporter OAuth token 过期
+- **症状**：`import_file.sh` 可能仍成功（它用自己的 COS token），但 mcporter 的 `manage.async_import` 报 405（SSE error）
+- **修复**：`mcporter auth tencent-docs` → 会打开浏览器授权页 → **请用户扫码/登录确认**（用户之前做过，属于既有流程的一部分，直接请用户操作，不要自己翻凭证文件）
+- ⚠️ **不要用 `--reset`** 除非确认要完整重授权：`--reset` 会清掉缓存的 refresh token 并触发完整 OAuth（需用户扫码），且 credentials.json 会被改写
+- ⚠️ 连续多次 auth 会触发 **429 限流**（SSE error: Non-200 status code (429)）→ 等 60 秒再重试
+- 405/429 时不要怀疑传输层/配置，先等 + 走标准 auth 流程
+
+### 完整 OAuth 时浏览器授权 URL 拿不到
+- 管道缓冲导致 `mcporter auth` 的 stdout 不可见时，可读 `~/.mcporter/credentials.json` 的 clientInfo（client_id / redirect_uris 端口 / state）+ codeVerifier 用 S256 推导 code_challenge，拼出 `https://docs.qq.com/scenario/open-claw.html?authType=2&...` 用 `open` 打开
+- 这只在万不得已时用；首选是让 mcporter 自己打开浏览器

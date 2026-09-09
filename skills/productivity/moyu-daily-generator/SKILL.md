@@ -61,7 +61,8 @@ description: 生成摸鱼日报 v3.0（19板块：信息差+A股+微博热搜+�
 - ⛔ 不做 TTS 语音晨报
 - 双语排版：`.t-en` 英文标题（衬线加粗）→ `.zh` 中文翻译 → `.desc-en` 英文摘要（斜体小字）
 - 中文翻译用「英文标题前缀→中文」映射表人工写（AI 翻译质量更高时可直接翻译，但专有名词要准确）
-- ⚠️ **匹配前必须归一化引号**：RSS 标题常含 `’ ‘ “ ”`（U+2018/2019/201C/201D），映射表 key 用 ASCII `'` 时会静默漏翻（2026-08-26 实测 41 条双语漏 16 条）。zh_for 里先做 norm 替换再 startswith 匹配；每期生成后必须统计 `class="zh"` 缺失数=0 才算过
+- ⚠️ **匹配前必须归一化引号/破折号/重音/HTML 实体**：RSS 标题常含 `’ ‘ “ ” – — é &#x27;` 等，映射表 key 用 ASCII 时会静默漏翻。详见 `references/zh-for-match-pitfalls.md` 历次踩坑表（2026-08-26 至 2026-09-07 共 5+ 起）。**关键纪律**：① `zh_for` 入口 `html.unescape` 还原 `&#x27;`；② `norm` 同时替换 `’/‘/“/”` + `–/—` + 重音字符 `é/è/â/ñ/ü`；③ 前缀 `lstrip("'\"")` 处理 RSS 标题最左边的弯引号。每期生成后必须统计 `class="zh"` 缺失数=0 才算过
+- ⚠️ **写中文翻译时 value 内不能有 ASCII 双引号**：会破坏 Python 字符串。正确做法是「」包内层。运行 `python3 scripts/fix-double-quotes.py` 自动批量修复
 
 ### 采集与解析坑（实测）
 - 百度 `top.baidu.com/api/board?tab=realtime`：url 字段即搜索落地页；hotScore 原始值 /10000 显示万
@@ -935,6 +936,8 @@ result = subprocess.run(
 详见 `references/cover-image-retrieval.md` — 封面图片获取流程（IMA API get_media_info）。
 详见 `references/cover-image-fallback.md` — 封面图片降级方案（当 IMA API 认证失败时）。
 详见 `references/quality-check-script.py` — 质量评分脚本（v2.0，含8项评分标准）。
+详见 `references/zh-for-match-pitfalls.md` — **zh_for 归一化陷阱**：引号/破折号/重音/HTML 实体的 5+ 次踩坑案例与修复清单。
+详见 `scripts/fix-double-quotes.py` — **自动修复脚本**：扫描 ZH 字典 value 内 ASCII 双引号 → 「」。每次 ZH 大改动后必跑。
 
 ## 常见陷阱
 
@@ -950,6 +953,15 @@ write_file('/tmp/moyu_daily.md', content=report)
 # ❌ 会报 NameError
 write_file('/tmp/moyu_daily.md', content=report)
 ```
+
+### ⚠️ /tmp/moyu_data/ 工作目录在会话间会被清空（2026-09-07 验证）
+**症状：** 重新运行时报 `FileNotFoundError: '/tmp/moyu_data/aggregate.py'` 或 gen_html.py 找不到。
+**原因：** Hermes 会话间清理 `/tmp/moyu_data/` 临时目录。
+**解决方案：**
+1. **每次新会话先确认目录**：`ls /tmp/moyu_data/*.py 2>&1 | head -3`，缺哪个就从 `archive_YYYY-MM-DD/` 复制或重建
+2. **aggregate.py 是无状态脚本**：可以直接从 `archive_2026-09-07/aggregate.py` 复制最新版，或从最近一次 `gen_html.py` 头部 import 推断
+3. **gen_html.py 含 200+ 行的 ZH 字典**：必须用 git 备份或在 archive 里保留——丢了就重写一次
+4. **本期脚本可以参考此 skill 的 `references/zh-for-match-pitfalls.md`** 找回关键的 norm/lstrip/unescape 套路
 
 ### ⚠️ delegate_task 子任务返回的数据 key 名称可能不一致（2026-06-18 验证）
 子任务用 `terminal` + `curl` 采集数据后写入 JSON 文件，key 名称取决于子任务代码的实现。本次采集到的 key 为：
@@ -1193,6 +1205,7 @@ CNN RSS (`rss.cnn.com/rss/edition_world.rss`) 通过 rss2json 解析后返回的
 
 ## 定时任务
 
-- 已在 cron 中注册：`0 10 * * 1-5`（工作日 10:00）
-- 任务ID: `651ee61f4ca9`
-- 推送到本对话（origin）
+- cron 仍停用（用户连续 7 天主动拉起而非依赖自动推送，2026-08-25 至 2026-09-07 期间每日手动触发）
+- 任务ID: `651ee61f4ca9`（停用状态）
+- 用户工作流：每早 09:20-09:30 主动发送「开始今天的」→ 立即跑全套
+- 这意味着脚本必须足够健壮，能在没有任何 warmup 缓存的情况下"冷启动"完成一期

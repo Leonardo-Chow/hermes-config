@@ -1,9 +1,9 @@
 {
-  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260831-051218",
-  "last_run_at": "2026-08-31T05:12:18.497085+00:00",
-  "last_run_duration_seconds": 11.490866,
-  "last_run_summary": "auto: 1 marked stale; llm: skipped (consolidation off)",
+  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260907-065706",
+  "last_run_at": "2026-09-07T06:57:06.120218+00:00",
+  "last_run_duration_seconds": 12.176005,
+  "last_run_summary": "auto: 6 marked stale; llm: skipped (consolidation off)",
   "last_run_summary_shown_at": "2026-05-22T09:07:42.961617+00:00",
   "paused": false,
-  "run_count": 15
+  "run_count": 16
 }

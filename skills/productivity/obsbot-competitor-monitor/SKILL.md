@@ -17,6 +17,8 @@ user-invocable: true
 3. **日期必须准确** — 根据今天实际日期计算搜索范围，不要假设
 4. **API key 不要写在脚本里** — 会被系统截断，用浏览器搜索或直接 curl
 5. **时区说明** — YouTube API 返回的是 **UTC 时间**，用户在东八区（UTC+8）。搜索和筛选时以 UTC 时间为准，不需要转换时区。
+6. **🔥 按既有流程执行，不要中途发明新方法（2026-09-08 用户发火纠正）** — 用户明确要求"按照之前的方法弄就行了，不要弄新的，昨天前天弄得好好的"。管道已定型：搜索→过滤→生成 Word→import_file.sh→async_import→search_file→move_file。某步失败时：按 skill 记录的重试/换代理策略重试；凭证问题走标准重新授权（让用户扫码）；**不要**临时引入子代理、新工具、或翻凭证文件拼授权 URL 等未经验证的做法。
+7. **失败要持续推进但汇报要有产出** — 用户会追问"你生成的文件呢？/继续啊"。每个阶段都要有中间产出（搜索结果数、生成的 docx 路径），不要长时间无输出。
 
 ## ⚠️ 搜索关键词漏检教训（2026-06-05）
 
@@ -98,6 +100,29 @@ esac
 echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 ```
 
+## ⚠️ 主搜索方法（2026-09-08 实测验证）：YouTube Data API search.list 日期过滤
+
+**2天窗口监测的唯一可靠主力方法 = `search.list` + `publishedAfter`/`publishedBefore` + `order=date`**
+
+| 方法 | 实测结果 | 结论 |
+|------|---------|------|
+| yt-dlp `ytsearch8:关键词` | 246 个相关视频，**0 个在 2 天窗口内**（按相关度排序） | ❌ 只适合泛搜，日期过滤命中率 ~0% |
+| delegate_task 子代理搜品牌 | free 模型限流失败（429 free-models-per-day / Nvidia overloaded） | ❌ 不要用子代理做品牌搜索 |
+| Tavily site:youtube.com + 日期 | 噪音大，混入游戏/setup mention | ⚠️ 只能作补充 |
+| **YouTube Data API search.list** | **48 查询 0 错误，34 个精确落在窗口内** | ✅ 主力 |
+
+**步骤**：
+1. 读 API key 池：`~/.hermes/config/youtube_api_pool.json`（2 个 key，都是 39 位 AIzaSy 开头真 key；search.list 100 配额/次，一天 48 查询≈5000 配额，单 key 够用，用尽 rotate）
+2. 每个品牌 × 每个关键词变体调一次 search.list（参数）：
+   - `part=snippet&type=video&q=<urlencoded查询>&publishedAfter=<START>T00:00:00Z&publishedBefore=<END+1天>T00:00:00Z&order=date&maxResults=20`
+   - ⚠️ **publishedBefore 必须用"结束日+1天的零点"**（before 是开区间），否则漏掉结束日全天
+   - 走代理：`curl -s --proxy http://127.0.0.1:1082`（Tavily 同款代理可用）
+3. 汇总去重后 `videos.list` 批量取详情（**50 个 ID/次 = 1 配额**）：part=snippet,statistics,contentDetails → views/likes/comments/时长(ISO8601 正则转秒)
+4. `channels.list` 批量拿订阅数（50 ID/次）
+5. 黑名单 + 过滤规则筛完后生成报告
+
+**判断相关性**：搜回来的视频很多是"描述/设备列表 mention"（游戏、税务节目、骑行 vlog 附 Amazon 链接）——用 API 结果的 snippet.description 前 300 字符 + channelTitle 判断主角是不是竞品评测，不是就过滤并记入过滤说明表。
+
 ## 核心竞品清单（21款）
 
 ⚠️ 每个品牌必须用**多个搜索词**覆盖，避免漏检。标题不含"webcam"的视频也可能相关（如"OBS Settings"、"Live Streaming"、"Review"）。
@@ -153,6 +178,23 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
 - 典型特征：CreationJourney 等批量发布的多品牌评测频道（同一天发 5+ 条不同品牌评测）
 - 这类内容不算竞品投放，属于 AI 生成的伪测评
 
+**AI 配音频道识别代理指标（2026-09-04 验证 — API 数据无法直接听音时的替代方法）**：
+YouTube Data API 没有可靠的"AI 配音"字段，yt-dlp 提取的 ASR 字幕常常是音乐/歌词噪声而非语音。**可靠的代理指标 = 频道发布模式**：
+
+| 指标 | AI 配音特征 | 真人特征 |
+|------|------------|---------|
+| 同频道多品牌评测 | ✅ 同一天 4-5 条不同品牌（如 Amazon Review Hub：Galaxy/Aiper/ASUS/Sunseeker/ECOVACS） | ❌ 通常 1-2 条/天，垂直领域 |
+| 标题模板化 | ✅ "XXX Review: Worth Buying?" / "X Tested the XXX — Game-Changer or Gimmick?" | ❌ 标题有个性化、具体场景描述 |
+| 跨产品类目 | ✅ 跨多个不相关产品（手机、机器人、相机、机器人吸尘器） | ❌ 专注单一品类 |
+| 描述区 | ✅ 大量 affiliate 链接 + 模板化文案 | ❌ 个人化描述 |
+
+**应用方法**：在过滤阶段前，用 YouTube Data API 查询该频道最近 20 条视频的标题和发布时间。如果发现：
+1. 单日 3+ 条不同品牌评测
+2. 跨产品类目
+3. 标题高度模板化
+
+→ **直接 PASS 整个频道的当天视频**（无需逐个听音）。这避免了 `yt-dlp --write-auto-subs` 提取的字幕通常是音乐歌词（"Yeah, yeah, can't lose blessing..."）而非真实语音的陷阱。
+
 ### 过滤1：官方账号排除
 - ❌ 排除竞品官方频道发布的视频（如 `Hollyland FAQ`、`Insta360`、`YoloLiv Tech` 等官号）
 - 判断方法：频道名包含品牌名 + "FAQ"/"Official"/"Tech"/"Tutorials" 等后缀
@@ -188,6 +230,25 @@ echo "搜索范围: $START_DATE ~ $END_DATE (UTC)"
   - YouTube 新视频发布后需要时间积累播放量，初始值低是正常现象
 - ⚠️ 巴西创作者常见模式：15-30秒 "直播" 片段，播放量 20-30 → 按过滤规则4处理
 - ⚠️ **标题拼写错误 + 播放量 0** → 疑似垃圾内容，直接过滤（2026-06-18 纠正）
+
+### 🚫 频道黑名单（2026-09-07 用户确认）— 直接过滤以下频道的所有视频：
+
+| 频道名 | 原因 |
+|--------|------|
+| **UnboxingMyBuys** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **Gadget Theory** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **Gadget Savvy** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **BrujulaDelUnboxing** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **Chia Se Thong Tin** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **CreatorFinds** | 批量发布多品牌评测，非真实竞品投放内容 |
+| **Pickfolio** | 批量发布多品牌评测，非真实竞品投放内容 |
+
+**使用方法**：每次搜索结果处理时，对比 `channelTitle` 字段，遇到以上频道名直接 PASS（不纳入报告）。建议同时关注以下同类频道（需人工确认后追加）：
+
+- Amazon Review Hub
+- CreationJourney
+- Super GURU
+- Other channels that batch-publish multi-brand reviews
 
 ### 过滤5：Roundup/合集视频过滤（2026-06-18 新增，2026-06-26 调整）
 - ❌ **小频道的 Top N 合集视频** → 排除（如 "Top 5 Best Webcams 2026" by 小频道）
@@ -1140,6 +1201,22 @@ if duration < 60:
 1. yt-dlp 不带 cookies 报 bot 检测 → 不要加 cookies 重试
 2. 直接跳到浏览器获取详情（Pitfall 17 的解决方案）
 3. 对于新视频 <48h，浏览器是唯一可靠方案
+
+### Pitfall 32: yt-dlp 提取的 ASR 字幕是音乐歌词噪声，不能用于判断 AI 配音（2026-09-04 验证）
+当尝试用 `yt-dlp --write-auto-subs` 提取视频字幕来判断"是否是 AI 配音"时，提取出的 `.srt` 文件通常**不是视频中的语音**，而是视频背景音乐的自动转写。
+
+**实测案例**（Amazon Review Hub「EMEET 4K Webcam Review」）：
+```srt
+1
+00:00:10,920 --> 00:00:13,670
+Yeah. Yeah, can't lose blessing cuz they
+2
+00:00:13,670 --> 00:00:13,680
+Yeah. Yeah, can't lose blessing cuz they
+```
+这是 BGM 歌词，根本不是视频解说。无法通过 ASR 字幕判断 AI 配音。
+
+**解决方案**：不要走 ASR 字幕路线。直接用 **频道发布模式** 作为代理指标（见上节"AI 配音频道识别代理指标"）。
 
 ### Pitfall 16: TikTok 数据源额度限制
 
