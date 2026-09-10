@@ -208,9 +208,53 @@ echo "⚠️ 推送失败：所有代理不可用。commit 已本地保存，代
 - **强烈建议轮换已泄露的 API Key**，即使已 force push
 - 旧 commit 在 GitHub 的 CDN 缓存中可能保留数小时
 
-## 4. 常见误报过滤
+## 7. Hermes 版本检测（每日复盘必做）
 
-以下文件中的匹配通常是文档示例，非真实泄露：
+### 方法一：CLI 直接检查（推荐，最快）
+```bash
+hermes --version
+# 输出示例：Hermes Agent v0.14.0 (2026.5.16)
+# Project: /Users/zhoulong/.hermes/hermes-agent
+# Update available: 16285 commits behind — run 'hermes update'
+```
+优势：直接显示落后 commit 数，无需网络请求，秒级完成。
+
+### 方法二：Git 对比（需 VPN/代理）
+```bash
+cd ~/.hermes/hermes-agent
+git fetch origin main
+git log HEAD..origin/main --oneline | wc -l
+```
+优势：可查看具体 commit 列表，适合需要审查变更时。
+
+### 判断标准
+| 落后 commits | 状态 | 行动 |
+|:------------|:----:|:-----|
+| 0 | ✅ 最新 | 无 |
+| 1-100 | 🟡 略旧 | 近期更新 |
+| 100-1000 | 🟠 较旧 | 建议更新 |
+| 1000+ | 🔴 严重滞后 | **必须更新**，可能含破坏性变更 |
+
+> ⚠️ 2026-09-09 实测：16,285 commits behind → 属于 🔴 严重滞后，必须执行 `hermes update`。
+
+### 更新流程
+```bash
+# 1. 备份当前配置（可选）
+cp ~/.hermes/config.yaml ~/.hermes/config.yaml.bak.$(date +%Y%m%d)
+
+# 2. 执行更新（需 VPN/代理）
+hermes update
+
+# 3. 验证更新
+hermes --version
+
+# 4. 测试核心功能
+hermes mcp test tavily
+```
+
+## 8. 预防措施
+
+### 新文件提交前检查
 - `SKILL.md` 中的 `sk-xxx...xxxx` 示例
 - `git-secret-scanning.md` 中的演示代码
 - `native-mcp/SKILL.md` 中的 Authorization header 示例

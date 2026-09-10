@@ -412,14 +412,14 @@
     "archived_at": null,
     "created_at": "2026-05-09T11:05:04.361493+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-18T03:17:27.147211+00:00",
-    "last_used_at": "2026-08-29T03:16:27.074836+00:00",
-    "last_viewed_at": "2026-08-29T03:16:27.072378+00:00",
-    "patch_count": 22,
+    "last_patched_at": "2026-09-09T03:07:57.878059+00:00",
+    "last_used_at": "2026-09-10T03:00:56.074746+00:00",
+    "last_viewed_at": "2026-09-10T03:00:56.072381+00:00",
+    "patch_count": 23,
     "pinned": false,
     "state": "active",
-    "use_count": 31,
-    "view_count": 31
+    "use_count": 35,
+    "view_count": 35
   },
   "daily-digest": {
     "archived_at": null,
@@ -439,13 +439,13 @@
     "created_at": "2026-08-26T01:43:03.581975+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-08-26T01:44:05.582606+00:00",
-    "last_used_at": "2026-08-26T01:43:55.428081+00:00",
-    "last_viewed_at": "2026-08-26T01:43:55.427002+00:00",
+    "last_used_at": "2026-09-09T03:05:56.183961+00:00",
+    "last_viewed_at": "2026-09-09T03:05:56.181654+00:00",
     "patch_count": 2,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "debugging-hermes-tui-commands": {
     "archived_at": null,
@@ -927,13 +927,13 @@
     "created_by": null,
     "last_patched_at": "2026-06-02T02:41:33.666403+00:00",
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-09-09T03:00:22.461114+00:00",
+    "last_used_at": "2026-09-10T03:00:23.878927+00:00",
     "last_viewed_at": "2026-06-22T10:22:21.415430+00:00",
     "patch_count": 7,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 151,
+    "use_count": 152,
     "view_count": 10
   },
   "imessage": {
@@ -1308,14 +1308,14 @@
     "created_by": null,
     "last_patched_at": "2026-09-01T01:27:25.411711+00:00",
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-09-07T01:35:57.569772+00:00",
-    "last_viewed_at": "2026-09-07T01:35:57.568568+00:00",
+    "last_used_at": "2026-09-09T03:06:01.534814+00:00",
+    "last_viewed_at": "2026-09-09T03:06:01.532461+00:00",
     "patch_count": 132,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 105,
-    "view_count": 75
+    "use_count": 106,
+    "view_count": 76
   },
   "nano-pdf": {
     "archived_at": null,
@@ -1672,6 +1672,19 @@
     "state": "active",
     "use_count": 0,
     "view_count": 0
+  },
+  "productivity/cybernetics-review": {
+    "archived_at": null,
+    "created_at": "2026-09-09T03:06:11.660951+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-09-09T03:06:11.663129+00:00",
+    "last_viewed_at": "2026-09-09T03:06:11.660958+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
   },
   "productivity/obsbot-competitive-analysis": {
     "archived_at": null,
