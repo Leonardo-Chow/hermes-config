@@ -2,7 +2,7 @@
 name: obsbot-daily-launch-monitor
 description: |
   OBSBOT 每日上线资源检测 — 自动搜索 YouTube/TikTok/Instagram/X 四平台，
-  覆盖10个产品关键词，按日期范围筛选，生成质检报告并上传腾讯文档。
+  覆盖10个产品关键词，按日期范围筛选，生成质检报告到 ~/Downloads。
 version: 1.2.0
 author: Leonardo
 metadata:
@@ -13,7 +13,7 @@ metadata:
 
 # OBSBOT 每日上线资源检测
 
-自动搜索 OBSBOT 产品在 YouTube/TikTok/Instagram/X 四平台的上线内容，生成质检报告并上传腾讯文档。
+自动搜索 OBSBOT 产品在 YouTube/TikTok/Instagram/X 四平台的上线内容，生成质检报告到 `~/Downloads`。
 
 ## 触发条件
 
@@ -366,7 +366,11 @@ actual_date = datetime.now() - timedelta(days=3)
 
 #### 排除规则
 
+- **账号黑名单（2026-09-07/09-11 用户逐条要求，直接过滤这些账号的所有视频）**：
+  `UnboxingMyBuys`、`Gadget Theory`、`Gadget Savvy`、`BrujulaDelUnboxing`、`Chia Se Thong Tin`、`CreatorFinds`、`Pickfolio`
 - 过滤官方账号（@obsbot、@OBSBOT_Official 等）
+- 时长 > 1 小时（直播回放）→ 排除
+- AI 配音视频（批量 Top5 榜单、无真人出镜、廉价感）→ 排除
 - 故障展示/非产品测评 → 排除
 - 仅设备列表提及（非主要使用）→ 排除
 - 竞品评测（可能对比OBSBOT但不是主产品）→ 排除
@@ -485,32 +489,18 @@ actual_date = datetime.now() - timedelta(days=3)
 | OBSBOT Tail 2 | ... |
 ```
 
-### Step 9: 上传腾讯文档
+### Step 9: 输出到本地（**不再上传腾讯文档**）
 
-#### 方式1: smartcanvas（首选）
-
-```bash
-mcporter call tencent-docs create_smartcanvas_by_mdx --args '{"title": "YYYY-MM-DD——视频上线监测——上午", "mdx": "报告内容..."}'
-```
-
-#### 方式2: doc 类型（smartcanvas 失败时的 fallback）
-
-当 `create_smartcanvas_by_mdx` 返回 RPC 错误时，改用 doc 类型：
+> **2026-09-11 用户明确要求**：视频上线监测不再上传腾讯文档，只生成 docx 到 `~/Downloads` 即可。
+> 腾讯文档相关流程（smartcanvas / manage.create_file / move_file）仅历史参考，日常执行跳过。
 
 ```bash
-# 创建 doc
-mcporter call tencent-docs manage.create_file --args '{"title": "YYYY-MM-DD——视频上线监测——下午", "file_type": "doc"}'
-# 获取 file_id
-
-# 插入内容
-mcporter call tencent-docs doc.insert_markdown --args '{"file_id": "FILE_ID", "index": 0, "markdown": "报告内容..."}'
+# 生成 docx（python-docx）
+python3 gen_report.py
+# 输出：~/Downloads/YYYY-MM-DD-视频上线监测.docx
 ```
 
-#### 移动到 OBSBOT 文件夹
-
-```bash
-mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "target_folder_id": "DjbGtzenXmbX"}'
-```
+生成后确认文件存在即可，无需任何上传/移动操作。
 
 ## 格式规范（用户明确要求，违反任何一条都是质量事故）
 
@@ -617,9 +607,9 @@ mcporter call tencent-docs manage.move_file --args '{"file_id": "FILE_ID", "targ
 
 ## 输出位置
 
-- 腾讯文档：云盘 → OBSBOT → **每日监测** 文件夹
-- OBSBOT 文件夹 ID：DjbGtzenXmbX
-- **每日监测 文件夹 ID：DumZsGZJrwsf**（文档必须保存到此文件夹）
+- **本地：`~/Downloads/YYYY-MM-DD-视频上线监测.docx`**（当前唯一输出，2026-09-11 起）
+- ~~腾讯文档：云盘 → OBSBOT → 每日监测 文件夹（已停用）~~
+  - 历史参考：OBSBOT 文件夹 ID `DjbGtzenXmbX` / 每日监测 ID `DumZsGZJrwsf`
 
 ## 示例调用
 
@@ -634,6 +624,6 @@ Agent：
 5. 搜索 X/Twitter（web_search）
 6. 去重筛选，过滤官方账号
 7. 质检（视频内容 + 描述区）
-8. 生成报告上传腾讯文档
-9. 返回文档链接
+8. 生成 docx 报告到 ~/Downloads（不上传腾讯文档）
+9. 返回本地文件路径
 ```
