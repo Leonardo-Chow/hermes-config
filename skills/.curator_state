@@ -1,9 +1,9 @@
 {
-  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260907-065706",
-  "last_run_at": "2026-09-07T06:57:06.120218+00:00",
-  "last_run_duration_seconds": 12.176005,
-  "last_run_summary": "auto: 6 marked stale; llm: skipped (consolidation off)",
+  "last_report_path": "/Users/zhoulong/.hermes/logs/curator/20260922-120120",
+  "last_run_at": "2026-09-22T12:01:20.622549+00:00",
+  "last_run_duration_seconds": 2252.502741,
+  "last_run_summary": "auto: 1 archived, 1 reactivated; llm: API call failed after 3 retries: Connection error.\narchived 4 skill(s):\n  • instagram-competitor-kol-discovery — pruned (stale)\n  • instagram-follower-batch-fetch — pruned (stale)\n  • kol-manager-webapp — pruned (stale)\n  • kol-video-analysis — pruned (stale)\nfull report: hermes curator status",
   "last_run_summary_shown_at": "2026-05-22T09:07:42.961617+00:00",
   "paused": false,
-  "run_count": 16
+  "run_count": 18
 }

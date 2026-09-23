@@ -7,7 +7,7 @@
 - Reels（`product_type=clips`）→ `post.video_view_count = None`（instaloader 只读 GraphVideo 的 video_view_count，Reels 不返回）
 - `web_profile_info` 只返回最近 12 条帖子，目标帖子常在更早位置
 - `web_profile_info` 翻页会被限流（`Please wait a few minutes before you try again`）
-- 单帖页面 HTML 对大部分帖子没有 play_count（但隐藏统计的帖子有 `view_counts":"false"` 标记）
+- 单帖页面 HTML 对大部分帖子没有 play_count（但隐藏统计的帖子有 `view_counts\":\"false\"` 标记）
 
 ## 移动端 Feed API（能拿到 play_count）
 
@@ -95,7 +95,7 @@ def find_post(username, target_sc, max_pages=150):
 2. **断点续跑**：进度存 `/tmp/mobile_progress.json`，重跑时跳过已有 views/error 的条目（注意：旧的 error 记录也会被 skip 逻辑当"完成"，清空进度文件再跑）。
 3. **限流特征**：`feed_page` 返回 dict 无 `items`（如 `{'message': 'Please wait a few minutes...'}`）→ 等 2-3 分钟重试。
 4. **时间乱序**：feed 返回不是严格倒序，翻页时打印日期范围辅助定位但不要据此提前结束。
-5. **博主隐藏统计**：帖子 HTML 含 `view_counts":"false"` 时（如 thedesignely DTc_ASSjRTJ、feryfer_gg DSG91N3jFs-），三路 API（instaloader/移动端/页面）全是 None —— 这是平台隐私设置，**无法绕过**，诚实标注"博主隐藏"，互动率回退 followers 口径。
+5. **博主隐藏统计**：帖子 HTML 含 `view_counts\":\"false\"` 时（如 thedesignely DTc_ASSjRTJ、feryfer_gg DSG91N3jFs-），三路 API（instaloader/移动端/页面）全是 None —— 这是平台隐私设置，**无法绕过**，诚实标注"博主隐藏"，互动率回退 followers 口径。
 
 ## 互动率口径
 

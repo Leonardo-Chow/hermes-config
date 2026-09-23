@@ -176,7 +176,8 @@ skill patch: autocli — 更新可用站点列表
 2. **session_search** — 补充复盘上下文，获取今日会话详情
 3. **Memory 同步到 IMA** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库（`uhcEva4nd2xus1Q2yt7yn_N4_waEdOsQlVU3lhnkLXw=`）
 4. **Hermes 更新检测** — `git fetch origin main` + `git log HEAD..origin/main --oneline`
-5. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+5. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
+6. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
 
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
@@ -208,6 +209,17 @@ skill patch: autocli — 更新可用站点列表
 | GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
 
 > 当问题修复后，从本表移除并记录到 memory。
+
+## 持续性维护发现（每次复盘关注）
+
+以下非安全类问题长期存在，需定期评估优先级：
+
+| 发现 | 首次发现 | 影响 | 状态 | 处理建议 |
+|:-----|:---------|:----:|:-----|:---------|
+| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 | 规划 `hermes update` 维护窗口，备份配置后执行 |
+| hermes-agent 子模块本地脏状态 (未提交变更) | 2026-09-11 | 🟡 低 | ⚠️ 未处理 | 确认 `flake.lock` 删除、`web_server.py` 修改、`feishu_attempt.py` 新增是否需保留/上游同步 |
+
+> 维护发现不阻塞复盘，但需在复盘报告中明确记录，避免长期累积技术债。
 
 ## 注意事项
 1. **闭环优先**：每次复盘必须形成闭环，不能只分析不修正

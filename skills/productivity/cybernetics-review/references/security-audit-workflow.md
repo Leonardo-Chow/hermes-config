@@ -237,6 +237,26 @@ git log HEAD..origin/main --oneline | wc -l
 
 > ⚠️ 2026-09-09 实测：16,285 commits behind → 属于 🔴 严重滞后，必须执行 `hermes update`。
 
+### 子模块健康检查（每日复盘必做）
+`hermes-agent` 为子模块，需单独检查其状态：
+
+```bash
+# 检查子模块落后程度与本地状态
+cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l
+```
+
+**关注指标**：
+- `HEAD..origin/main` 落后 commit 数（同上判断标准）
+- `git status` 是否有 untracked/modified/deleted 文件（脏状态）
+- 子模块引用是否指向脏 commit（主仓库显示 `-dirty`）
+
+**处理建议**：
+| 状态 | 行动 |
+|:-----|:-----|
+| 仅落后 commits，无本地变更 | 正常更新流程 |
+| 落后 + 本地有修改 | 先备份本地改动 (`git stash` 或 copy)，更新后决定是否恢复 |
+| 子模块引用 `-dirty` | 主仓库 commit 前需解决子模块状态 |
+
 ### 更新流程
 ```bash
 # 1. 备份当前配置（可选）

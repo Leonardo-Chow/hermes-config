@@ -3,7 +3,7 @@ name: obsbot-daily-launch-monitor
 description: |
   OBSBOT 每日上线资源检测 — 自动搜索 YouTube/TikTok/Instagram/X 四平台，
   覆盖10个产品关键词，按日期范围筛选，生成质检报告到 ~/Downloads。
-version: 1.2.0
+version: 1.3.0
 author: Leonardo
 metadata:
   hermes:
@@ -18,10 +18,28 @@ metadata:
 ## 触发条件
 
 当用户提到以下关键词时使用此 skill：
+- **「开始今天的」/「开始今天的检测」/「再做一次今天的检测」/「开始啊」** —— 用户日常最常用的触发语，**不带任何其他上下文**。含义固定为：跑一次 OBSBOT 每日上线监测，产出 docx 到 `~/Downloads`。**不要反问要做什么，直接执行。**
 - OBSBOT 上线资源
 - OBSBOT 每日监测
 - OBSBOT 视频检测
 - OBSBOT 内容监控
+
+### 日常执行路径（2026-09 起的实际做法，照此做即可）
+
+```bash
+# 1) 确认今天日期
+date "+%Y-%m-%d %H:%M %Z (%A)"
+# 2) 目标 = 前一天 UTC（报告文件名用今天的 CST 日期）
+TARGET=$(date -v-1d "+%Y-%m-%d")
+# 3) 跑现成扫描脚本（已封装全部搜索+过滤逻辑）
+python3 ~/.hermes/scripts/obsbot_yt_scan.py "$TARGET"
+#    周一补齐周末：python3 ~/.hermes/scripts/obsbot_yt_scan.py <周五> <周六> <周日>
+# 4) 用脚本输出的「入选候选」做人工质检（AI配音/主题偏离/测试流），生成 docx
+```
+
+**日期映射铁律**：报告文件名 = 执行当天的 CST 日期；内容覆盖 **前一天 UTC 全天**（周一覆盖上周五~周日 3 天）。
+例：9/18 执行 → 文件名 `2026-09-18-视频上线监测.docx` → 内容是 9/17 UTC 的视频。
+不要在文件名里写 UTC 日期，用户按 CST 日期归档。
 
 ## 产品关键词（10个）
 
@@ -366,15 +384,27 @@ actual_date = datetime.now() - timedelta(days=3)
 
 #### 排除规则
 
-- **账号黑名单（2026-09-07/09-11 用户逐条要求，直接过滤这些账号的所有视频）**：
-  `UnboxingMyBuys`、`Gadget Theory`、`Gadget Savvy`、`BrujulaDelUnboxing`、`Chia Se Thong Tin`、`CreatorFinds`、`Pickfolio`
+- **🔴 历史去重（2026-09-20 用户明确要求）：前面报告里出现过的 video / 链接，绝不在后续报告中二次出现。**
+  - 台账文件：`~/.hermes/config/obsbot_reported_videos.json`（结构 `{"videos": {"<videoId>": {"reported": "YYYY-MM-DD", ...}}}`）
+  - 扫描脚本 `obsbot_yt_scan.py` **已内置**：加载台账 → 命中历史 ID 的行自动剔除，并在输出末尾单列「已排除（历史报告重复）」。
+  - **每期报告生成后必须登记**：
+    ```bash
+    python3 ~/.hermes/scripts/obsbot_yt_scan.py --mark <vid1> <vid2> ...
+    ```
+  - 判据以 **video ID** 为准（同一链接）；同一标题出现在不同频道属重传，人工判断是否剔除。
+  - ⚠️ 已知历史事故：Talent 2 发布期有 4 条视频在 9/15 与 9/16 两期报告中重复出现，用户因此提出此要求。
+- **账号黑名单（2026-09-07/09-11/09-20 用户逐条要求，直接过滤这些账号的所有视频）**：
+  `UnboxingMyBuys`、`Gadget Theory`、`Gadget Savvy`、`BrujulaDelUnboxing`、`Chia Se Thong Tin`、`CreatorFinds`、`Pickfolio`、`Su Lo`、`Ha Vu`、`SAM`
 - 过滤官方账号（@obsbot、@OBSBOT_Official 等）
-- 时长 > 1 小时（直播回放）→ 排除
+- 时长 > 1 小时（直播回放）→ 排除。**⚠️ 判据要查 API 字段，不能只看时长数字**（2026-09-18 修正）：`snippet.liveBroadcastContent == "none"` 且无 `liveStreamingDetails` 的即为常规长视频，**即便 1h00m32s 这种刚过线也应保留**（案例：GAMINGTREND 的 Talent 2 真人实时演示被误判）；只有确属直播回放（有 `liveStreamingDetails`）才排除。
+- **< 1 分钟（Shorts）→ 排除**（2026-09-15 用户确认「保持现状」：即使某日全部 OBSBOT 内容均为 Shorts，也照常输出「暂无」，不收录）
 - AI 配音视频（批量 Top5 榜单、无真人出镜、廉价感）→ 排除
 - 故障展示/非产品测评 → 排除
 - 仅设备列表提及（非主要使用）→ 排除
 - 竞品评测（可能对比OBSBOT但不是主产品）→ 排除
 - **日韩东南亚博主谨慎过滤**：日本、韩国、泰国、越南、马来西亚、菲律宾等地区博主 → 排除（内容以当地语言为主，对欧美市场参考价值低）。**但印尼/俄语博主如果是KOL自发评测/开箱/对比等有价值内容，应保留**（2026-06-17 教训：DIMAS俄语Tiny3 Lite评测被误过滤）
+  - **⚠️ 实际执行口径（2026-09-11 ~ 09-18 连续 7 天日报实践校准）**：用户**从未**因为地区语言否决过条目 —— 泰语（The Digital STM）、越南语（Roo Setup）、印尼语（KAMARANA）、日语、土耳其语（Mustafa Güney）、繁体中文（WINYEDA）等真实评测/开箱均被正常收录且无异议。用户的做法是**逐号加黑名单**（7 个账号里就有一个越南语号 `Chia Se Thong Tin`），而不是按地区一刀切。
+  - **因此默认策略**：只要是真的产品评测/开箱/对比（非 gear 清单提及、非 AI 配音、非测试流），**无论地区语言一律保留**；发现低质账号由用户指认后写入上方黑名单。不要把「地区」当过滤主力。
 - **视频时长不到1分钟** → 排除（太短无法展示产品特性）
 - **纯直播类型（没有讲解）** → 排除（只有画面没有产品介绍/评测内容）
 - **视频质量差** → 排除（画质差、内容浅、制作粗糙、剪辑混乱等）
@@ -502,6 +532,46 @@ python3 gen_report.py
 
 生成后确认文件存在即可，无需任何上传/移动操作。
 
+### Step 10: 登记台账（必做，否则下期重复）
+
+报告定稿后，把本期收录的**全部** video ID 写入去重台账：
+
+```bash
+python3 ~/.hermes/scripts/obsbot_yt_scan.py --mark <vid1> <vid2> <vid3> ...
+# 输出：台账已更新：新增 N 条，总计 M 条
+```
+
+- 台账：`~/.hermes/config/obsbot_reported_videos.json`
+- 下一期扫描时这些 ID 会自动被排除，并在「已排除（历史报告重复）」段落中显示。
+- **忘记登记 = 下期必然重复出现**（用户已因此纠正过一次）。
+
+### Step 11: 自检（用户要求「自检一下」时，或每周例行一次）
+
+```bash
+python3 ~/.hermes/scripts/obsbot_audit.py          # 默认 2026-09-05 ~ 昨天
+python3 ~/.hermes/scripts/obsbot_audit.py 2026-07-01 2026-09-22   # 指定区间
+```
+
+检查 5 项并以退出码反映结论（0=通过）：
+
+| # | 检查项 | 不合格含义 |
+|:-:|:---|:---|
+| 1 | 跨报告重复 | 同一 video ID 出现在多期报告 → 违反用户去重要求 |
+| 2 | 未登记台账 | 报告里有 ID 但台账没登记 → 下期必重复 |
+| 3 | 台账冗余 | 台账有 ID 但报告里找不到 → 早期清理残留 |
+| 4 | UTC 日期缺口 | 某天完全没被任何报告覆盖 → 漏采 |
+| 5 | 覆盖天数统计 | 参考值 |
+
+**修复工具**：
+- `obsbot_ledger_backfill.py` — 按报告文档全量回填台账（新增报告目录后重跑）
+- `obsbot_ledger_repair.py` — 补登遗漏 + 修正日期标签错位
+- 发现重复条目时：从**较晚**那期报告删除（较早那期为首次收录）
+
+**历史案例（2026-09-23 自检）**：
+- 发现并修复 4 条跨期重复（9/15 vs 9/16，Talent 2 发布期抢跑造成）
+- 发现台账漏登 23 条 + 全量回填 311 条（7 月起的历史报告未纳管）→ 台账 90 → 401 条
+- 发现 2 条 7 月重复（hkOAfFghvDs、bqiyTynGJRs）并清除
+
 ## 格式规范（用户明确要求，违反任何一条都是质量事故）
 
 1. **链接格式**：纯文本 URL，不用 Markdown 超链接 `[链接](URL)`。用户 2026-06-01 纠正，原话："链接不要用超链接"
@@ -586,11 +656,34 @@ python3 gen_report.py
 
 ### 执行陷阱
 
+6.4 **直接用现成扫描脚本**：`~/.hermes/scripts/obsbot_yt_scan.py` 已封装「10 关键词 × N 天搜索 → 去黑名单/官方 → publishedAt 复核 → 时长/播放量硬过滤」全流程。
+   ```bash
+   python3 ~/.hermes/scripts/obsbot_yt_scan.py 2026-09-14            # 单日
+   python3 ~/.hermes/scripts/obsbot_yt_scan.py 2026-09-11 2026-09-12 2026-09-13   # 周一补齐周末
+   ```
+   输出末段「入选候选」即通过硬过滤的清单，再人工判断 AI 配音/主题偏离即可。
+
+6.5 **API key 来源**：优先读 `~/.hermes/config/youtube_api_pool.json`（脚本已内置，逐个验活）。**不要**把 key 字面量写进 write_file 的脚本——掩码机制会吞掉字面量导致 `SyntaxError: unterminated string literal`；`/tmp` 下的临时脚本也会被系统清理，不要作为 key 来源长期依赖。
+
+6.6 **🔴 绝不用 `publishedAfter`/`publishedBefore` 搜索**（2026-09-15 实测重大坑）：YouTube search 的日期窗口参数会**大量漏视频** —— 同一窗口下窗口法只找到 12 条，改用 `order=date` 拉最近 50 条 + 客户端按 `publishedAt` 过滤则找到 37 条（漏了 Talent 2 发布日的一批新片）。
+   - **正确做法**：每个关键词只发一次 `order=date, maxResults=50`（不带日期窗口），拿到 vid 后用 `videos.list` 的 `snippet.publishedAt` 在客户端按目标日期过滤。
+   - 副作用：单关键词命中数上升（15 关键词 ≈ 443 条），但 `videos.list` 批量查详情可承受。
+   - 判据：标题或频道名含 `obsbot` 才算候选；**仅描述区出现**的绝大多数是 gear 清单/设备列表提及（实测 Mac669、Frohnix、Aoki TV、English Sermons 全是 gear list）→ 排除。
+
+6.7 **`P0D` 时长会崩溃**：直播/预告的 duration 可能是 `P0D` 或不含 `PT` 前缀，`re.match(r"PT(...)")` 返回 None 抛 `AttributeError`。正则写成 `r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"` 并判空。
+
 7. **YouTube API 配额**：使用 API 池轮换（`youtube_api_pool.py`），配额用完时 rotate
 8. **TikTok 必须多策略**：仅靠 web_search 会漏掉最近 1-3 天的视频
 9. **Tavily 配额限制**：keyless tier ~10 次/天，优先用于 Instagram/X 搜索
 10. **delegate_task 超时**：子任务经常超时，优先用 terminal 直接执行 API 调用
-11. **VPN 长任务中断**：定期检查 VPN 状态，断开时重新连接
+11. **VPN 掉线 → YouTube API 全线不可达**（2026-09-17 实测）：`googleapis.com` 返回 000，脚本报「未找到可用 API key」——**这不是 key 失效，是链路断了**。快速判据：
+    ```bash
+    for h in www.baidu.com www.google.com www.googleapis.com api.github.com; do
+      echo "$h -> $(curl -s -o /dev/null -w '%{http_code}' --max-time 8 https://$h)"; done
+    scutil --proxy   # HTTPEnable/HTTPSEnable/SOCKSEnable 是否为 0
+    ```
+    baidu/github 通 + google 000 + 无系统代理 → **VPN 掉了，必须让用户手动开**（用户规则：我不操作 VPN、不切节点）。
+    **降级方案**（VPN 未恢复时先交付部分结果）：Tavily MCP 走服务端，不受本地链路影响 —— `tavily_search(time_range="day")` 找线索，`tavily_extract` 抓具体 YouTube 视频页拿播放量/章节；但**无法**系统枚举关键词、拿不到可靠 publishedAt，只能算临时补丁，VPN 恢复后必须用 API 重跑。
 12. **smartcanvas API 故障**：`create_smartcanvas_by_mdx` 可能返回 RPC 错误，fallback 到 doc 类型 + `doc.insert_markdown`
 
 ### 日期与时间陷阱
@@ -610,6 +703,46 @@ python3 gen_report.py
 - **本地：`~/Downloads/YYYY-MM-DD-视频上线监测.docx`**（当前唯一输出，2026-09-11 起）
 - ~~腾讯文档：云盘 → OBSBOT → 每日监测 文件夹（已停用）~~
   - 历史参考：OBSBOT 文件夹 ID `DjbGtzenXmbX` / 每日监测 ID `DumZsGZJrwsf`
+
+### 当前实际 docx 格式（2026-09 起，简单纯文本段落，不要用表格）
+
+```
+2026/09/18 上线情况
+
+2026/09/17（周四 UTC / 09/18 北京时间早）
+
+1. Talent 2-Tom Buck
+https://www.youtube.com/watch?v=jHrwNtdjbXg
+Can The OBSBOT Talent 2 Replace An Entire Podcast Studio?
+
+2. Meet SE-Roo Setup
+https://www.youtube.com/watch?v=mnmJt8rh7fc
+Webcam OBSBOT Meet SE ...
+
+INS
+暂无
+
+TT
+暂无
+
+X
+暂无
+
+搜索关键词
+OBSBOT / OBSBOT Tiny 3 / ... / OBSBOT webcam
+```
+
+**要点**：
+- 条目标题行 = `序号. 产品-频道名`（产品用 Tail 2 / Tiny 3 / Meet SE / Talent 2 这类短名；**不加** -KOL自发/-KOC自发 等后缀）
+- 紧跟一行**纯文本 URL**（不要 Markdown 超链接）
+- 再一行**视频原始标题**（去掉表情符号和 #hashtag 尾巴更清爽）
+- 当天无合格视频就写「暂无」（**不要**为了凑数放进 Shorts）
+- 末尾固定三平台 `INS / TT / X` 各写「暂无」+ 「搜索关键词」全文列出
+- python-docx 生成后**必须回读校验**再汇报
+
+### 报告交付后的汇报格式（用户偏好）
+
+用表格列入选清单（序号/产品/频道/订阅/时长/播放）→ 过滤明细 → 「情报观察」3-5 条（大号动向、campaign 标题复用、区域分布、展会/新品节点）。用户重视情报解读，不只是罗列链接。
 
 ## 示例调用
 

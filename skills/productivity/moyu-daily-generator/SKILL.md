@@ -61,8 +61,15 @@ description: 生成摸鱼日报 v3.0（19板块：信息差+A股+微博热搜+�
 - ⛔ 不做 TTS 语音晨报
 - 双语排版：`.t-en` 英文标题（衬线加粗）→ `.zh` 中文翻译 → `.desc-en` 英文摘要（斜体小字）
 - 中文翻译用「英文标题前缀→中文」映射表人工写（AI 翻译质量更高时可直接翻译，但专有名词要准确）
-- ⚠️ **匹配前必须归一化引号/破折号/重音/HTML 实体**：RSS 标题常含 `’ ‘ “ ” – — é &#x27;` 等，映射表 key 用 ASCII 时会静默漏翻。详见 `references/zh-for-match-pitfalls.md` 历次踩坑表（2026-08-26 至 2026-09-07 共 5+ 起）。**关键纪律**：① `zh_for` 入口 `html.unescape` 还原 `&#x27;`；② `norm` 同时替换 `’/‘/“/”` + `–/—` + 重音字符 `é/è/â/ñ/ü`；③ 前缀 `lstrip("'\"")` 处理 RSS 标题最左边的弯引号。每期生成后必须统计 `class="zh"` 缺失数=0 才算过
+- ⚠️ **匹配前必须归一化引号/破折号/重音/HTML 实体**：RSS 标题常含 `’ ‘ “ ” – — é '` 等，映射表 key 用 ASCII 时会静默漏翻。详见 `references/zh-for-match-pitfalls.md` 历次踩坑表（2026-08-26 至 2026-09-15 共 8+ 起）。**关键纪律**：① `zh_for` 入口 `html.unescape` 还原 `'`、`&apos;`、`"` 等 HTML 实体；② `norm` 同时替换 `’/‘/“/”` + `–/—` + 重音字符 `é/è/â/ñ/ü` + 全角破折号 `——`；③ 前缀 `lstrip(\"'\\\"\")` 处理 RSS 标题最左边的弯引号。每期生成后必须统计 `class="zh"` 缺失数=0 才算过
+- ⚠️ **HN_ZH / GH_ZH 字典需每期维护**：Hacker News 与 GitHub 趋势条目每日更新，必须在生成前为新条目补充中文翻译。缺失 HN/GH 中文描述会导致板块质量扣分。每期生成前检查：`HN_ZH` 覆盖当期 HN 条目 100%，`GH_ZH` 覆盖当期 GitHub 仓库 100%，`GH_ZH_AIAGENT` 覆盖 AI Agent 专区 100%。
+- ⚠️ **GitHub 仓库描述为空时抓 README**：GitHub Search API 返回的 `description` 可能为 null，生成 `GH_ZH` 时需优先抓取 `raw.githubusercontent.com/<owner>/<repo>/main/README.md` 首段作为中文介绍依据。
 - ⚠️ **写中文翻译时 value 内不能有 ASCII 双引号**：会破坏 Python 字符串。正确做法是「」包内层。运行 `python3 scripts/fix-double-quotes.py` 自动批量修复
+- ⚠️ **ZH 字典 key 与 RSS 标题前缀匹配优化**：ZH 字典 key 使用英文标题前 30 字符（归一化后），需同时支持 `startswith` 前缀匹配和精确匹配。RSS 标题可能比 key 长，需双向 `startswith` 检查。每次新增翻译后，必须在生成后验证 `class="zh"` 缺失数=0
+- ⚠️ **RSS 标题首字符弯引号处理**：RSS 标题常以 `\u2018` (') 或 `\u201c` (") 开头，归一化后变成 `'` 或 `"`。`zh_for` 中需对 key 和标题同时 `lstrip("'\"")` 剥离首字符引号后再 `startswith` 匹配
+- ⚠️ **RSS 标题包含 HTML 实体**：RSS 标题常含 `'`、`&apos;`、`"`、`&` 等实体。`zh_for` 入口必须先 `html.unescape` 还原后再归一化匹配
+- ⚠️ **ZH 字典 value 内 ASCII 双引号**：Python 字符串字面量不能包含未转义的 `"`。编写 ZH 字典时内层引号必须用 `'` 或 `「」`。每次批量修改后运行 `python3 scripts/fix-double-quotes.py` 自动替换
+- ⚠️ **重复 key 导致翻译丢失**：ZH 字典中重复 key 会导致后者覆盖前者。新增翻译前先检查是否已存在
 
 ### 采集与解析坑（实测）
 - 百度 `top.baidu.com/api/board?tab=realtime`：url 字段即搜索落地页；hotScore 原始值 /10000 显示万
@@ -941,6 +948,8 @@ result = subprocess.run(
 
 ## 常见陷阱
 
+### 常见陷阱
+
 ### ⚠️ execute_code 中 write_file 需要显式导入（2026-06-18 验证）
 **症状：** 在 `execute_code` 脚本中直接调用 `write_file('/tmp/file.md', content=report)` 报错 `NameError: name 'write_file' is not defined`。
 **原因：** `execute_code` 的内置工具（`terminal`, `read_file`, `write_file` 等）需要从 `hermes_tools` 显式导入。
@@ -953,6 +962,15 @@ write_file('/tmp/moyu_daily.md', content=report)
 # ❌ 会报 NameError
 write_file('/tmp/moyu_daily.md', content=report)
 ```
+
+### ⚠️ /tmp/moyu_data/ 工作目录在会话间会被清空（2026-09-07 验证）
+**症状：** 重新运行时报 `FileNotFoundError: '/tmp/moyu_data/aggregate.py'` 或 gen_html.py 找不到。
+**原因：** Hermes 会话间清理 `/tmp/moyu_data/` 临时目录。
+**解决方案：**
+1. **每次新会话先确认目录**：`ls /tmp/moyu_data/*.py 2>&1 | head -3`，缺哪个就从 `archive_YYYY-MM-DD/` 复制或重建
+2. **aggregate.py 是无状态脚本**：可以直接从 `archive_2026-09-07/aggregate.py` 复制最新版，或从最近一次 `gen_html.py` 头部 import 推断
+3. **gen_html.py 含 200+ 行的 ZH 字典**：必须用 git 备份或在 archive 里保留——丢了就重写一次
+4. **本期脚本可以参考此 skill 的 `references/zh-for-match-pitfalls.md`** 找回关键的 norm/lstrip/unescape 套路
 
 ### ⚠️ /tmp/moyu_data/ 工作目录在会话间会被清空（2026-09-07 验证）
 **症状：** 重新运行时报 `FileNotFoundError: '/tmp/moyu_data/aggregate.py'` 或 gen_html.py 找不到。

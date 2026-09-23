@@ -17,6 +17,83 @@ user-invocable: true
 3. **日期必须准确** — 根据今天实际日期计算搜索范围，不要假设
 4. **API key 不要写在脚本里** — 会被系统截断，用浏览器搜索或直接 curl
 5. **时区说明** — YouTube API 返回的是 **UTC 时间**，用户在东八区（UTC+8）。搜索和筛选时以 UTC 时间为准，不需要转换时区。
+6. **🚫 已出现过的视频/链接不得二次出现（2026-09-20 用户明确要求）** — 前面任何一次报告（含收录区和过滤说明区）出现过的视频或链接，后续报告一律不再重复列出。包括：
+   - 已收录的视频 → 不再收录
+   - 已列入「过滤说明」的频道/视频 → 不再重复列入过滤说明
+   - 判定依据是 **video ID**（不是频道名），通过 `seen_videos.json` 库自动比对
+
+## 🗂️ 去重库 seen_videos.json（必用）
+
+**位置**：`~/obsbot_monitor/seen_videos.json`
+**结构**：`{video_id: {first_seen, channel, title, publishedAt, status}}`，status = `included` | `filtered`
+
+**用法**：
+1. 每次生成报告前，加载该库，比对候选视频 ID
+2. 命中库中的 ID → **完全跳过**（不进收录、不进过滤说明）
+3. 生成完成后，把本次所有候选写入库（收录标 `included`，其余标 `filtered`）
+
+**通用生成器**：`~/obsbot_monitor/report_builder.py`（已内置 seen 去重 + 自动写库）
+修改顶部 CONFIG（日期 / KEEP 收录名单 / FILTERS 过滤名单）后直接 `python3 report_builder.py` 即可。
+
+⚠️ 过滤说明的"频道"往往是聚合项（如「ngohoanglong（×2）」），判定时需看该频道本次是否还有**新视频**；若全部已在库中，则整项不列。
+
+6. **输出位置（2026-09-17 用户确认）** — 报告只输出 docx 到 `~/Downloads/`，**不再上传腾讯文档**。文件名格式：`YYYY-MM-DD——竞品检测报告——时间范围（M.D-M.D）.docx`（例：`2026-09-11——竞品检测报告——时间范围（9.10-9.11）.docx`）。用户日常指令是「开始今天的」，看到即执行全流程。
+7. **VPN 检查优先** — 大陆环境必须走代理（`http://127.0.0.1:1082`）。若 curl 报 **error 7** 或代理端口全不通 → **不自行启动 VPN**，直接告知用户手动开启，同时先准备好搜索窗口参数待命。
+
+## 🚀 首选搜索方案：YouTube Data API search.list（2026-09-14 验证）
+
+**背景**：yt-dlp 按相关度搜索对 2 天窗口命中率极低（实测 246 个视频 → 日期范围内 0 命中），不可用于每日监测。**必须用 YouTube Data API 的 `search.list` + `publishedAfter/publishedBefore` + `order=date`**。
+
+**工作目录**：`~/obsbot_monitor/`（不要用 /tmp — 系统重启会被清空）
+
+| 脚本 | 用途 |
+|------|------|
+| `~/obsbot_monitor/api_search.py` | search.list 批量搜索（24 品牌 × 48 查询），≤100 配额/查询 |
+| `~/obsbot_monitor/details.py` | videos.list + channels.list 批量详情（1 配额/50 个） |
+
+**执行流程**：
+```bash
+cd ~/obsbot_monitor
+# 1. 改日期窗口 (UTC, BEFORE 取次日 00:00 以覆盖全天)
+sed -i '' "s/AFTER = '.*'/AFTER = '2026-09-14T00:00:00Z'/; s/BEFORE = '.*'/BEFORE = '2026-09-16T00:00:00Z'/" api_search.py
+# 2. 搜索 (~2分钟, 48 查询)
+python3 api_search.py
+# 3. 详情
+python3 details.py
+```
+
+**配额**：48 查询 × 100 = 4800 单位/天；池 2 个 key 共 20000，充足。两个 key 自动轮换。
+
+### ⚠️ search.list 有独立的每日上限（2026-09-23 踩坑）
+
+YouTube Data API 的 `search.list` 除了消耗 100 单位/次，还有**独立的「Search Queries per day」指标上限：100 次/天**（错误信息：`Quota exceeded for quota metric 'Search Queries' and limit 'Search Queries per day'`）。
+
+**这意味着**：
+- 单次完整搜索（48 查询）用掉 48 次配额 → **一天最多跑 2 次完整搜索**
+- 反复重跑（补搜、重试）会迅速耗尽，之后所有 search.list 调用全部失败
+- **`videos.list` / `channels.list` 不受此限制影响**（仍可用，1 单位/次）—— 所以详情获取永远不受影响
+
+**配额耗尽后的应对**：
+1. 立刻停止重试 search.list（越试越浪费）
+2. **改用 yt-dlp 补搜**（免费无配额）：
+   ```python
+   yt-dlp --flat-playlist --no-warnings --print "%(id)s|||%(title)s|||%(channel)s" "ytsearch15:QUERY"
+   ```
+   拿到候选 ID 后仍可用 `videos.list`（可用）批量取发布日期 → 按窗口筛选
+   ⚠️ `ytsearchdateN:` 语法已废弃（报 Unsupported url scheme），只能用 `ytsearchN:`（按相关度）
+3. 把 yt-dlp 结果合并进 `api_results.json` 再跑 `details.py`
+
+**配额持久化**：`api_search.py` 已内置 `key_usage.json`（按日期记录用量、标记 exhausted、自动切 key），避免同一天重复打爆同一 key。
+
+**curl 必须走代理**：
+```bash
+os.environ['https_proxy'] = 'http://127.0.0.1:1082'
+```
+⚠️ 代理不通时 curl 报 **error 7**（连接被拒）。此时**不要自己启动 VPN**，直接告知用户开启 VPN（用户手动开关）。
+检查命令：`curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --proxy http://127.0.0.1:1082 https://www.google.com`
+
+**去重**：连续两天执行时窗口会重叠（如周一周二），需加载前一天已收录的视频 ID/频道+标题并排除，避免重复上报。做法：运行前 `cp api_details.json details_<日期>_prev.json` 备份。
+
 6. **🔥 按既有流程执行，不要中途发明新方法（2026-09-08 用户发火纠正）** — 用户明确要求"按照之前的方法弄就行了，不要弄新的，昨天前天弄得好好的"。管道已定型：搜索→过滤→生成 Word→import_file.sh→async_import→search_file→move_file。某步失败时：按 skill 记录的重试/换代理策略重试；凭证问题走标准重新授权（让用户扫码）；**不要**临时引入子代理、新工具、或翻凭证文件拼授权 URL 等未经验证的做法。
 7. **失败要持续推进但汇报要有产出** — 用户会追问"你生成的文件呢？/继续啊"。每个阶段都要有中间产出（搜索结果数、生成的 docx 路径），不要长时间无输出。
 
