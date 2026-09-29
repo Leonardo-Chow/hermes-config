@@ -72,6 +72,12 @@ venv/
 .DS_Store
 Thumbs.db
 
+# macOS metadata (resource forks)
+__MACOSX/
+._*
+.history/
+*.zip
+
 # IDE
 .vscode/
 .idea/
