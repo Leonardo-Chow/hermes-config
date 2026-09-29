@@ -8,50 +8,68 @@ import json
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 POOL = "/Users/zhoulong/.hermes/config/youtube_api_pool.json"
-KEY_FILES = ["/tmp/scan3day.py", "/tmp/weekend_scan.py"]
 API_KEY = None
 
-
-def _valid(k):
-    try:
-        u = ("https://www.googleapis.com/youtube/v3/videos?part=id"
-             f"&id=dQw4w9WgXcQ&key={k}")
-        urllib.request.urlopen(u, timeout=15).read()
-        return True
-    except Exception:  # noqa: BLE001
-        return False
-
-
+# 多 key 轮换：全部载入，遇 429/403（配额耗尽）自动切下一个
+_KEY_LIST = []
+_KEY_IDX = 0
 try:
-    _pool = json.load(open(POOL))
-    for _k in _pool.get("api_keys", []):
-        if _valid(_k):
-            API_KEY = _k
-            break
+    _KEY_LIST = [k for k in json.load(open(POOL)).get("api_keys", []) if k]
 except Exception:  # noqa: BLE001
     pass
-
-if not API_KEY:
-    for _f in KEY_FILES:
-        try:
-            API_KEY = re.search(r"(AIzaSy[A-Za-z0-9_\-]{33})", open(_f).read()).group(1)
-            break
-        except Exception:  # noqa: BLE001
-            continue
-
-if not API_KEY:
-    sys.exit("未找到可用 YouTube API key（检查 youtube_api_pool.json）")
+if not _KEY_LIST:
+    _KEY_LIST = [k for k in [API_KEY] if k]
+if not _KEY_LIST:
+    sys.exit("未找到 YouTube API key（检查 youtube_api_pool.json）")
+API_KEY = _KEY_LIST[0]
 
 KWS = ["OBSBOT", "OBSBOT Tiny 3", "OBSBOT Tiny 3 Lite", "OBSBOT Tiny 2", "OBSBOT Tiny 2 Lite",
-       "OBSBOT Tail 2", "OBSBOT Meet Flip", "OBSBOT Meet SE", "OBSBOT Meet 2", "OBSBOT Meet",
-       "OBSBOT Talent", "OBSBOT Vox", "OBSBOT review", "OBSBOT unboxing", "OBSBOT webcam"]
+       "OBSBOT Tail 2", "OBSBOT Tail Air", "OBSBOT Meet Flip", "OBSBOT Meet SE", "OBSBOT Meet 2",
+       "OBSBOT Meet", "OBSBOT Talent", "OBSBOT Vox", "OBSBOT Tiny SE", "OBSBOT One",
+       "OBSBOT review", "OBSBOT unboxing", "OBSBOT webcam"]
 
 BLACKLIST = {"UnboxingMyBuys", "Gadget Theory", "Gadget Savvy", "BrujulaDelUnboxing",
-             "Chia Se Thong Tin", "CreatorFinds", "Pickfolio", "Su Lo", "Ha Vu", "SAM"}
+             "Chia Se Thong Tin", "CreatorFinds", "Pickfolio", "Su Lo", "Ha Vu", "SAM",
+             "Khanh Trang", "Nhi An", "DealKompass"}
+
+# 品牌名匹配：英文 + 本地化（韩/日/俄/泰/越南/印尼等平台的转写）
+BRAND_NAMES = [r"obsbot", r"옵스봇", r"オプスボット", r"オブスボット", r"обсбот", r"оббсбот"]
+
+# 赞助植入信号词（描述区出现这些 = 品牌合作/植入，应收录；单纯 gear 清单则排除）
+# 2026-09-29 依据「官方 KOL 合作 brief」补全指纹
+SPONSOR_SIGNALS = [
+    # 通用赞助措辞
+    r"sponsored", r"sponsor", r"thanks to", r"thank you to", r"provided by",
+    r"#ad\b", r"品牌合作", r"赞助", r"推广",
+    # 官方 Hashtag 体系（brief 规定）
+    r"#streamwithobsbot", r"#obsbotecosystem", r"#obsbotreview", r"#obsbotambassador",
+    r"#obsbot[a-z0-9]+",
+    # 联盟/折扣链接（brief 规定的链接格式）
+    r"rfsn=", r"utm_source=refersion", r"maas_adg_", r"ref_=aa_maas",
+    r"obsbot\.com/store", r"obsbot\.com/[a-z]{2}/store", r"obsbot\.com/[a-z0-9\-]+-4k-webcam",
+    r"affiliate",
+    # CTA / 折扣码措辞（⚠️ 不要用 r"%\s*off" 或裸 code 形态 —— 任何长描述都会误报，2026-09-29 踩坑）
+    r"discount code", r"promo code", r"use code", r"coupon code",
+    r"shop the deals", r"prime day deal", r"优惠码", r"折扣码",
+]
+
+
+def match_brand(text):
+    """返回命中的品牌名写法，未命中返回 None。"""
+    low = text.lower()
+    for p in BRAND_NAMES:
+        if re.search(p, low):
+            return p
+    return None
+
+
+def sponsor_signals(text):
+    return [p for p in SPONSOR_SIGNALS if re.search(p, text, re.I)]
 
 # 🔴 已发布台账：曾出现在历史报告里的 video ID 一律不再二次出现（2026-09-20 用户要求）
 LEDGER = "/Users/zhoulong/.hermes/config/obsbot_reported_videos.json"
@@ -87,13 +105,21 @@ def mark_reported(vids, date=None, meta=None):
 
 
 def api(path, params):
-    params["key"] = API_KEY
-    url = f"https://www.googleapis.com/youtube/v3/{path}?" + urllib.parse.urlencode(params)
+    """调用 YouTube API；遇 429（搜索配额耗尽）自动轮换 key 重试。"""
+    global _KEY_LIST, _KEY_IDX
     err = None
-    for _ in range(3):
+    for attempt in range(len(_KEY_LIST) * 2):
+        params["key"] = _KEY_LIST[_KEY_IDX]
+        url = f"https://www.googleapis.com/youtube/v3/{path}?" + urllib.parse.urlencode(params)
         try:
             with urllib.request.urlopen(url, timeout=20) as f:
                 return json.load(f)
+        except urllib.error.HTTPError as e:
+            err = f"HTTP {e.code}"
+            if e.code in (429, 403):          # 配额耗尽 → 换下一个 key
+                _KEY_IDX = (_KEY_IDX + 1) % len(_KEY_LIST)
+                continue
+            time.sleep(1)
         except Exception as e:  # noqa: BLE001
             err = str(e)
             time.sleep(2)
@@ -144,13 +170,18 @@ def main(days):
     rows = []
     idlist = sorted(ids)
     for k in range(0, len(idlist), 50):
-        d = api("videos", {"part": "snippet,contentDetails,statistics",
+        d = api("videos", {"part": "snippet,contentDetails,statistics,liveStreamingDetails",
                            "id": ",".join(idlist[k:k + 50])})
         for it in d.get("items", []):
             s = it["snippet"]
             ch = s["channelTitle"]
             title = s["title"]
-            if "obsbot" not in title.lower() and "obsbot" not in ch.lower():
+            desc = s.get("description", "") or ""
+            in_title = bool(match_brand(title) or match_brand(ch))
+            sigs = sponsor_signals(desc)
+            # 官方大使计划标记（#obsbotambassador）：属官方合作，**豁免 <1min 过滤**（2026-09-29 用户要求）
+            is_ambassador = bool(re.search(r"#obsbotambassador|obsbot\s*ambassador", desc, re.I))
+            if not in_title and not sigs:
                 continue
             if ch in BLACKLIST or ch.strip().lower() in ("obsbot", "obsbot official"):
                 continue
@@ -162,6 +193,10 @@ def main(days):
                 "dur": iso2sec(it.get("contentDetails", {}).get("duration")),
                 "day": pub[:10], "pub": pub,
                 "views": int(it.get("statistics", {}).get("viewCount", 0) or 0),
+                "was_live": bool(it.get("liveStreamingDetails")),
+                "kind": "主内容" if in_title else "赞助植入",
+                "ambassador": is_ambassador,
+                "signals": sigs[:2],
             })
 
     rows.sort(key=lambda r: (r["day"], r["ch"]))
@@ -176,17 +211,27 @@ def main(days):
     for r in rows:
         flag = ""
         if r["dur"] > 3600:
-            flag += " [>1h]"
+            flag += " [>1h直播回放]" if r["was_live"] else " [>1h非直播·需人工判断]"
         if 0 <= r["dur"] < 60:
             flag += " [<1min]"
         if r["views"] == 0:
             flag += " [0views]"
         print(f"{r['day']} | {r['vid']} | {r['ch'][:32]:32} | {fmt(r['dur']):>10} | "
               f"{r['views']:>7}v | {r['title'][:52]}{flag}")
-    print("\n入选候选（通过时长/播放量硬过滤）:")
+    print("\n入选候选（时长/播放量硬过滤）:")
     for r in rows:
-        if 60 <= r["dur"] <= 3600 and r["views"] > 0:
-            print(f"  {r['day']} | {r['vid']} | {r['ch']} | {fmt(r['dur'])} | {r['views']}v | {r['title'][:60]}")
+        # >1h 只排除「直播回放」；非直播的长视频标注出来交人工判断（规则本意是过滤直播回放）
+        if r["dur"] > 3600:
+            if not r["was_live"]:
+                print(f"  ⚠️需人工判断(>1h非直播) | {r['day']} | {r['vid']} | {r['ch']} | {fmt(r['dur'])} | {r['views']}v | {r['title'][:60]}")
+            continue
+        if r["views"] <= 0:
+            continue
+        # 官方大使（#obsbotambassador）豁免 <1min 过滤
+        if r["dur"] < 60 and not r.get("ambassador"):
+            continue
+        tag = "  【大使】" if r.get("ambassador") else ("  【赞助植入】" if r.get("kind") == "赞助植入" else "")
+        print(f"  {r['day']} | {r['vid']} | {r['ch']} | {fmt(r['dur'])} | {r['views']}v | {r['title'][:55]}{tag}")
     if dup_rows:
         print("\n已排除（历史报告重复）:")
         for r in dup_rows:

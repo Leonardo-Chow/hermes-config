@@ -121,7 +121,7 @@ git rm --cached workspace/ig_kol_bios.json   # 示例
 echo 'workspace/ig_kol_bios.json' >> .gitignore
 ```
 
-### .gitignore 必须覆盖的条目
+### ⚠️ .gitignore 必须覆盖的条目
 
 ```gitignore
 # API Key 配置文件（每个新池都要加）
@@ -138,9 +138,27 @@ verification_evidence.db
 workspace/*.csv
 workspace/ig_kol_bios.json
 workspace/ig_kol_data.json
+
+# macOS 元数据文件（防止 git add -A 污染）
+__MACOSX/
+._*
+.DS_Store
+
+# 编辑器/IDE 临时文件
+.history/
+*.swp
+*.swo
+*~
+
+# 本地打包/分发文件
+*.zip
+*.tar.gz
+*.dmg
 ```
 
 **⚠️ 新 API 池文件陷阱（2026-08-03）**：新建 `config/tavily_api_pool.json` 后忘了加 .gitignore，内含真实 `tvly-*` key，差点被 `git add -A` 提交。**任何新建的 config/*api_pool*.json 立即加入 .gitignore。**
+
+**⚠️ macOS 元数据文件陷阱（2026-09-26 新增）**：`git add -A` 会把 `__MACOSX/`、`._*`、`.history/` 等 macOS 产生的元数据文件一并提交。**必须在 .gitignore 中显式屏蔽**，且定期用 `git ls-files | grep -E '__MACOSX|\._|\.history'` 检查是否有漏网之鱼。清理命令见 `cybernetics-review/references/security-audit-workflow.md`。
 
 ### 推送
 

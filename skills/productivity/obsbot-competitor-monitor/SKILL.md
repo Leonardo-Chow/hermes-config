@@ -10,7 +10,96 @@ user-invocable: true
 
 # OBSBOT 竞品上线监测
 
+## 📐 Content Type 官方判定标准（2026-09-28 用户提供，必须严格执行）
+
+| 类别 | 平台 | 细项 | 定义 |
+|------|------|------|------|
+| **长视频** | YouTube | **YTB Dedicated Video** | 仅聚焦 1 个产品，偶尔提及同类但不展开对比，核心是「深度解析单品」；**KOL 内部要求 YouTube 平台至少达到 5min** 的产品详细介绍和讲解 |
+| 长视频 | YouTube | **YTB Comparison** | 至少包含 1 个竞品，**以对比框架贯穿全视频**（仅含对比元素不属于「对比视频」），对比对象平等且有密切关联，核心目标是「呈现差异/优劣势」；如无项目要求，不主张博主对比 OBSBOT 自家产品 |
+| 长视频 | YouTube | **YTB Round-up** | 罗列多个产品但**无结构化对比、无维度拆解**，仅「并列展示」，不分析差异与优劣势，仅简单介绍特性（如「5 款好用的 Webcam 盘点」） |
+| 长视频 | YouTube | **YTB Tutorials** | **以传递方法/知识为核心**，如功能/场景搭建/多机搭建/直播平台&软件&设备教学；简单提及产品视为普通测评 |
+| 长视频 | YouTube | **YTB Integration** | 至少 90s-120s 的产品植入 Integration / Pre-roll / Mid-roll |
+| **短视频** | YouTube/IG/TikTok | **YTB Shorts** | 限制 **3min 以内** |
+| 短视频 | | TT Video | App 内部拍摄限制 60s，外部视频导入限制 3min 以内 |
+| 短视频 | | IG Reels | App 内部拍摄限制 90s，外部视频导入限制 15min 以内 |
+| **图文** | IG/Twitter | IG Post | 单张/限制 20 张内 |
+| 图文 | | Tweet | 限制 280 字符 |
+| **直播流** | Twitch/kick | Twitch Livestream / Kick Livestream | — |
+
+**判定优先级**：先看时长（<3min → YTB Shorts），再看内容实质（对比贯穿 → Comparison；多品并列无对比 → Round-up；知识/方法为核心 → Tutorials；90-120s 植入 → Integration；单品深度 → Dedicated Video）。
+
+**⚠️ 写入总表时的取值格式（2026-09-28 实测）**：判定逻辑用上述标准，但**写入 Google Sheets 的 Content Type 取值不带 `YTB ` 前缀** —— 表格现有 1500+ 条数据与下拉选项均为 `Shorts` / `Dedicated` / `Comparison` / `Tutorials` / `Round-up` / `Integration`（全表零个带 YTB 前缀的值）。
+
+| 判定的官方细项 | 表内实际填写的值 |
+|---------------|-----------------|
+| YTB Shorts | `Shorts` |
+| YTB Dedicated Video | `Dedicated` |
+| YTB Comparison | `Comparison` |
+| YTB Round-up | `Round-up` |
+| YTB Tutorials | `Tutorials` |
+| YTB Integration | `Integration` |
+
+⚠️ 若填 `YTB Shorts` 这类带前缀值，会因不在下拉选项内而被标为无效值。
+
+## 📊 竞品投放监测总表（Google Sheets，2026-09-28 接入）
+
+- **文档 ID**：`189xzoCflugF9tQdhos6SG2L9lPMwQRJ1tOMtAc7PrFc`
+- **数据表 gid**：`266799232`（工作表名 = 数据表）；另有一个说明 sheet（监测目的 + 竞品清单 + 搜索词）
+- **读取方式**（只读、无需认证，走代理）：
+  ```bash
+  curl -sL --proxy http://127.0.0.1:1082 \
+    "https://docs.google.com/spreadsheets/d/<SID>/export?format=csv&gid=266799232"
+  ```
+  说明 sheet：去掉 `&gid=` 参数即导出第一个 sheet
+- **表结构（15 列）**：`Date | 竞品 | 网红ID | 视频链接 | 量级 | Content Type | 是否上评 | 曝光量 | 点赞量 | 点赞率 | 评论数 | 评论率 | 互动率 | Title | Comment`
+- **竞品命名规范**（必须对齐表格，共 16 类 + 1 个新品类）：`Logitech Series`（**所有 Logitech 型号统一为此**：Brio 4K/C920/C922/MX Brio 等一律归入）、`Insta360 Link 2&2c`、`Insta360 link 2 pro`、`Insta360 Wave`、`Elgato Facecam 4K`、`Elgato Facecam mk2`、`Emeet Pixy`（含 PIXY 4K）、`EMEET PIXY Wireless`、`EMEET SmartCam S600`、`EMEET SmartCam S800`、`EMEET SmartCam C960 Ultra`、`EMEET S600L`、`EMEET SmartCam C60E 4K`（表格实际用名，不在说明 sheet 的 16 类里但表中大量使用）、`Hollyland Lyra 4K`、`Hollyland VenusLiv Air`、`Hollyland Astra P1`、`Razer Kiyo&Kiyo V2`（含 Kiyo V2 Pro）、`Yolocam S3`、`Yolocam S7`、`UGREEN 4K webcam`
+- **回填要求（2026-09-28 用户确认，含后续补充）**：填 `Date / 竞品 / 网红ID / 视频链接 / 量级 / Content Type / 是否上评 / 曝光量 / 点赞量 / 点赞率 / 评论数 / 评论率 / 互动率 / Title`；**仅 `Comment` 列留空**
+  - **量级**：按频道订阅数自动判定（<1000 素人 / 1000-13000 KOC / >13000 KOL）
+  - **曝光量** = 视频播放量（`statistics.viewCount`），务必抓取
+  - **是否上评**：按下方规则判定（评论 >10 且非仅夸赞 = 是）
+  - **点赞率** = 点赞/曝光（1 位小数）、**评论率** = 评论/曝光（1 位小数）、**互动率** = (点赞+评论)/曝光（整数）
+- **Content Type 取值必须用表格实际格式（无 YTB 前缀）**：`Shorts`（<3min）、`Dedicated`（≥3min 单品深度）、`Comparison`（对比贯穿）、`Tutorials`（方法/知识为核心）、`Round-up`（多品并列）、`Integration`（90-120s 植入）——⚠️ 表格全表无任何 "YTB" 前缀值，写了会触发下拉验证无效
+- **粘贴注意**：用「仅粘贴值」(`Cmd/Ctrl+Shift+V`) 才能保留目标列的下拉验证与字体格式；普通粘贴会覆盖格式
+
+### 量级判定标准（2026-09-28 用户确认，按订阅数自动判定）
+
+| 频道订阅数 | 量级 |
+|-----------|------|
+| **< 1,000** | 素人 |
+| **1,000 ~ 13,000** | KOC |
+| **> 13,000** | KOL |
+
+⚠️ **回填时必须填写量级列**（不再留空）。一律以 YouTube 频道订阅数（`channels.list` 的 `subscriberCount`）为准，不要凭播放量或主观感觉判断。
+
+```python
+def level(sub):
+    if sub < 1000: return '素人'
+    if sub <= 13000: return 'KOC'
+    return 'KOL'
+```
+
+**回填脚本**：`~/obsbot_monitor/backfill_fetch.py`（取视频详情）、`backfill_subs.py`（取频道订阅数）
+**Date 列**：用视频**实际发布日**的 `M.D` 格式（如 `9.23`），不是报告日期
+**去重**：先导出表格全量比对 `video_id`，已存在的不重复写入
+
+### 「是否上评」判定规则（2026-09-28 用户确认）
+
+| 条件 | 是否上评 |
+|------|---------|
+| 评论数 **≤ 10** | **否** |
+| 评论数 **> 10**，但讨论**以摄像头产品为主且仅夸赞**（含纯表情/无实质互动） | **否**（判为**无效评论**） |
+| 评论数 **> 10**，且有**实质讨论**（提问 / 批评 / 使用问题 / 对比 / 建议） | **是** |
+
+**抓评论**：`commentThreads.list`（1 单位/次）；参数 `part=snippet`、`maxResults=100`、`order=relevance`、`textFormat=plainText`
+**脚本**：`~/obsbot_monitor/backfill_comments.py`
+**判定要点**：纯夸赞（"best webcam ever"/"great review"）、纯表情（❤❤❤）、无实质互动（"Watching"/"Support"）均属无效；含提问、批评、设置咨询、对比讨论的属有效
+- **数据格式**：Date 用 `9.28` 风格（取视频**实际发布日期**，非报告日期）；点赞率/评论率保留 1 位小数；互动率取整数 `(赞+评)/播放`
+- **表格现状**：1,500+ 条记录，2025-11 ~ 2026-09；曝光量仅 50% 完整（KOC 层全缺）
+- **⚠️ 回填前必须去重**：先导出表格 CSV → 正则提取全部视频链接中的 video ID → 与本次待填数据比对，命中的直接剔除。表格由团队持续维护，很可能已手工填入部分日期，不去重会产生重复行
+- **📄 完整回填流程（提取→取详情→映射→生成 TSV→粘贴）见 `references/backfill-workflow.md`**
+
 ## ⚠️ 关键执行原则
+
 
 1. **第一步必须检测日期** — 用 `date` 命令获取今天的实际日期和星期几，不要假设
 2. **连续执行，不要停顿** — 搜索→统计→过滤→生成→上传，全程自动，不要中途汇报等确认
@@ -21,6 +110,12 @@ user-invocable: true
    - 已收录的视频 → 不再收录
    - 已列入「过滤说明」的频道/视频 → 不再重复列入过滤说明
    - 判定依据是 **video ID**（不是频道名），通过 `seen_videos.json` 库自动比对
+7. **🛑 沿用已验证流程，不要自创方法（2026-09-28 用户批评）** — 工具失败时走本 skill 已记录的降级路径（见各 references），**不要引入新流程、不要重置凭证、不要改动已跑通的配置**。用户原话：「按照之前的方法弄就行了，不要你去弄新的，昨天前天弄得好好的」。
+   - 典型反面案例：腾讯文档 405 时误跑 `mcporter auth --reset`，清掉可用凭证、触发 OAuth 扫码，任务直接停摆 → 正确做法是**去掉代理直连重试**。
+   - 用户催「你在干什么？给我结果啊」= 立即停止探索，用当前已有数据先交付结果。
+8. **VPN 与配额的时序** —
+   - 代理不通（curl error 7 / `000`）→ 快速诊断端口后**告知用户手动开启 VPN**，不要自己启动 VPN 或切节点。
+   - ⚠️ `search.list` 配额按**太平洋时间午夜**重置（≈北京时间 15:00）。若在北京时间 15:00 前执行且昨日已耗尽，search 仍会全部报配额错误 → 直接转 `yt-dlp` 补搜（`videos.list` 不受影响，可正常取详情）。
 
 ## 🗂️ 去重库 seen_videos.json（必用）
 
@@ -37,8 +132,8 @@ user-invocable: true
 
 ⚠️ 过滤说明的"频道"往往是聚合项（如「ngohoanglong（×2）」），判定时需看该频道本次是否还有**新视频**；若全部已在库中，则整项不列。
 
-6. **输出位置（2026-09-17 用户确认）** — 报告只输出 docx 到 `~/Downloads/`，**不再上传腾讯文档**。文件名格式：`YYYY-MM-DD——竞品检测报告——时间范围（M.D-M.D）.docx`（例：`2026-09-11——竞品检测报告——时间范围（9.10-9.11）.docx`）。用户日常指令是「开始今天的」，看到即执行全流程。
-7. **VPN 检查优先** — 大陆环境必须走代理（`http://127.0.0.1:1082`）。若 curl 报 **error 7** 或代理端口全不通 → **不自行启动 VPN**，直接告知用户手动开启，同时先准备好搜索窗口参数待命。
+9. **输出位置（2026-09-17 用户确认）** — 报告只输出 docx 到 `~/Downloads/`，**不再上传腾讯文档**（除非用户当次明确要求）。文件名格式：`YYYY-MM-DD——竞品检测报告——时间范围（M.D-M.D）.docx`（例：`2026-09-11——竞品检测报告——时间范围（9.10-9.11）.docx`）。用户日常指令是「开始今天的」，看到即执行全流程。
+   （VPN/代理处理见第 8 条；腾讯文档上传流程见 `references/tencent-docs-upload-workflow.md`）
 
 ## 🚀 首选搜索方案：YouTube Data API search.list（2026-09-14 验证）
 
@@ -515,21 +610,13 @@ table.style = 'Table Grid'
 | Content Type | 按新分类标准：YTB Dedicated Video / YTB Comparison / YTB Round-up / YTB Tutorials / YTB Integration / YTB Shorts / TT Video / IG Reels / IG Post / Tweet |
 | ⚠️ YouTube 时长规则 | **时长 < 3分钟（180秒）一律标记为 YTB Shorts**，不论内容形式 |
 
-## Content Type 分类标准（2026-08-14 用户确认）
+## 数据字段定义（表格列含义）
 
-| 类别 | 平台 | 细项 | 定义 |
-|------|------|------|------|
-| 长视频 | YouTube | **YTB Dedicated Video** | 仅聚焦1个产品，偶尔提及同类产品但不展开对比，核心是"深度解析单品"；KOL内部要求 YouTube 平台至少 5min 关于产品的详细介绍和讲解 |
-| 长视频 | YouTube | **YTB Comparison** | 至少包含1个竞品，以对比框架贯穿全视频（仅含对比元素不属于严格意义上的"对比视频"），对比对象平等且有密切关联，核心目标是"呈现差异/优劣势"；如果没有项目要求，不主张博主对比OBSBOT旗下自家产品 |
-| 长视频 | YouTube | **YTB Round-up** | 罗列多个产品但无结构化对比，无维度拆解，仅"并列展示"，不分析差异与优劣势，仅简单介绍特性（如"5款好用的Webcam盘点"） |
-| 长视频 | YouTube | **YTB Tutorials** | 以传递方法/知识为核心，如功能/场景搭建/多机搭建/直播平台&软件&设备教学，简单提及产品视为普通测评 |
-| 长视频 | YouTube | **YTB Integration** | 至少90s-120s的产品植入 Integration/Pre-roll/Mid-roll |
-| 短视频 | YouTube/IG/TikTok | **YTB Shorts** | ⚠️ 限制 3min 以内（一律标记 Shorts，不论内容形式） |
-| 短视频 | TikTok | **TT Video** | App内部拍摄限制60s，外部视频导入限制3min以内 |
-| 短视频 | Instagram | **IG Reels** | App内部拍摄限制90s，外部视频导入限制15min以内 |
-| 图文 | Instagram | **IG Post** | 单张/限制20张内 |
-| 图文 | Twitter | **Tweet** | 限制280字符 |
-| 是否上评 | 是/空（仅评论提到obsbot或舆论差时=是） |
+> ⚠️ Content Type 判定标准已统一到本文档开头的「📐 Content Type 官方判定标准（2026-09-28）」章节，此处不再重复。
+
+| 字段 | 定义 |
+|------|------|
+| 是否上评 | 是/空（仅评论提到 obsbot 或舆论差时=是） |
 | 曝光量 | 播放量 |
 | 点赞量 | 点赞数 |
 | 点赞率 | 点赞/播放 % |

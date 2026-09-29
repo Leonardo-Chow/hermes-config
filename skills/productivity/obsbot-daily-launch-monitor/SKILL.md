@@ -393,8 +393,33 @@ actual_date = datetime.now() - timedelta(days=3)
     ```
   - 判据以 **video ID** 为准（同一链接）；同一标题出现在不同频道属重传，人工判断是否剔除。
   - ⚠️ 已知历史事故：Talent 2 发布期有 4 条视频在 9/15 与 9/16 两期报告中重复出现，用户因此提出此要求。
-- **账号黑名单（2026-09-07/09-11/09-20 用户逐条要求，直接过滤这些账号的所有视频）**：
-  `UnboxingMyBuys`、`Gadget Theory`、`Gadget Savvy`、`BrujulaDelUnboxing`、`Chia Se Thong Tin`、`CreatorFinds`、`Pickfolio`、`Su Lo`、`Ha Vu`、`SAM`
+- **🔴 赞助植入必须收录（2026-09-29 用户给出官方 KOL brief 后确立）**：正片主题不是 OBSBOT、但含品牌合作段落/联盟链接的视频**属于必收内容**，此前因「标题或频道名必须含 OBSBOT」的过滤条件被系统性漏掉。
+  - 实测漏检案例：Jared Polin（1.54M 订阅，40552 播放）、Michael Feyrer Jr.（261K，22380 播放）、Caddac、Monsieur GRrr（741K）、Zero Absolu Gaming（86.5K）
+  - 三条判据（命中任一即收录）：标题/频道含品牌名 → 主内容；描述区含品牌名 + 赞助信号 → 赞助植入；描述区含品牌名但无赞助信号 → gear 清单，排除
+  - 扫描脚本 `obsbot_yt_scan.py` 已内置 `BRAND_NAMES` + `SPONSOR_SIGNALS` 判定，报告中标注【赞助植入】
+  - 专项检索脚本：`obsbot_scan_official_kol.py`（含直接用折扣码/hashtag 搜索）
+
+- **官方 KOL 合作 brief 的指纹（2026-09-29 用户提供，用于识别官方合作视频）**：
+
+| 指纹类别 | 具体特征 | 强度 |
+|:---|:---|:---:|
+| **独家折扣码** | 6–10 位大写字母数字，如 `269YUS10`（Tiny 2 Lite Prime Day 30% off） | ⭐⭐⭐ 最独特 |
+| **联盟链接** | `rfsn=<数字>.<hash>` + `utm_source=refersion`；Amazon `maas_adg_<HASH>_afap_abs` + `ref_=aa_maas` | ⭐⭐⭐ |
+| **官方 Hashtag** | `#streamwithobsbot`、`#obsbotecosystem`、`#obsbotreview`、`#obsbotambassador`、`#obsbot_<产品名>` | ⭐⭐⭐ |
+| **CTA 措辞** | "Shop the Deals Here"、"Discount Code"、`@OBSBOT` 提及、"brought to you by OBSBOT" | ⭐⭐ |
+| **结构特征** | 描述含 Chapters 时间轴 + 产品使用体验段 | ⭐ |
+
+- **本地化品牌名**：韩 `옵스봇`、日 `オプスボット`、俄 `обсбот` 等转写也要匹配，否则漏检（实测韩国频道标题含 `옵스봇 TINY 3` 被漏）。
+
+- **🔴 官方大使计划 `#obsbotambassador` 必须收录（2026-09-29 用户明确要求）**：简介/描述区带 `#obsbotambassador` 的视频 = 官方大使合作，**豁免 <1min（Shorts）过滤**，一律收录并在报告中标注【大使】。
+  - 判据：描述区匹配 `#obsbotambassador` 或 `obsbot ambassador`（不区分大小写）
+  - 反查手段：`q="#obsbotambassador"` 直接搜索（YouTube 索引 hashtag，实测返回 46 条），配合 `q="obsbot ambassador"`、`q="#streamwithobsbot"`
+  - 实测该 hashtag 存量 46 条，其中大量为 Sub-1min 短视频，此前被 Shorts 规则误杀
+  - 已收录案例：Tutz（2394v）、FarmSim25Builds（1010v）、Afra Sarıçam（793v）、MrsMobster、Nemiro、David Tapia
+
+- **账号黑名单（2026-09-07/09-11/09-20/09-29 用户逐条要求，直接过滤这些账号的所有视频）**：
+  `UnboxingMyBuys`、`Gadget Theory`、`Gadget Savvy`、`BrujulaDelUnboxing`、`Chia Se Thong Tin`、`CreatorFinds`、`Pickfolio`、`Su Lo`、`Ha Vu`、`SAM`、`Khanh Trang`、`Nhi An`、`DealKompass`
+  （后 5 个为亚马逊导流农号：订阅 <50 且视频数 >100，标题套亚马逊商品页 + 联盟链接）
 - 过滤官方账号（@obsbot、@OBSBOT_Official 等）
 - 时长 > 1 小时（直播回放）→ 排除。**⚠️ 判据要查 API 字段，不能只看时长数字**（2026-09-18 修正）：`snippet.liveBroadcastContent == "none"` 且无 `liveStreamingDetails` 的即为常规长视频，**即便 1h00m32s 这种刚过线也应保留**（案例：GAMINGTREND 的 Talent 2 真人实时演示被误判）；只有确属直播回放（有 `liveStreamingDetails`）才排除。
 - **< 1 分钟（Shorts）→ 排除**（2026-09-15 用户确认「保持现状」：即使某日全部 OBSBOT 内容均为 Shorts，也照常输出「暂无」，不收录）
@@ -524,13 +549,17 @@ actual_date = datetime.now() - timedelta(days=3)
 > **2026-09-11 用户明确要求**：视频上线监测不再上传腾讯文档，只生成 docx 到 `~/Downloads` 即可。
 > 腾讯文档相关流程（smartcanvas / manage.create_file / move_file）仅历史参考，日常执行跳过。
 
+**🔴 报告必须用 `gen_report_by_id.py` 生成 —— 标题从 API 取，禁止手抄**（2026-09-28 复核发现 21/30 条标题被我截断或改写）：
+
 ```bash
-# 生成 docx（python-docx）
-python3 gen_report.py
-# 输出：~/Downloads/YYYY-MM-DD-视频上线监测.docx
+# 1) 编辑脚本顶部的 DAYS 列表：(产品, videoId)
+# 2) 运行 —— 自动调 API 拉真实频道名+标题，缺任何一条会直接报错终止
+python3 ~/.hermes/scripts/gen_report_by_id.py
 ```
 
 生成后确认文件存在即可，无需任何上传/移动操作。
+
+**为什么不能手写标题**：YouTube 标题常含 emoji、超长 hashtag、特殊符号（`—`/`!`/`?`）。手抄会不自觉截断或改写，用户要求全文原样。脚本模式从源头杜绝此类误差。
 
 ### Step 10: 登记台账（必做，否则下期重复）
 
@@ -671,6 +700,15 @@ python3 ~/.hermes/scripts/obsbot_audit.py 2026-07-01 2026-09-22   # 指定区间
    - 判据：标题或频道名含 `obsbot` 才算候选；**仅描述区出现**的绝大多数是 gear 清单/设备列表提及（实测 Mac669、Frohnix、Aoki TV、English Sermons 全是 gear list）→ 排除。
 
 6.7 **`P0D` 时长会崩溃**：直播/预告的 duration 可能是 `P0D` 或不含 `PT` 前缀，`re.match(r"PT(...)")` 返回 None 抛 `AttributeError`。正则写成 `r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"` 并判空。
+
+6.8 **不要用 `doc.paragraphs[idx]` 就地改 docx**（2026-09-28 踩坑）：`doc.paragraphs` **包含空段落**，而解析时通常已过滤空段 —— 两套索引不一致，写入会**改串到别的段落**（实际造成 30 条报告里 14 条标题错位）。
+   - 正确做法：**修改 = 重新生成**，用 `gen_report_by_id.py` 从 video ID 重建整个文档。
+   - 若必须删条目：重建文档时跳过目标段落（`for t in paras: if 命中: continue`），不要原地删除。
+
+6.9 **🔴 key「验活」不等于「有配额」**（2026-09-29 卡死踩坑）：YouTube 的 `Search Queries per day` 配额与 `videos.list` 是**分开计量**的。用 `videos.list` 验活通过的 key，可能搜索配额已耗尽 —— 症状是脚本静默返回「命中 0 条」或「命中 50 条」（只有一个关键词成功），看起来像正常结果，实际**大面积漏检**。
+   - `api()` 已改为遇 `HTTP 429/403` 自动轮换池中下一个 key（`_KEY_LIST` / `_KEY_IDX`）。
+   - **判据**：单日命中数 < 200 基本可判定异常（正常 400–600）。
+   - 手动排查：`curl "https://www.googleapis.com/youtube/v3/search?part=snippet&q=OBSBOT&type=video&maxResults=3&key=<KEY>"` → 429 = 搜索配额耗尽。
 
 7. **YouTube API 配额**：使用 API 池轮换（`youtube_api_pool.py`），配额用完时 rotate
 8. **TikTok 必须多策略**：仅靠 web_search 会漏掉最近 1-3 天的视频

@@ -47,17 +47,23 @@ mcporter call "tencent-docs" "manage.move_file" --args '{
 mcporter call "tencent-docs" "manage.folder_list" --args '{"folder_id": "DnNkcnCRIHGt"}'
 ```
 
-## 代理处理策略
-
-mcporter 和 import_file.sh 的代理需求不一致：
+## 代理处理策略（2026-09-28 实测修正）
 
 | 操作 | 直连 | 代理 |
 |------|------|------|
-| import_file.sh | ✅ 通常可用 | ✅ 备用 |
-| mcporter async_import | ❌ 常超时 | ✅ 通常可用 |
-| mcporter search_file | ✅ 通常可用 | ❌ 常超时 |
-| mcporter move_file | ❌ 常超时 | ✅ 通常可用 |
-| mcporter folder_list | ✅ 通常可用 | ✅ 都可用 |
+| import_file.sh（COS 上传） | ✅ 可用 | ✅ 备用 |
+| mcporter async_import | ✅ **成功** | ❌ **405 SSE error** |
+| mcporter search_file | ✅ 可用（偶发超时） | ❌ 常超时 |
+| mcporter move_file | ✅ 可用 | ✅ 备用 |
+| mcporter folder_list | ✅ 可用 | ✅ 都可用 |
+
+**⚠️ 关键教训（2026-09-28 实测）**：
+
+1. **`async_import` 必须直连** —— 加 `https_proxy` 反而返回 `405 (SSE error: Non-200 status code)`。本文件此前写反了，曾据此误判为「token 过期」并做出错误操作。
+2. **遇 405 先去掉代理直连重试**，不要立刻跑 `mcporter auth`。
+3. 🔴 **绝对不要跑 `mcporter auth tencent-docs --reset`** —— 它会清掉缓存凭证并触发完整 OAuth 流程（需用户在浏览器扫码），期间所有 mcporter 调用全部失效。用户明确批评过这个操作（「按照之前的方法弄就行了，不要你去弄新的」）。只有直连+代理都长期失败、且确认 token 真过期时才走 auth（且不加 `--reset`）。
+4. **限流特征**：429 / 405 / i/o timeout 交替出现 = 服务端限流窗口未过。间隔 60s+ 重试，不要换方案（本次连续重试 4 轮后恢复）。
+5. `import_file.sh` 的 COS 上传本身不依赖 MCP token，所以它成功 ≠ mcporter 可用，两者独立判断。
 
 **策略**：
 1. 先尝试直连

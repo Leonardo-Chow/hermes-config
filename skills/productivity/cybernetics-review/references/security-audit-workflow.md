@@ -40,13 +40,21 @@ cd ~/.hermes && git ls-files | xargs grep -l 'AIzaSy\|sk-\|ghp_\|gho_\|password\
 
 > ⚠️ 宽泛模式会匹配 90+ 文件（文档示例、正则模式、YAML narrative 等），仅用于确认"还有哪些文件需要逐个检查"，**不能直接作为泄露证据**。
 
-扫描 git 跟踪文件中的真实凭证（排除文档示例和二进制文件）：
+### 用户每日复盘使用的快速检查清单（已在 cron 中实测）
 
 ```bash
-cd ~/.hermes && git ls-files | xargs grep -n \
-  'AIzaSy[A-Za-z0-9_-]\{30\}\|sk-[A-Za-z0-9]\{20,\}\|ghp_[A-Za-z0-9]\{30\}\|gho_[A-Za-z0-9]\{30\}\|ghu_[A-Za-z0-9]\{30\}\|ghs_[A-Za-z0-9]\{30\}' \
-  2>/dev/null | head -30
+# 1. 真实密钥严格扫描（低误报）
+cd ~/.hermes && git ls-files | xargs grep -nE 'AIzaSy[A-Za-z0-9_-]{33}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}' 2>/dev/null | head -20
+
+# 2. 仓库可见性（必须为 true）
+gh repo view Leonardo-Chow/hermes-config --json isPrivate -q '.isPrivate'
+
+# 3. config.yaml 密钥检查（应全为空字符串）
+cd ~/.hermes && grep -n 'api_key:\|token:' config.yaml | grep -v '""' | grep -v 'session_key'
 ```
+
+如果全部通过 → ✅ 安全，继续复盘。  
+如果任何一项失败 → 按下方流程处理。
 
 ### 判断标准
 
@@ -56,6 +64,50 @@ cd ~/.hermes && git ls-files | xargs grep -n \
 | 掩码 Key (含 `...`) | ✅ 安全 | 无需处理 |
 | 文档示例 (`sk-xxx...xxxx`) | ✅ 安全 | 无需处理 |
 | 二进制文件匹配 | ⚠️ 误报 | 检查是否为编译嵌入字符串 |
+
+### ⚠️ macOS 元数据文件污染陷阱（2026-09-26 新增）
+
+`git add -A` 会把 macOS 产生的元数据文件一并提交，导致 Git 历史污染：
+
+| 文件模式 | 来源 | 危害 |
+|:---------|:-----|:-----|
+| `__MACOSX/` | macOS 资源分叉 | 无用元数据，膨胀仓库体积 |
+| `*._*` | macOS 资源分叉 | 隐藏文件，同上 |
+| `.history/` | 编辑器备份 | 临时文件，无需版本控制 |
+| `*.zip` | 本地打包 | 二进制文件，应走 Release |
+
+**预防**：在 `.gitignore` 中添加：
+
+```gitignore
+# macOS 元数据
+__MACOSX/
+._*
+.DS_Store
+
+# 编辑器/IDE 临时文件
+.history/
+*.swp
+*.swo
+*~
+
+# 本地打包/分发文件
+*.zip
+*.tar.gz
+*.dmg
+```
+
+**清理已提交的元数据**：
+
+```bash
+cd ~/.hermes
+git rm -r --cached skills/__MACOSX/
+git rm -r --cached skills/ima-skill/.history/
+git rm --cached skills/ima-skills-1.1.10.zip
+git commit -m "chore: remove macOS metadata files from tracking"
+git push origin main
+```
+
+> 2026-09-26 实测：`git add -A` 提交了 29 个 `__MACOSX/` 文件、3 个 `.history/` 文件、1 个 `.zip` 文件。必须显式清理并加入 `.gitignore`。
 
 ### 验证 Key 是否被掩码
 
