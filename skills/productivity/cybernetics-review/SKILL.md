@@ -271,16 +271,22 @@ skill patch: autocli — 更新可用站点列表
 - 涉及 skill: `ima-skill`（IMA 记忆同步）、`hermes-agent`（更新检测）
 
 ### 执行步骤
-1. **安全审查（最优先）** — 扫描敏感信息、检查仓库隐私状态。详见 `references/security-audit-workflow.md`
+1. **安全审查（最优先）** — 扫描敏感信息、检查仓库隐私状态。**检查 macOS 元数据污染（`__MACOSX/`、`._*`、`.history/`、`*.zip`）**。详见 `references/security-audit-workflow.md`
 2. **运行 hermes-retro** — 脚本路径: `~/.hermes/audit/hermes-retro`（bash 脚本，非 npm 包）
    ```bash
    bash ~/.hermes/audit/hermes-retro --today
    ```
-2. **session_search** — 补充复盘上下文，获取今日会话详情
-3. **Memory 同步到 IMA** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库（`uhcEva4nd2xus1Q2yt7yn_N4_waEdOsQlVU3lhnkLXw=`）
-4. **Hermes 更新检测** — `git fetch origin main` + `git log HEAD..origin/main --oneline`
-5. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
-6. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+3. **session_search** — 补充复盘上下文，获取今日会话详情
+4. **Memory 同步到 IMA** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库（`uhcEva4nd2xus1Q2yt7yn_N4_waEdOsQlVU3lhnkLXw=`）
+5. **Hermes 更新检测** — `git fetch origin main` + `git log HEAD..origin/main --oneline`
+6. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
+7. **Git 仓库清理** — 若发现 macOS 元数据文件被跟踪，执行清理并更新 `.gitignore`：
+   ```bash
+   git rm -r --cached skills/__MACOSX/ skills/**/.history/ skills/*.zip
+   # 确保 .gitignore 包含：__MACOSX/ _.* .history/ *.zip
+   git add .gitignore && git commit -m "chore: remove macOS metadata from tracking"
+   ```
+8. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
 
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
@@ -321,6 +327,7 @@ skill patch: autocli — 更新可用站点列表
 |:-----|:---------|:----:|:-----|:---------|
 | hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 | 规划 `hermes update` 维护窗口，备份配置后执行 |
 | hermes-agent 子模块本地脏状态 (未提交变更) | 2026-09-11 | 🟡 低 | ⚠️ 未处理 | 确认 `flake.lock` 删除、`web_server.py` 修改、`feishu_attempt.py` 新增是否需保留/上游同步 |
+| macOS 元数据文件污染 git 仓库 | 2026-09-26 | 🟡 低 | 🔄 反复出现 | `.gitignore` 已补全；每次复盘执行 `git ls-files \| grep -E '__MACOSX\|_history\|\.zip$'` 检查 |
 
 > 维护发现不阻塞复盘，但需在复盘报告中明确记录，避免长期累积技术债。
 
