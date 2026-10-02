@@ -272,21 +272,18 @@ skill patch: autocli — 更新可用站点列表
 
 ### 执行步骤
 1. **安全审查（最优先）** — 扫描敏感信息、检查仓库隐私状态。**检查 macOS 元数据污染（`__MACOSX/`、`._*`、`.history/`、`*.zip`）**。详见 `references/security-audit-workflow.md`
-2. **运行 hermes-retro** — 脚本路径: `~/.hermes/audit/hermes-retro`（bash 脚本，非 npm 包）
-   ```bash
-   bash ~/.hermes/audit/hermes-retro --today
-   ```
-3. **session_search** — 补充复盘上下文，获取今日会话详情
-4. **Memory 同步到 IMA** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库（`uhcEva4nd2xus1Q2yt7yn_N4_waEdOsQlVU3lhnkLXw=`）
-5. **Hermes 更新检测** — `git fetch origin main` + `git log HEAD..origin/main --oneline`
-6. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
-7. **Git 仓库清理** — 若发现 macOS 元数据文件被跟踪，执行清理并更新 `.gitignore`：
+2. **session_search** — 补充复盘上下文，获取今日会话详情（替代已废弃的 `hermes-retro`）
+3. **Hermes 更新检测** — `hermes --version`（最快，无需网络）或 `git fetch origin main` + `git log HEAD..origin/main --oneline`
+4. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
+5. **Git 仓库清理** — 若发现 macOS 元数据文件被跟踪，执行清理并更新 `.gitignore`：
    ```bash
    git rm -r --cached skills/__MACOSX/ skills/**/.history/ skills/*.zip
    # 确保 .gitignore 包含：__MACOSX/ _.* .history/ *.zip
    git add .gitignore && git commit -m "chore: remove macOS metadata from tracking"
    ```
-8. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+6. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+   - ⚠️ **Cron Job 限制**：`memory` 工具不可用，Memory→IMA 同步需在人工会话中补做
+   - ⚠️ **VPN 限制**：GitHub 操作需用户手动开启 VPN，代理不可用时直连重试
 
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
@@ -345,3 +342,4 @@ skill patch: autocli — 更新可用站点列表
 - `references/pdf-generation-template.md` — 新闻风格 PDF 生成模板（CNN/BBC/经济学人）
 - `references/ima-memory-sync.md` — Memory 文件同步到 IMA Herme记忆库的完整流程
 - `references/memory-cleanup-methodology.md` — Memory 清理方法论（四步清理法、操作陷阱、检查清单）
+- `references/session-search-daily-review.md` — session_search 每日复盘使用模式（发现会话、提取闭环、Cron Job 适配）

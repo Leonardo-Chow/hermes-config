@@ -180,7 +180,10 @@ def main(days):
             in_title = bool(match_brand(title) or match_brand(ch))
             sigs = sponsor_signals(desc)
             # 官方大使计划标记（#obsbotambassador）：属官方合作，**豁免 <1min 过滤**（2026-09-29 用户要求）
-            is_ambassador = bool(re.search(r"#obsbotambassador|obsbot\s*ambassador", desc, re.I))
+            # ⚠️ 标签可能出现在标题里，不能只查描述区（2026-10-01 踩坑）
+            _alltext = f"{title} {desc}"
+            is_ambassador = bool(re.search(r"#obsbotambassador|obsbot\s*ambassador", _alltext, re.I))
+            is_paid = bool(re.search(r"#paidpartner|#paid\s*partnership|paid partnership", _alltext, re.I))
             if not in_title and not sigs:
                 continue
             if ch in BLACKLIST or ch.strip().lower() in ("obsbot", "obsbot official"):
@@ -196,6 +199,7 @@ def main(days):
                 "was_live": bool(it.get("liveStreamingDetails")),
                 "kind": "主内容" if in_title else "赞助植入",
                 "ambassador": is_ambassador,
+                "paid": is_paid,
                 "signals": sigs[:2],
             })
 
@@ -228,9 +232,9 @@ def main(days):
         if r["views"] <= 0:
             continue
         # 官方大使（#obsbotambassador）豁免 <1min 过滤
-        if r["dur"] < 60 and not r.get("ambassador"):
+        if r["dur"] < 60 and not (r.get("ambassador") or r.get("paid")):
             continue
-        tag = "  【大使】" if r.get("ambassador") else ("  【赞助植入】" if r.get("kind") == "赞助植入" else "")
+        tag = "  【大使】" if r.get("ambassador") else ("  【paidpartner】" if r.get("paid") else ("  【赞助植入】" if r.get("kind") == "赞助植入" else ""))
         print(f"  {r['day']} | {r['vid']} | {r['ch']} | {fmt(r['dur'])} | {r['views']}v | {r['title'][:55]}{tag}")
     if dup_rows:
         print("\n已排除（历史报告重复）:")
