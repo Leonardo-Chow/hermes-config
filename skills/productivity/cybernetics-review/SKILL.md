@@ -273,7 +273,7 @@ skill patch: autocli — 更新可用站点列表
 ### 执行步骤
 1. **安全审查（最优先）** — 扫描敏感信息、检查仓库隐私状态。**检查 macOS 元数据污染（`__MACOSX/`、`._*`、`.history/`、`*.zip`）**。详见 `references/security-audit-workflow.md`
 2. **session_search** — 补充复盘上下文，获取今日会话详情（替代已废弃的 `hermes-retro`）
-3. **Hermes 更新检测** — `hermes --version`（最快，无需网络）或 `git fetch origin main` + `git log HEAD..origin/main --oneline`
+3. **Hermes 更新检测** — `hermes --version`（最快，无需网络）优先；落后时再用 `git fetch origin main` + `git log HEAD..origin/main --oneline` 精确计数
 4. **子模块健康检查** — `cd ~/.hermes/hermes-agent && git status && git log HEAD..origin/main --oneline | wc -l` 检查落后程度与本地脏状态
 5. **Git 仓库清理** — 若发现 macOS 元数据文件被跟踪，执行清理并更新 `.gitignore`：
    ```bash
@@ -281,14 +281,18 @@ skill patch: autocli — 更新可用站点列表
    # 确保 .gitignore 包含：__MACOSX/ _.* .history/ *.zip
    git add .gitignore && git commit -m "chore: remove macOS metadata from tracking"
    ```
-6. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
+6. **IMA 记忆同步** — 读取 `~/.hermes/memory.md` + `~/.hermes/user.md` + `~/.hermes/memory/` 下文件，用 `import_doc` 创建笔记，再 `add_knowledge` 到 Herme记忆库。**需注入代理**：`https_proxy=http://127.0.0.1:1082 node ima_api.cjs ...`
+7. **数据分流** — 底层逻辑→memory，操作细节→skill，历史数据→IMA
    - ⚠️ **Cron Job 限制**：`memory` 工具不可用，Memory→IMA 同步需在人工会话中补做
    - ⚠️ **VPN 限制**：GitHub 操作需用户手动开启 VPN，代理不可用时直连重试
+   - ⚠️ **IMA 代理限制**：GFW 环境下 IMA API 调用必须显式注入 https_proxy
 
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
 - **`skill_manage` 可用** — 可以在 cron 中 patch/create skills
 - **VPN 由用户手动开启** — git fetch 等 GitHub 操作需要用户先开启 VPN
+- **IMA API 需显式代理** — GFW 环境下 `node ima_api.cjs` 调用必须注入 `https_proxy=http://127.0.0.1:1082`（或当前可用代理端口），否则返回 `fetch failed`。建议在调用前检测代理可用性
+- **`hermes --version` 优于 git fetch** — 版本检测最快，无需网络，优先使用；落后大量 commits 时再用 `git log HEAD..origin/main --oneline | wc -l` 精确计数
 
 ### 数据分流规则
 | 类型 | 目标 | 示例 |
@@ -312,7 +316,7 @@ skill patch: autocli — 更新可用站点列表
 
 | 发现 | 首次发现 | 风险 | 状态 | 修复命令 |
 |:-----|:---------|:----:|:-----|:---------|
-| GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
+| GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 (2026-10-02 复盘确认仍为 Public) | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
 
 > 当问题修复后，从本表移除并记录到 memory。
 
@@ -322,7 +326,7 @@ skill patch: autocli — 更新可用站点列表
 
 | 发现 | 首次发现 | 影响 | 状态 | 处理建议 |
 |:-----|:---------|:----:|:-----|:---------|
-| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 | 规划 `hermes update` 维护窗口，备份配置后执行 |
+| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 (2026-10-02 确认落后 16285 commits) | 规划 `hermes update` 维护窗口，备份配置后执行 |
 | hermes-agent 子模块本地脏状态 (未提交变更) | 2026-09-11 | 🟡 低 | ⚠️ 未处理 | 确认 `flake.lock` 删除、`web_server.py` 修改、`feishu_attempt.py` 新增是否需保留/上游同步 |
 | macOS 元数据文件污染 git 仓库 | 2026-09-26 | 🟡 低 | 🔄 反复出现 | `.gitignore` 已补全；每次复盘执行 `git ls-files \| grep -E '__MACOSX\|_history\|\.zip$'` 检查 |
 
