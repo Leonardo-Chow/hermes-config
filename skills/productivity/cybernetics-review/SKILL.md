@@ -290,9 +290,10 @@ skill patch: autocli — 更新可用站点列表
 ### ⚠️ Cron Job 环境限制
 - **`memory` 工具不可用** — cron job 中无法调用 `memory(action='add/replace')`，需在报告中注明待下次会话更新
 - **`skill_manage` 可用** — 可以在 cron 中 patch/create skills
-- **VPN 由用户手动开启** — git fetch 等 GitHub 操作需要用户先开启 VPN
+- **VPN 由用户手动开启** — git fetch 等 GitHub 操作需要用户先开启 VPN，**Cron 运行时 VPN 工具（Shadowrocket/v2rayN/ClashX）均未运行**，代理端口不可用
 - **IMA API 需显式代理** — GFW 环境下 `node ima_api.cjs` 调用必须注入 `https_proxy=http://127.0.0.1:1082`（或当前可用代理端口），否则返回 `fetch failed`。建议在调用前检测代理可用性
 - **`hermes --version` 优于 git fetch** — 版本检测最快，无需网络，优先使用；落后大量 commits 时再用 `git log HEAD..origin/main --oneline | wc -l` 精确计数
+- **Cron 代理端口不可靠** — SOCKS5 1082/10808/7890 端口在 cron 环境下**不可用**，直连 GitHub 超时（60s）。GitHub push **必须**在人工会话中由用户开启 VPN 后补推
 
 ### 数据分流规则
 | 类型 | 目标 | 示例 |
@@ -326,7 +327,7 @@ skill patch: autocli — 更新可用站点列表
 
 | 发现 | 首次发现 | 影响 | 状态 | 处理建议 |
 |:-----|:---------|:----:|:-----|:---------|
-| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 (2026-10-02 确认落后 16285 commits) | 规划 `hermes update` 维护窗口，备份配置后执行 |
+| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 (2026-10-03 确认落后 16285 commits) | 规划 `hermes update` 维护窗口，备份配置后执行 |
 | hermes-agent 子模块本地脏状态 (未提交变更) | 2026-09-11 | 🟡 低 | ⚠️ 未处理 | 确认 `flake.lock` 删除、`web_server.py` 修改、`feishu_attempt.py` 新增是否需保留/上游同步 |
 | macOS 元数据文件污染 git 仓库 | 2026-09-26 | 🟡 低 | 🔄 反复出现 | `.gitignore` 已补全；每次复盘执行 `git ls-files \| grep -E '__MACOSX\|_history\|\.zip$'` 检查 |
 
