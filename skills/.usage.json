@@ -412,14 +412,14 @@
     "archived_at": null,
     "created_at": "2026-05-09T11:05:04.361493+00:00",
     "created_by": null,
-    "last_patched_at": "2026-10-03T03:05:11.729594+00:00",
-    "last_used_at": "2026-10-03T03:04:31.813589+00:00",
-    "last_viewed_at": "2026-10-03T03:04:31.811662+00:00",
-    "patch_count": 39,
+    "last_patched_at": "2026-10-04T05:11:09.045985+00:00",
+    "last_used_at": "2026-10-05T03:52:37.105502+00:00",
+    "last_viewed_at": "2026-10-05T03:52:37.103220+00:00",
+    "patch_count": 41,
     "pinned": false,
     "state": "active",
-    "use_count": 50,
-    "view_count": 50
+    "use_count": 55,
+    "view_count": 55
   },
   "daily-digest": {
     "archived_at": null,
@@ -927,13 +927,13 @@
     "created_by": null,
     "last_patched_at": "2026-06-02T02:41:33.666403+00:00",
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-10-04T03:21:31.454903+00:00",
+    "last_used_at": "2026-10-07T03:05:45.152686+00:00",
     "last_viewed_at": "2026-06-22T10:22:21.415430+00:00",
     "patch_count": 7,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 167,
+    "use_count": 170,
     "view_count": 10
   },
   "imessage": {

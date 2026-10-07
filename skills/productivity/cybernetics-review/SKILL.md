@@ -317,7 +317,7 @@ skill patch: autocli — 更新可用站点列表
 
 | 发现 | 首次发现 | 风险 | 状态 | 修复命令 |
 |:-----|:---------|:----:|:-----|:---------|
-| GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 (2026-10-02 复盘确认仍为 Public) | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
+| GitHub 仓库为 PUBLIC | 2026-06-18 | 🔴 高 | ⚠️ 未修复 (2026-10-04 复盘确认仍为 Public) | `gh repo edit Leonardo-Chow/hermes-config --visibility private` |
 
 > 当问题修复后，从本表移除并记录到 memory。
 
@@ -327,7 +327,7 @@ skill patch: autocli — 更新可用站点列表
 
 | 发现 | 首次发现 | 影响 | 状态 | 处理建议 |
 |:-----|:---------|:----:|:-----|:---------|
-| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 (2026-10-03 确认落后 16285 commits) | 规划 `hermes update` 维护窗口，备份配置后执行 |
+| hermes-agent 子模块严重滞后 (16k+ commits) | 2026-09-09 | 🟠 中 | ⚠️ 未处理 (2026-10-04 确认落后 16285 commits) | 规划 `hermes update` 维护窗口，备份配置后执行 |
 | hermes-agent 子模块本地脏状态 (未提交变更) | 2026-09-11 | 🟡 低 | ⚠️ 未处理 | 确认 `flake.lock` 删除、`web_server.py` 修改、`feishu_attempt.py` 新增是否需保留/上游同步 |
 | macOS 元数据文件污染 git 仓库 | 2026-09-26 | 🟡 低 | 🔄 反复出现 | `.gitignore` 已补全；每次复盘执行 `git ls-files \| grep -E '__MACOSX\|_history\|\.zip$'` 检查 |
 
